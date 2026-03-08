@@ -3,8 +3,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 type AccountantRow = { id: string; name: string };
 type ClientReminderRow = { id: string; name: string; email: string | null; unique_token: string };
 
@@ -20,13 +18,15 @@ export async function POST() {
     return NextResponse.json({ error: "Neautentificat" }, { status: 401 });
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
     return NextResponse.json(
       { error: "RESEND_API_KEY lipsă. Configurează Resend în .env.local" },
       { status: 500 }
     );
   }
 
+  const resend = new Resend(apiKey);
   const fromEmail = process.env.RESEND_FROM ?? "Velo <onboarding@resend.dev>";
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
