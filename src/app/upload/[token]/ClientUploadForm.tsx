@@ -85,6 +85,7 @@ export function ClientUploadForm({
             <label className="flex items-center gap-3 flex-wrap cursor-pointer">
               <input
                 type="file"
+                accept="application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.xls,.xlsx,text/plain,.txt"
                 className="sr-only"
                 disabled={!!uploading}
                 onChange={(e) => {
@@ -113,7 +114,7 @@ export function ClientUploadForm({
                 )}
               </span>
               <span className="text-sm text-[var(--ink-muted)]">
-                PDF, imagine sau document
+                PDF, imagine sau document. Pe telefon: alege «Fișiere» sau «Browse» dacă nu vezi PDF.
               </span>
             </label>
           </div>

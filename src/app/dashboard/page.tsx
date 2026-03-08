@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
 import { AddClientForm } from "./AddClientForm";
 import { ClientCard } from "./ClientCard";
 import { DashboardTutorial } from "./DashboardTutorial";
@@ -50,13 +49,6 @@ export default async function DashboardPage() {
         <p className="dash-page-sub">
           Clienții tăi și documentele trimise pentru luna curentă.
         </p>
-        <Link
-          href="/dashboard/setari"
-          className="inline-flex items-center gap-2 mt-3 text-sm font-medium text-[var(--sage)] hover:text-[var(--sage-dark)]"
-        >
-          Programează mesaj lunar (email) către clienți
-          <span aria-hidden>→</span>
-        </Link>
       </header>
 
       <AddClientForm />
