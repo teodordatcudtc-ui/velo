@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useToast } from "@/app/components/ToastProvider";
 
-export function ReminderTestButton() {
+export function ReminderTestButton({ disabled = false }: { disabled?: boolean }) {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const toast = useToast();
@@ -43,10 +43,10 @@ export function ReminderTestButton() {
       <button
         type="button"
         onClick={handleTest}
-        disabled={sending}
+        disabled={sending || disabled}
         className="btn btn-secondary"
       >
-        {sending ? "Se trimit..." : "Trimite test acum"}
+        {disabled ? "Disponibil pe Premium" : sending ? "Se trimit..." : "Trimite test acum"}
       </button>
       {result && (
         <p

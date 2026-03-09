@@ -1,0 +1,234 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  createEarlyAccessCode,
+  redeemEarlyAccessCode,
+  setSubscriptionPlanForTesting,
+} from "@/app/actions/profile";
+import { useToast } from "@/app/components/ToastProvider";
+
+type Props = {
+  isPremium: boolean;
+  subscriptionPlan: "standard" | "premium";
+  premiumUntil: string | null;
+  canGenerateCodes?: boolean;
+};
+
+function formatDate(dateIso: string | null): string {
+  if (!dateIso) return "—";
+  return new Date(dateIso).toLocaleDateString("ro-RO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+export function PlanAccessCard({
+  isPremium,
+  subscriptionPlan,
+  premiumUntil,
+  canGenerateCodes = false,
+}: Props) {
+  const toast = useToast();
+  const [pending, setPending] = useState(false);
+  const [lastSuccessText, setLastSuccessText] = useState<string | null>(null);
+  const [creatingCode, setCreatingCode] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [switchingPlan, setSwitchingPlan] = useState(false);
+
+  const statusText = useMemo(() => {
+    if (subscriptionPlan === "premium") return "Premium activ";
+    if (isPremium && premiumUntil) return `Early access activ până la ${formatDate(premiumUntil)}`;
+    return "Standard activ";
+  }, [isPremium, premiumUntil, subscriptionPlan]);
+
+  async function handleRedeem(formData: FormData) {
+    setPending(true);
+    setLastSuccessText(null);
+    try {
+      const result = await redeemEarlyAccessCode(formData);
+
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      const text = result.premiumUntil
+        ? `Cod aplicat. Premium activ până la ${formatDate(result.premiumUntil)}.`
+        : "Cod aplicat cu succes.";
+      setLastSuccessText(text);
+      toast.success(text);
+    } catch {
+      toast.error("Nu am putut valida codul acum. Verifică conexiunea și încearcă din nou.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleCreateCode(formData: FormData) {
+    setCreatingCode(true);
+    setGeneratedCode(null);
+    try {
+      const result = await createEarlyAccessCode(formData);
+
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      if (result?.code) {
+        setGeneratedCode(result.code);
+        toast.success(`Cod creat: ${result.code}`);
+      }
+    } catch {
+      toast.error("Nu am putut genera codul acum. Încearcă din nou.");
+    } finally {
+      setCreatingCode(false);
+    }
+  }
+
+  async function handlePlanSwitch(formData: FormData) {
+    setSwitchingPlan(true);
+    try {
+      const result = await setSubscriptionPlanForTesting(formData);
+
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(
+        result?.plan === "premium"
+          ? "Plan schimbat pe Premium (test)."
+          : "Plan schimbat pe Standard (test)."
+      );
+    } catch {
+      toast.error("Nu am putut salva schimbarea de plan. Încearcă din nou.");
+    } finally {
+      setSwitchingPlan(false);
+    }
+  }
+
+  return (
+    <div className="dash-card max-w-xl">
+      <h2 className="text-lg font-semibold text-[var(--ink)] mb-2">Plan abonament</h2>
+      <p className="text-sm text-[var(--ink-soft)] mb-3">{statusText}</p>
+      <div className="text-sm text-[var(--ink-muted)] mb-4">
+        {isPremium
+          ? "Ai clienți nelimitați și acces la funcțiile Premium."
+          : "Plan Standard: maxim 40 clienți activi. Upgrade la Premium pentru clienți nelimitați."}
+      </div>
+
+      <div className="pt-4 mb-4 border-t border-[var(--paper-3)]">
+        <h3 className="text-sm font-semibold text-[var(--ink)] mb-2">Schimbă planul (test)</h3>
+        <p className="text-sm text-[var(--ink-muted)] mb-3">
+          Temporar poți selecta manual planul pentru a testa restricțiile și funcțiile.
+        </p>
+        <form action={handlePlanSwitch} className="flex items-center gap-2">
+          <select
+            name="plan"
+            defaultValue={subscriptionPlan}
+            className="dash-input"
+            style={{ minWidth: 180 }}
+          >
+            <option value="standard">Standard</option>
+            <option value="premium">Premium</option>
+          </select>
+          <button type="submit" className="btn btn-secondary" disabled={switchingPlan}>
+            {switchingPlan ? "Se salvează..." : "Aplică planul"}
+          </button>
+        </form>
+      </div>
+
+      <div className="pt-4 border-t border-[var(--paper-3)]">
+        <h3 className="text-sm font-semibold text-[var(--ink)] mb-2">Cod early access</h3>
+        <p className="text-sm text-[var(--ink-muted)] mb-3">
+          Introdu codul primit pentru acces Premium full 45 zile.
+        </p>
+        <form action={handleRedeem} className="flex gap-2 items-center">
+          <input
+            name="code"
+            type="text"
+            required
+            autoComplete="off"
+            placeholder="EX: EARLY-ABC123"
+            className="dash-input flex-1"
+            style={{ textTransform: "uppercase" }}
+          />
+          <button type="submit" className="btn btn-primary" disabled={pending}>
+            {pending ? "Se aplică..." : "Aplică cod"}
+          </button>
+        </form>
+        {lastSuccessText && (
+          <p className="text-sm text-[var(--sage)] mt-2">{lastSuccessText}</p>
+        )}
+      </div>
+
+      {canGenerateCodes && (
+        <div className="pt-4 mt-4 border-t border-[var(--paper-3)]">
+          <h3 className="text-sm font-semibold text-[var(--ink)] mb-2">Generează cod early access</h3>
+          <p className="text-sm text-[var(--ink-muted)] mb-3">
+            Poți personaliza formatul codului cu prefix și segment client.
+          </p>
+          <form action={handleCreateCode} className="flex flex-wrap gap-2 items-end">
+            <div>
+              <label className="block text-xs text-[var(--ink-muted)] mb-1">Prefix cod</label>
+              <input
+                name="code_prefix"
+                type="text"
+                maxLength={16}
+                defaultValue="EARLY"
+                placeholder="EARLY"
+                className="dash-input w-[130px]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[var(--ink-muted)] mb-1">Segment client</label>
+              <input
+                name="client_segment"
+                type="text"
+                maxLength={16}
+                placeholder="ACME"
+                className="dash-input w-[130px]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[var(--ink-muted)] mb-1">Zile</label>
+              <input
+                name="valid_days"
+                type="number"
+                min={1}
+                max={365}
+                defaultValue={45}
+                className="dash-input w-[110px]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-[var(--ink-muted)] mb-1">Utilizări</label>
+              <input
+                name="max_uses"
+                type="number"
+                min={1}
+                max={1000}
+                defaultValue={1}
+                className="dash-input w-[110px]"
+              />
+            </div>
+            <button type="submit" className="btn btn-secondary" disabled={creatingCode}>
+              {creatingCode ? "Se generează..." : "Generează cod"}
+            </button>
+          </form>
+          {generatedCode && (
+            <p className="text-sm text-[var(--sage)] mt-2">
+              Cod generat: <strong>{generatedCode}</strong>
+            </p>
+          )}
+          <p className="text-xs text-[var(--ink-muted)] mt-2">
+            Exemplu format: <strong>EARLY-CLIENT-X7K2Q9</strong>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

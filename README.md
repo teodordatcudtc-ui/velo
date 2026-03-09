@@ -27,6 +27,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 - `RESEND_FROM` – adresa expeditor (ex. `Velo <noreply@domeniul-tau.ro>`). Fără domeniu verificat poți folosi `onboarding@resend.dev` doar pentru teste.
 - `CRON_SECRET` – secret pentru a apela `/api/cron/send-reminders` (cron extern sau [cron-job.org](https://cron-job.org)): `GET /api/cron/send-reminders?secret=CRON_SECRET`.
 - `NEXT_PUBLIC_APP_URL` – URL-ul aplicației (ex. `https://velo.ro`) pentru linkurile din email.
+- `EARLY_ACCESS_ADMIN_EMAIL` – un singur email admin care poate genera coduri early access din pagina Setări.
 
 ### 2. Baza de date
 
@@ -34,8 +35,11 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 `supabase/migrations/001_initial.sql`  
 apoi `supabase/migrations/002_reminder_settings.sql` (pentru programarea mesajului lunar).
+apoi `supabase/migrations/003_reminder_per_client.sql`, `supabase/migrations/004_archived_clients.sql`,
+`supabase/migrations/005_document_requests.sql`, `supabase/migrations/006_subscriptions_and_early_access.sql`
+și `supabase/migrations/007_document_request_reminder_tracking.sql`.
 
-Aceste scripturi creează tabelele `accountants`, `clients`, `document_types`, `uploads`, RLS, trigger-ul de contabil și coloanele pentru reminder (ziua lunii, activat/dezactivat).
+Aceste scripturi creează tabelele principale, RLS, trigger-ul de contabil, reminder per client, arhivare clienți, cereri de documente, pachete Standard/Premium, coduri early access și limita de 40 clienți pe Standard.
 
 ### 3. Storage
 

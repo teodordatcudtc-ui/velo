@@ -105,143 +105,149 @@ export function DashboardTutorial({ userId }: { userId?: string }) {
   const isLast = step === STEPS.length - 1;
   const hasTarget = !!rect && !!current.target;
 
+  /* Card flotant în colțul din dreapta-jos — non-blocking, nu acoperă conținutul */
   return (
-    <div
-      className="fixed inset-0 z-[9998]"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="tutorial-title"
-      aria-describedby="tutorial-desc"
-    >
-      {/* Blur overlay: 4 panels so the target stays clickable */}
-      {hasTarget && rect ? (
-        <>
+    <>
+      {/* Overlay semi-transparent DOAR când există un target evidențiat */}
+      {hasTarget && rect && (
+        <div className="fixed inset-0 z-[9990] pointer-events-none" aria-hidden>
           {/* top */}
           <div
-            className="absolute left-0 right-0 bg-[var(--ink)]/40 backdrop-blur-md"
-            style={{ top: 0, left: 0, right: 0, height: Math.max(0, rect.top) }}
-            aria-hidden
-            onClick={close}
+            style={{
+              position: "absolute",
+              top: 0, left: 0, right: 0,
+              height: Math.max(0, rect.top),
+              background: "rgba(26,26,46,0.35)",
+              backdropFilter: "blur(4px)",
+            }}
           />
           {/* bottom */}
           <div
-            className="absolute left-0 right-0 bg-[var(--ink)]/40 backdrop-blur-md"
             style={{
-              top: rect.top + rect.height,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              position: "absolute",
+              top: rect.top + rect.height, left: 0, right: 0, bottom: 0,
+              background: "rgba(26,26,46,0.35)",
+              backdropFilter: "blur(4px)",
             }}
-            aria-hidden
-            onClick={close}
           />
           {/* left */}
           <div
-            className="absolute bg-[var(--ink)]/40 backdrop-blur-md"
             style={{
-              top: rect.top,
-              left: 0,
+              position: "absolute",
+              top: rect.top, left: 0,
               width: Math.max(0, rect.left),
               height: rect.height,
+              background: "rgba(26,26,46,0.35)",
+              backdropFilter: "blur(4px)",
             }}
-            aria-hidden
-            onClick={close}
           />
           {/* right */}
           <div
-            className="absolute bg-[var(--ink)]/40 backdrop-blur-md"
             style={{
+              position: "absolute",
               top: rect.top,
               left: rect.left + rect.width,
               right: 0,
               height: rect.height,
+              background: "rgba(26,26,46,0.35)",
+              backdropFilter: "blur(4px)",
             }}
-            aria-hidden
-            onClick={close}
           />
           {/* Highlight ring */}
           <div
-            className="absolute rounded-[var(--r-md)] ring-2 ring-[var(--sage)] ring-offset-2 ring-offset-transparent pointer-events-none"
             style={{
-              top: rect.top,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
+              position: "absolute",
+              top: rect.top, left: rect.left,
+              width: rect.width, height: rect.height,
+              borderRadius: "var(--r-md)",
+              outline: "2px solid var(--sage)",
+              outlineOffset: 3,
+              pointerEvents: "none",
             }}
-            aria-hidden
           />
-        </>
-      ) : (
-        <div
-          className="absolute inset-0 bg-[var(--ink)]/40 backdrop-blur-md"
-          aria-hidden
-          onClick={close}
-        />
+        </div>
       )}
 
-      {/* Tooltip card - mereu în viewport, centrat, ca să poți apăsa butoanele */}
+      {/* Card tutorial — fix în colțul dreapta-jos, pointer-events proprii */}
       <div
-        className="absolute z-10 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-[var(--r-xl)] bg-[var(--paper)] border border-[var(--paper-3)] shadow-[var(--shadow-xl)] p-6 mx-4 max-h-[calc(100vh-48px)] overflow-y-auto"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="tutorial-title"
+        aria-describedby="tutorial-desc"
+        style={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          zIndex: 9995,
+          width: "100%",
+          maxWidth: 360,
+          background: "var(--paper)",
+          border: "1px solid var(--paper-3)",
+          borderRadius: "var(--r-xl)",
+          boxShadow: "0 8px 48px rgba(26,26,46,0.18), 0 2px 8px rgba(26,26,46,0.1)",
+          padding: 24,
+          pointerEvents: "auto",
+        }}
       >
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-700 uppercase tracking-wider text-[var(--sage)]">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--sage)" }}>
             Ghid rapid
           </span>
           <button
             type="button"
             onClick={close}
-            className="text-[var(--ink-muted)] hover:text-[var(--ink)] p-1 rounded transition"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-muted)", padding: 4, borderRadius: 6, lineHeight: 1 }}
             aria-label="Închide"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <h2 id="tutorial-title" className="font-[var(--f-display)] text-xl font-600 text-[var(--ink)] mb-2">
+        <h2 id="tutorial-title" style={{ fontFamily: "var(--f-display)", fontSize: 18, fontWeight: 600, color: "var(--ink)", marginBottom: 8 }}>
           {current.title}
         </h2>
-        <p id="tutorial-desc" className="text-[var(--ink-soft)] text-sm leading-relaxed mb-6">
+        <p id="tutorial-desc" style={{ fontSize: 13, color: "var(--ink-soft)", lineHeight: 1.6, marginBottom: 20 }}>
           {current.text}
         </p>
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex gap-1.5">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ display: "flex", gap: 6 }}>
             {STEPS.map((_, i) => (
               <span
                 key={i}
-                className={`block h-1.5 rounded-full transition-all ${
-                  i === step
-                    ? "w-5 bg-[var(--sage)]"
-                    : i < step
-                      ? "w-1.5 bg-[var(--sage)]/50"
-                      : "w-1.5 bg-[var(--paper-3)]"
-                }`}
+                style={{
+                  display: "block",
+                  height: 6,
+                  borderRadius: 100,
+                  width: i === step ? 20 : 6,
+                  background: i === step ? "var(--sage)" : i < step ? "rgba(75,122,110,0.4)" : "var(--paper-3)",
+                  transition: "all 0.2s",
+                }}
                 aria-hidden
               />
             ))}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={close}
-              className="text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]"
-            >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button type="button" onClick={close} style={{ fontSize: 13, color: "var(--ink-muted)", background: "none", border: "none", cursor: "pointer" }}>
               Sari peste
             </button>
-            {isLast ? (
-              <button type="button" onClick={close} className="btn btn-primary text-sm">
-                Am înțeles
-              </button>
-            ) : (
-              <button type="button" onClick={next} className="btn btn-primary text-sm">
-                Continuă
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={isLast ? close : next}
+              style={{
+                fontSize: 13, fontWeight: 500,
+                background: "var(--sage)", color: "#fff",
+                border: "none", borderRadius: "var(--r-md)",
+                padding: "8px 16px", cursor: "pointer",
+              }}
+            >
+              {isLast ? "Am înțeles" : "Continuă"}
+            </button>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

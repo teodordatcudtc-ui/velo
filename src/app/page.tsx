@@ -214,7 +214,10 @@ export default async function HomePage() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, color: "rgba(0,0,0,.45)", marginBottom: 6, textAlign: "center" }}>Velo · Reminder automat</div>
                     <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 8 }}>
-                      <div className="demo-msg-bubble">Bună ziua! Documentele pentru Februarie 2025 nu au fost primite încă. Vă rugăm să le trimiteți până pe 15 Mar →</div>
+                      <div className="demo-msg-bubble">
+                        Bună ziua! Contabilul vă solicită documentele pentru luna curentă. Încărcați aici (fără cont):{" "}
+                        <span style={{ color: "var(--sage)", fontWeight: 600, textDecoration: "underline" }}>velo.ro/upload/exemplu-client</span>
+                      </div>
                     </div>
                     <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, alignItems: "flex-end" }}>
                       <div className="demo-msg-bubble outgoing">Trimis acum! Mulțumesc 🙏</div>

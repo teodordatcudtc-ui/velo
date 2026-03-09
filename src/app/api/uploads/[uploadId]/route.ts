@@ -35,37 +35,26 @@ export async function GET(
   const download = new URL(request.url).searchParams.get("download") === "1";
   const admin = createAdminClient();
 
-  if (download) {
-    const { data: blob, error: downloadError } = await admin.storage
-      .from(BUCKET)
-      .download(upload.file_path);
-
-    if (downloadError || !blob) {
-      return NextResponse.json(
-        { error: downloadError?.message ?? "Eroare la descărcare." },
-        { status: 500 }
-      );
-    }
-
-    const safeName = upload.file_name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    return new NextResponse(blob, {
-      headers: {
-        "Content-Type": blob.type || "application/octet-stream",
-        "Content-Disposition": `attachment; filename="${safeName}"`,
-      },
-    });
-  }
-
-  const { data: signed, error: signedError } = await admin.storage
+  const { data: blob, error: downloadError } = await admin.storage
     .from(BUCKET)
-    .createSignedUrl(upload.file_path, SIGNED_URL_EXPIRY);
+    .download(upload.file_path);
 
-  if (signedError || !signed?.signedUrl) {
+  if (downloadError || !blob) {
     return NextResponse.json(
-      { error: signedError?.message ?? "Eroare la generare link." },
+      { error: downloadError?.message ?? "Eroare la încărcare document." },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ url: signed.signedUrl });
+  const safeName = upload.file_name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const disposition = download
+    ? `attachment; filename="${safeName}"`
+    : "inline";
+
+  return new NextResponse(blob, {
+    headers: {
+      "Content-Type": blob.type || "application/octet-stream",
+      "Content-Disposition": disposition,
+    },
+  });
 }

@@ -2,8 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { hasPremiumAccess } from "@/lib/subscription";
 
-type AccountantRow = { id: string; name: string };
+type AccountantRow = {
+  id: string;
+  name: string;
+  subscription_plan: string | null;
+  premium_until: string | null;
+};
 type ClientReminderRow = { id: string; name: string; email: string | null; unique_token: string };
 
 export const dynamic = "force-dynamic";
@@ -35,7 +41,7 @@ export async function POST() {
 
   const { data: accountant, error: accError } = await admin
     .from("accountants")
-    .select("id, name")
+    .select("id, name, subscription_plan, premium_until")
     .eq("id", user.id)
     .single();
 
@@ -44,6 +50,13 @@ export async function POST() {
   }
 
   const acc = accountant as AccountantRow;
+
+  if (!hasPremiumAccess(accountant as AccountantRow)) {
+    return NextResponse.json(
+      { error: "Funcția de reminder automat este disponibilă doar pe planul Premium." },
+      { status: 403 }
+    );
+  }
 
   const { data: clients } = await admin
     .from("clients")

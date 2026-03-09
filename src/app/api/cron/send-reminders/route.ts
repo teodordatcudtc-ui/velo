@@ -11,6 +11,32 @@ type ClientReminderRow = {
   accountants: { name: string } | null;
 };
 
+type RequestReminderRow = {
+  id: string;
+  client_id: string;
+  month: number;
+  year: number;
+  sent_at: string;
+  message: string | null;
+  doc_type_names: string[] | null;
+  clients:
+    | {
+        id: string;
+        name: string;
+        email: string | null;
+        unique_token: string;
+        accountants: { name: string } | null;
+      }
+    | {
+        id: string;
+        name: string;
+        email: string | null;
+        unique_token: string;
+        accountants: { name: string } | null;
+      }[]
+    | null;
+};
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
@@ -94,10 +120,94 @@ export async function GET(request: Request) {
     }
   }
 
+  // 3-day reminders for explicitly created document requests
+  const threeDaysAgoIso = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: pendingReqs, error: reqErr } = await supabase
+    .from("document_requests")
+    .select(
+      "id, client_id, month, year, sent_at, message, doc_type_names, clients(id, name, email, unique_token, accountants(name))"
+    )
+    .eq("reminder_after_3_days", true)
+    .is("reminder_sent_at", null)
+    .lte("sent_at", threeDaysAgoIso);
+
+  if (reqErr) {
+    return NextResponse.json({
+      ok: true,
+      sent: totalSent,
+      clients: withEmail.length,
+      requestRemindersSent: 0,
+      errors: [`document_requests: ${reqErr.message}`, ...errors],
+    });
+  }
+
+  let requestRemindersSent = 0;
+  const reqRows = (pendingReqs ?? []) as RequestReminderRow[];
+  for (const req of reqRows) {
+    const clientRaw = req.clients;
+    const client = Array.isArray(clientRaw) ? clientRaw[0] : clientRaw;
+    if (!client?.email?.trim()) continue;
+
+    // send reminder only when there are zero uploads for that requested period
+    const { count: uploadCount, error: uploadsErr } = await supabase
+      .from("uploads")
+      .select("*", { count: "exact", head: true })
+      .eq("client_id", req.client_id)
+      .eq("month", req.month)
+      .eq("year", req.year);
+    if (uploadsErr) {
+      errors.push(`uploads check ${req.id}: ${uploadsErr.message}`);
+      continue;
+    }
+    if ((uploadCount ?? 0) > 0) continue;
+
+    const accName = client.accountants?.name ?? "Contabilul tău";
+    const uploadLink = `${baseUrl}/upload/${client.unique_token}`;
+    const docsList =
+      req.doc_type_names && req.doc_type_names.length > 0
+        ? `<ul>${req.doc_type_names.map((d) => `<li>${d}</li>`).join("")}</ul>`
+        : "";
+    const customMessage = req.message?.trim()
+      ? `<p><strong>Mesaj inițial:</strong> ${req.message.trim()}</p>`
+      : "";
+
+    const { error: sendError } = await resend.emails.send({
+      from: fromEmail,
+      to: client.email,
+      subject: `Reminder documente – ${accName}`,
+      html: `
+        <p>Bună ziua, ${client.name},</p>
+        <p>Este un reminder că încă așteptăm documentele solicitate de <strong>${accName}</strong>.</p>
+        ${docsList}
+        ${customMessage}
+        <p>Le puteți încărca aici:</p>
+        <p><a href="${uploadLink}" style="color: #4b7a6e; font-weight: 600;">${uploadLink}</a></p>
+        <p>Mulțumim,<br/>Echipa Velo</p>
+      `,
+    });
+
+    if (sendError) {
+      errors.push(`${client.email}: ${sendError.message}`);
+      continue;
+    }
+
+    const { error: markErr } = await (supabase as any)
+      .from("document_requests")
+      .update({ reminder_sent_at: new Date().toISOString() })
+      .eq("id", req.id);
+    if (markErr) {
+      errors.push(`mark reminder ${req.id}: ${markErr.message}`);
+      continue;
+    }
+
+    requestRemindersSent++;
+  }
+
   return NextResponse.json({
     ok: true,
     sent: totalSent,
     clients: withEmail.length,
+    requestRemindersSent,
     errors: errors.length > 0 ? errors : undefined,
   });
 }

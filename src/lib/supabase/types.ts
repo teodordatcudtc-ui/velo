@@ -16,6 +16,8 @@ export interface Database {
           created_at: string;
           reminder_enabled: boolean;
           reminder_day_of_month: number | null;
+          subscription_plan: "standard" | "premium";
+          premium_until: string | null;
         };
         Insert: {
           id: string;
@@ -23,6 +25,8 @@ export interface Database {
           created_at?: string;
           reminder_enabled?: boolean;
           reminder_day_of_month?: number | null;
+          subscription_plan?: "standard" | "premium";
+          premium_until?: string | null;
         };
         Update: {
           id?: string;
@@ -30,6 +34,8 @@ export interface Database {
           created_at?: string;
           reminder_enabled?: boolean;
           reminder_day_of_month?: number | null;
+          subscription_plan?: "standard" | "premium";
+          premium_until?: string | null;
         };
       };
       clients: {
@@ -43,6 +49,7 @@ export interface Database {
           created_at: string;
           reminder_enabled: boolean;
           reminder_day_of_month: number | null;
+          archived: boolean;
         };
         Insert: {
           id?: string;
@@ -54,6 +61,7 @@ export interface Database {
           created_at?: string;
           reminder_enabled?: boolean;
           reminder_day_of_month?: number | null;
+          archived?: boolean;
         };
         Update: {
           accountant_id?: string;
@@ -64,6 +72,7 @@ export interface Database {
           created_at?: string;
           reminder_enabled?: boolean;
           reminder_day_of_month?: number | null;
+          archived?: boolean;
         };
       };
       document_types: {
@@ -114,6 +123,61 @@ export interface Database {
           month?: number;
           year?: number;
           created_at?: string;
+        };
+      };
+      early_access_codes: {
+        Row: {
+          code: string;
+          active: boolean;
+          valid_days: number;
+          max_uses: number;
+          used_count: number;
+          expires_at: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          code: string;
+          active?: boolean;
+          valid_days?: number;
+          max_uses?: number;
+          used_count?: number;
+          expires_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          code?: string;
+          active?: boolean;
+          valid_days?: number;
+          max_uses?: number;
+          used_count?: number;
+          expires_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+      };
+      early_access_redemptions: {
+        Row: {
+          id: string;
+          code: string;
+          accountant_id: string;
+          redeemed_at: string;
+          premium_until: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          accountant_id: string;
+          redeemed_at?: string;
+          premium_until: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          accountant_id?: string;
+          redeemed_at?: string;
+          premium_until?: string;
         };
       };
     };

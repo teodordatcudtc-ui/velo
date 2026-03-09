@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { UploadRow, ClientOption, DocTypeOption } from "./page";
-import { useToast } from "@/app/components/ToastProvider";
 
 const MONTH_NAMES = [
   "Ian.", "Feb.", "Mar.", "Apr.", "Mai", "Iun.",
@@ -10,6 +9,103 @@ const MONTH_NAMES = [
 ];
 
 type SortBy = "date" | "client" | "type" | "month";
+type Option = { value: string; label: string };
+
+function FilterDropdown({
+  label,
+  value,
+  options,
+  onChange,
+  width = 160,
+}: {
+  label: string;
+  value: string;
+  options: Option[];
+  onChange: (value: string) => void;
+  width?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const selected = options.find((o) => o.value === value);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  return (
+    <div ref={rootRef} style={{ position: "relative", width, minWidth: width }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="dash-input"
+        style={{
+          width: "100%",
+          maxWidth: width,
+          padding: "6px 10px",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          fontSize: 12,
+          cursor: "pointer",
+        }}
+      >
+        <span>{selected?.label ?? label}</span>
+        <span style={{ fontSize: 10, color: "var(--ink-muted)" }}>{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            width: "100%",
+            maxHeight: 220,
+            overflowY: "auto",
+            border: "1px solid var(--paper-3)",
+            borderRadius: "var(--r-md)",
+            background: "#fff",
+            boxShadow: "var(--shadow-md)",
+            zIndex: 40,
+            padding: 6,
+          }}
+        >
+          {options.map((opt) => (
+            <button
+              key={opt.value || "__all"}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                border: "none",
+                background:
+                  opt.value === value ? "var(--sage-xlight)" : "transparent",
+                color: opt.value === value ? "var(--sage)" : "var(--ink)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                fontSize: 12.5,
+                fontWeight: opt.value === value ? 600 : 500,
+                cursor: "pointer",
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function DocumenteList({
   uploads,
@@ -20,7 +116,6 @@ export function DocumenteList({
   clientOptions: ClientOption[];
   docTypeOptions: DocTypeOption[];
 }) {
-  const toast = useToast();
   const [filterClient, setFilterClient] = useState<string>("");
   const [filterDocType, setFilterDocType] = useState<string>("");
   const [filterMonth, setFilterMonth] = useState<string>("");
@@ -41,6 +136,23 @@ export function DocumenteList({
     const set = new Set(uploads.map((u) => u.year));
     return Array.from(set).sort((a, b) => b - a);
   }, [uploads]);
+
+  const clientFilterOptions = useMemo<Option[]>(
+    () => [{ value: "", label: "Client" }, ...clientOptions.map((c) => ({ value: c.id, label: c.name }))],
+    [clientOptions]
+  );
+  const docTypeFilterOptions = useMemo<Option[]>(
+    () => [{ value: "", label: "Tip" }, ...docTypeOptions.map((d) => ({ value: d.id, label: d.name }))],
+    [docTypeOptions]
+  );
+  const monthFilterOptions = useMemo<Option[]>(
+    () => [{ value: "", label: "Lună" }, ...MONTH_NAMES.map((name, i) => ({ value: String(i + 1), label: name }))],
+    []
+  );
+  const yearFilterOptions = useMemo<Option[]>(
+    () => [{ value: "", label: "An" }, ...years.map((y) => ({ value: String(y), label: String(y) }))],
+    [years]
+  );
 
   const filtered = useMemo(() => {
     return uploads.filter((u) => {
@@ -89,15 +201,8 @@ export function DocumenteList({
     }
   }
 
-  async function openUpload(id: string) {
-    try {
-      const res = await fetch(`/api/uploads/${id}`);
-      const data = await res.json();
-      if (data?.url) window.open(data.url, "_blank");
-      else toast.error(data?.error ?? "Eroare la deschidere.");
-    } catch {
-      toast.error("Eroare la deschidere.");
-    }
+  function openUpload(id: string) {
+    window.open(`/api/uploads/${id}`, "_blank");
   }
 
   if (uploads.length === 0) {
@@ -115,54 +220,34 @@ export function DocumenteList({
         <span className="text-xs font-medium text-[var(--ink-muted)] shrink-0">
           Filtre:
         </span>
-        <select
+        <FilterDropdown
+          label="Client"
           value={filterClient}
-          onChange={(e) => setFilterClient(e.target.value)}
-          className="dash-input !w-[160px] !max-w-[160px] shrink-0 text-xs py-1.5 px-2 box-border"
-        >
-          <option value="">Client</option>
-          {clientOptions.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select
+          options={clientFilterOptions}
+          onChange={setFilterClient}
+          width={160}
+        />
+        <FilterDropdown
+          label="Tip"
           value={filterDocType}
-          onChange={(e) => setFilterDocType(e.target.value)}
-          className="dash-input !w-[110px] !max-w-[110px] shrink-0 text-xs py-1.5 px-2 box-border"
-        >
-          <option value="">Tip</option>
-          {docTypeOptions.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-        <select
+          options={docTypeFilterOptions}
+          onChange={setFilterDocType}
+          width={120}
+        />
+        <FilterDropdown
+          label="Lună"
           value={filterMonth}
-          onChange={(e) => setFilterMonth(e.target.value)}
-          className="dash-input !w-[82px] !max-w-[82px] shrink-0 text-xs py-1.5 px-2 box-border"
-        >
-          <option value="">Lună</option>
-          {MONTH_NAMES.map((name, i) => (
-            <option key={i} value={i + 1}>
-              {name}
-            </option>
-          ))}
-        </select>
-        <select
+          options={monthFilterOptions}
+          onChange={setFilterMonth}
+          width={92}
+        />
+        <FilterDropdown
+          label="An"
           value={filterYear}
-          onChange={(e) => setFilterYear(e.target.value)}
-          className="dash-input !w-[88px] !max-w-[88px] shrink-0 text-xs py-1.5 px-2 box-border"
-        >
-          <option value="">An</option>
-          {years.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+          options={yearFilterOptions}
+          onChange={setFilterYear}
+          width={96}
+        />
         <span className="text-xs text-[var(--ink-muted)] shrink-0 ml-0.5">
           {sorted.length} doc.
         </span>

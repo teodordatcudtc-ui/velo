@@ -296,21 +296,7 @@ export function ClientCard({
                       <>
                         <button
                           type="button"
-                          onClick={async () => {
-                            try {
-                              const res = await fetch(`/api/uploads/${upload.id}`);
-                              const data = await res.json();
-                              if (data?.url) window.open(data.url, "_blank");
-                              else {
-                                const msg = data?.error ?? "Eroare la deschidere.";
-                                setError(msg);
-                                toast.error(msg);
-                              }
-                            } catch {
-                              setError("Eroare la deschidere.");
-                              toast.error("Eroare la deschidere.");
-                            }
-                          }}
+                          onClick={() => window.open(`/api/uploads/${upload.id}`, "_blank")}
                           className="text-[var(--sage)] hover:underline text-xs"
                         >
                           Deschide
@@ -429,21 +415,7 @@ export function ClientCard({
                         <span className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={async () => {
-                              try {
-                                const res = await fetch(`/api/uploads/${u.id}`);
-                                const data = await res.json();
-                                if (data?.url) window.open(data.url, "_blank");
-                                else {
-                                  const msg = data?.error ?? "Eroare la deschidere.";
-                                  setError(msg);
-                                  toast.error(msg);
-                                }
-                              } catch {
-                                setError("Eroare la deschidere.");
-                                toast.error("Eroare la deschidere.");
-                              }
-                            }}
+                            onClick={() => window.open(`/api/uploads/${u.id}`, "_blank")}
                             className="text-[var(--sage)] hover:underline text-xs"
                           >
                             Deschide
