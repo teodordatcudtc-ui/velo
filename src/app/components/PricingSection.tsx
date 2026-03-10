@@ -82,7 +82,9 @@ export default function PricingSection() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
-        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + "#pricing")}`;
+        const interval = annual ? "annual" : "monthly";
+        const checkoutUrl = `/checkout?plan=${encodeURIComponent(planId)}&interval=${encodeURIComponent(interval)}`;
+        window.location.href = `/login?redirect=${encodeURIComponent(checkoutUrl)}`;
         return;
       }
       if (!res.ok) {
