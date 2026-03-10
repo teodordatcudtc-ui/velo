@@ -150,12 +150,24 @@ export async function setSubscriptionPlanForTesting(formData: FormData) {
   if (!user) return { error: "Neautentificat" };
 
   const planRaw = (formData.get("plan") as string | null) ?? "";
-  const plan = planRaw === "premium" ? "premium" : "standard";
+  const plan =
+    planRaw === "premium"
+      ? "premium"
+      : planRaw === "none"
+        ? "none"
+        : "standard";
+
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  const futureDate = oneYearFromNow.toISOString().slice(0, 10);
+  const pastDate = "2000-01-01";
 
   const updatePayload =
-    plan === "standard"
-      ? { subscription_plan: "standard" as const, premium_until: null as string | null }
-      : { subscription_plan: "premium" as const };
+    plan === "premium"
+      ? { subscription_plan: "premium" as const, premium_until: futureDate }
+      : plan === "none"
+        ? { subscription_plan: "standard" as const, premium_until: pastDate }
+        : { subscription_plan: "standard" as const, premium_until: null as string | null };
 
   const { error } = await supabase
     .from("accountants")

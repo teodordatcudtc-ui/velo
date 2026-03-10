@@ -38,9 +38,12 @@ export function PlanAccessCard({
   const [switchingPlan, setSwitchingPlan] = useState(false);
 
   const statusText = useMemo(() => {
-    if (subscriptionPlan === "premium") return "Premium activ";
+    if (subscriptionPlan === "premium" && premiumUntil && new Date(premiumUntil) > new Date())
+      return "Premium activ";
     if (isPremium && premiumUntil) return `Early access activ până la ${formatDate(premiumUntil)}`;
-    return "Standard activ";
+    if (premiumUntil && new Date(premiumUntil) <= new Date()) return "Fără plan activ (expirat)";
+    if (subscriptionPlan === "standard" && !premiumUntil) return "Standard activ";
+    return "Fără plan activ";
   }, [isPremium, premiumUntil, subscriptionPlan]);
 
   async function handleRedeem(formData: FormData) {
@@ -98,11 +101,13 @@ export function PlanAccessCard({
         return;
       }
 
-      toast.success(
+      const msg =
         result?.plan === "premium"
           ? "Plan schimbat pe Premium (test)."
-          : "Plan schimbat pe Standard (test)."
-      );
+          : result?.plan === "none"
+            ? "Plan schimbat pe Fără pachet (test)."
+            : "Plan schimbat pe Standard (test).";
+      toast.success(msg);
     } catch {
       toast.error("Nu am putut salva schimbarea de plan. Încearcă din nou.");
     } finally {
@@ -128,12 +133,17 @@ export function PlanAccessCard({
         <form action={handlePlanSwitch} className="flex items-center gap-2">
           <select
             name="plan"
-            defaultValue={subscriptionPlan}
+            defaultValue={
+              premiumUntil && new Date(premiumUntil) <= new Date()
+                ? "none"
+                : subscriptionPlan
+            }
             className="dash-input"
             style={{ minWidth: 180 }}
           >
             <option value="standard">Standard</option>
             <option value="premium">Premium</option>
+            <option value="none">Fără pachet</option>
           </select>
           <button type="submit" className="btn btn-secondary" disabled={switchingPlan}>
             {switchingPlan ? "Se salvează..." : "Aplică planul"}
