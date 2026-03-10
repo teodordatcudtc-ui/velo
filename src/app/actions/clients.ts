@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { generateUploadToken } from "@/lib/upload-token";
 import { customAlphabet } from "nanoid";
 import { Resend } from "resend";
-import { hasPremiumAccess, STANDARD_CLIENT_LIMIT } from "@/lib/subscription";
+import { getClientLimit, hasPremiumAccess } from "@/lib/subscription";
 
 const fallbackAlphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -160,7 +160,8 @@ export async function addClient(formData: FormData) {
 
   const accountant = await getAccountantPlanInfo(supabase, user.id);
   const isPremium = hasPremiumAccess(accountant);
-  if (!isPremium) {
+  const limit = getClientLimit(accountant);
+  if (!isPremium && limit != null) {
     const { count, error: countError } = await supabase
       .from("clients")
       .select("*", { count: "exact", head: true })
@@ -168,11 +169,12 @@ export async function addClient(formData: FormData) {
       .eq("archived", false);
 
     if (countError) return { error: countError.message };
-    if ((count ?? 0) >= STANDARD_CLIENT_LIMIT) {
-      return {
-        error:
-          "Ai atins limita de 40 clienți pentru planul Standard. Upgrade la Premium pentru clienți nelimitați.",
-      };
+    if ((count ?? 0) >= limit) {
+      const msg =
+        limit === 5
+          ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
+          : "Ai atins limita de 40 clienți pentru planul Standard. Upgrade la Premium pentru clienți nelimitați.";
+      return { error: msg };
     }
   }
 
@@ -222,9 +224,10 @@ export async function importClientsFromCsv(csvText: string) {
 
   const accountant = await getAccountantPlanInfo(supabase, user.id);
   const isPremium = hasPremiumAccess(accountant);
+  const limit = getClientLimit(accountant);
 
   let availableSlots = Number.POSITIVE_INFINITY;
-  if (!isPremium) {
+  if (!isPremium && limit != null) {
     const { count, error: countError } = await supabase
       .from("clients")
       .select("*", { count: "exact", head: true })
@@ -232,12 +235,13 @@ export async function importClientsFromCsv(csvText: string) {
       .eq("archived", false);
 
     if (countError) return { error: countError.message };
-    availableSlots = Math.max(0, STANDARD_CLIENT_LIMIT - (count ?? 0));
+    availableSlots = Math.max(0, limit - (count ?? 0));
     if (availableSlots === 0) {
-      return {
-        error:
-          "Ai atins limita de 40 clienți pentru planul Standard. Upgrade la Premium pentru clienți nelimitați.",
-      };
+      const msg =
+        limit === 5
+          ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
+          : "Ai atins limita de 40 clienți pentru planul Standard. Upgrade la Premium pentru clienți nelimitați.";
+      return { error: msg };
     }
   }
 
@@ -268,7 +272,7 @@ export async function importClientsFromCsv(csvText: string) {
     imported,
     failed,
     skippedByLimit,
-    limit: isPremium ? null : STANDARD_CLIENT_LIMIT,
+    limit: getClientLimit(accountant),
     errors,
   };
 }
@@ -625,7 +629,8 @@ export async function restoreClient(clientId: string) {
 
   const accountant = await getAccountantPlanInfo(supabase, user.id);
   const isPremium = hasPremiumAccess(accountant);
-  if (!isPremium) {
+  const limit = getClientLimit(accountant);
+  if (!isPremium && limit != null) {
     const { count, error: countError } = await supabase
       .from("clients")
       .select("*", { count: "exact", head: true })
@@ -633,11 +638,12 @@ export async function restoreClient(clientId: string) {
       .eq("archived", false);
 
     if (countError) return { error: countError.message };
-    if ((count ?? 0) >= STANDARD_CLIENT_LIMIT) {
-      return {
-        error:
-          "Nu poți restaura clientul: ai deja 40 clienți activi pe planul Standard.",
-      };
+    if ((count ?? 0) >= limit) {
+      const msg =
+        limit === 5
+          ? "Nu poți restaura: planul gratuit permite maxim 5 clienți."
+          : "Nu poți restaura clientul: ai deja 40 clienți activi pe planul Standard.";
+      return { error: msg };
     }
   }
 

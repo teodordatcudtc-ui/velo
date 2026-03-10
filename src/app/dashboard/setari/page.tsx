@@ -20,7 +20,11 @@ export default async function SetariPage() {
 
   const isPremium = hasPremiumAccess(accountant);
   const subscriptionPlan =
-    accountant?.subscription_plan === "premium" ? "premium" : "standard";
+    accountant?.subscription_plan === "premium"
+      ? "premium"
+      : accountant?.subscription_plan === "none"
+        ? "none"
+        : "standard";
   const premiumUntil = accountant?.premium_until ?? null;
   const canGenerateCodes =
     !!user.email &&

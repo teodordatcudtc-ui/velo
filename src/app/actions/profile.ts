@@ -160,13 +160,12 @@ export async function setSubscriptionPlanForTesting(formData: FormData) {
   const oneYearFromNow = new Date();
   oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
   const futureDate = oneYearFromNow.toISOString().slice(0, 10);
-  const pastDate = "2000-01-01";
 
   const updatePayload =
     plan === "premium"
       ? { subscription_plan: "premium" as const, premium_until: futureDate }
       : plan === "none"
-        ? { subscription_plan: "standard" as const, premium_until: pastDate }
+        ? { subscription_plan: "none" as const, premium_until: null as string | null }
         : { subscription_plan: "standard" as const, premium_until: null as string | null };
 
   const { error } = await supabase

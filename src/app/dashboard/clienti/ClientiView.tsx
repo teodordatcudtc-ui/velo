@@ -345,7 +345,11 @@ export function ClientiView({
 
   function openAddClientModal() {
     if (isAtClientLimit) {
-      toast.info("Ai atins limita de 40 clienți pe Standard. Treci pe Premium pentru clienți nelimitați.");
+      toast.info(
+        (clientLimit ?? 40) === 5
+          ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
+          : "Ai atins limita de 40 clienți pe Standard. Treci pe Premium pentru clienți nelimitați."
+      );
       return;
     }
     setModalOpen(true);
@@ -1269,7 +1273,9 @@ export function ClientiView({
             </div>
             {isAtClientLimit && (
               <p style={{ fontSize: 12, color: "var(--ink-muted)", marginTop: 8 }}>
-                Ai atins limita de 40 clienți pentru planul Standard.
+                {(clientLimit ?? 40) === 5
+                  ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
+                  : "Ai atins limita de 40 clienți pentru planul Standard."}
               </p>
             )}
           </form>

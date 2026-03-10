@@ -16,7 +16,7 @@ export interface Database {
           created_at: string;
           reminder_enabled: boolean;
           reminder_day_of_month: number | null;
-          subscription_plan: "standard" | "premium";
+          subscription_plan: "none" | "standard" | "premium";
           premium_until: string | null;
         };
         Insert: {
@@ -25,7 +25,7 @@ export interface Database {
           created_at?: string;
           reminder_enabled?: boolean;
           reminder_day_of_month?: number | null;
-          subscription_plan?: "standard" | "premium";
+          subscription_plan?: "none" | "standard" | "premium";
           premium_until?: string | null;
         };
         Update: {
@@ -34,7 +34,7 @@ export interface Database {
           created_at?: string;
           reminder_enabled?: boolean;
           reminder_day_of_month?: number | null;
-          subscription_plan?: "standard" | "premium";
+          subscription_plan?: "none" | "standard" | "premium";
           premium_until?: string | null;
         };
       };

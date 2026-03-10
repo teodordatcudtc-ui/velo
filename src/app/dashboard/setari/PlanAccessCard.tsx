@@ -10,7 +10,7 @@ import { useToast } from "@/app/components/ToastProvider";
 
 type Props = {
   isPremium: boolean;
-  subscriptionPlan: "standard" | "premium";
+  subscriptionPlan: "none" | "standard" | "premium";
   premiumUntil: string | null;
   canGenerateCodes?: boolean;
 };
@@ -41,6 +41,7 @@ export function PlanAccessCard({
     if (subscriptionPlan === "premium" && premiumUntil && new Date(premiumUntil) > new Date())
       return "Premium activ";
     if (isPremium && premiumUntil) return `Early access activ până la ${formatDate(premiumUntil)}`;
+    if (subscriptionPlan === "none") return "Plan gratuit (5 clienți)";
     if (premiumUntil && new Date(premiumUntil) <= new Date()) return "Fără plan activ (expirat)";
     if (subscriptionPlan === "standard" && !premiumUntil) return "Standard activ";
     return "Fără plan activ";
@@ -122,7 +123,9 @@ export function PlanAccessCard({
       <div className="text-sm text-[var(--ink-muted)] mb-4">
         {isPremium
           ? "Ai clienți nelimitați și acces la funcțiile Premium."
-          : "Plan Standard: maxim 40 clienți activi. Upgrade la Premium pentru clienți nelimitați."}
+          : subscriptionPlan === "none"
+            ? "Plan gratuit: maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
+            : "Plan Standard: maxim 40 clienți activi. Upgrade la Premium pentru clienți nelimitați."}
       </div>
 
       <div className="pt-4 mb-4 border-t border-[var(--paper-3)]">
@@ -133,17 +136,13 @@ export function PlanAccessCard({
         <form action={handlePlanSwitch} className="flex items-center gap-2">
           <select
             name="plan"
-            defaultValue={
-              premiumUntil && new Date(premiumUntil) <= new Date()
-                ? "none"
-                : subscriptionPlan
-            }
+            defaultValue={subscriptionPlan}
             className="dash-input"
-            style={{ minWidth: 180 }}
+            style={{ minWidth: 200 }}
           >
-            <option value="standard">Standard</option>
-            <option value="premium">Premium</option>
-            <option value="none">Fără pachet</option>
+            <option value="none">Plan gratuit (5 clienți)</option>
+            <option value="standard">Standard (40 clienți)</option>
+            <option value="premium">Premium (nelimitat)</option>
           </select>
           <button type="submit" className="btn btn-secondary" disabled={switchingPlan}>
             {switchingPlan ? "Se salvează..." : "Aplică planul"}
