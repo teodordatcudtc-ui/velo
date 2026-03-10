@@ -88,6 +88,10 @@ export function ClientiOnboardingTutorial({
     if (typeof window === "undefined") return;
 
     try {
+      if (localStorage.getItem(storageKey) === "1") return;
+    } catch {}
+
+    try {
       if (localStorage.getItem(continueKey) === "1") {
         localStorage.removeItem(continueKey);
         setStep(3);
@@ -99,23 +103,26 @@ export function ClientiOnboardingTutorial({
     if (hasAnyClients) {
       return;
     }
-    try {
-      if (localStorage.getItem(storageKey) === "1") return;
-    } catch {}
     setOpen(true);
   }, [continueKey, hasAnyClients, storageKey]);
 
   useEffect(() => {
     if (!startSignal) return;
+    try {
+      if (localStorage.getItem(storageKey) === "1") return;
+    } catch {}
     setStep(0);
     setOpen(true);
-  }, [startSignal]);
+  }, [startSignal, storageKey]);
 
   useEffect(() => {
     if (!continueSignal) return;
+    try {
+      if (localStorage.getItem(storageKey) === "1") return;
+    } catch {}
     setStep((prev) => (prev < 3 ? 3 : prev));
     setOpen(true);
-  }, [continueSignal]);
+  }, [continueSignal, storageKey]);
 
   useEffect(() => {
     if (!open) return;
