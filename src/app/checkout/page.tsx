@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const searchParams = useSearchParams();
   const plan = searchParams.get("plan") ?? "";
   const interval = searchParams.get("interval") ?? "monthly";
@@ -83,5 +83,21 @@ export default function CheckoutPage() {
         <p className="text-[var(--ink)] font-500">Se deschide Stripe...</p>
       </div>
     </main>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center px-4 bg-[var(--paper)]">
+          <div className="text-center">
+            <p className="text-[var(--ink)] font-500">Se încarcă...</p>
+          </div>
+        </main>
+      }
+    >
+      <CheckoutContent />
+    </Suspense>
   );
 }
