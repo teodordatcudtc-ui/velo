@@ -6,13 +6,12 @@ export type AccountantSubscriptionRow = {
   premium_until?: string | null;
 };
 
-/** Acces la funcții Premium (clienți nelimitați, reminder etc). Expiră la premium_until. */
+/** Acces la funcții Premium (clienți nelimitați, reminder etc). Include early access: dacă premium_until e în viitor, ai acces indiferent de subscription_plan. */
 export function hasPremiumAccess(
   accountant: AccountantSubscriptionRow | null | undefined,
   now: Date = new Date()
 ): boolean {
   if (!accountant) return false;
-  if (accountant.subscription_plan !== "premium") return false;
   if (!accountant.premium_until) return false;
   return new Date(accountant.premium_until).getTime() > now.getTime();
 }

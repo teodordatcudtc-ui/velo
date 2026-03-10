@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { SidebarNav } from "./SidebarNav";
 import styles from "./DashboardShell.module.css";
 
+const FIRST_VISIT_KEY = "velo_dashboard_first_visit_";
+
 type Props = {
+  userId: string;
   name: string;
   email: string;
   initial: string;
@@ -16,6 +19,7 @@ type Props = {
 };
 
 export function DashboardLayoutClient({
+  userId,
   name,
   email,
   initial,
@@ -25,10 +29,24 @@ export function DashboardLayoutClient({
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !pathname?.startsWith("/dashboard")) return;
+    if (pathname === "/dashboard/clienti") return;
+    try {
+      const key = `${FIRST_VISIT_KEY}${userId}`;
+      if (localStorage.getItem(key) === "1") return;
+      localStorage.setItem(key, "1");
+      router.replace("/dashboard/clienti");
+    } catch {
+      // ignore localStorage errors
+    }
+  }, [pathname, userId, router]);
 
   return (
     <div className={`${styles.root} ${sidebarOpen ? styles.sidebarOpen : ""}`}>

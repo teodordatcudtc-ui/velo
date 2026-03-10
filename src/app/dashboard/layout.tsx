@@ -37,6 +37,7 @@ export default async function DashboardLayout({
 
   return (
     <DashboardLayoutClient
+      userId={user.id}
       name={name}
       email={email}
       initial={initial}

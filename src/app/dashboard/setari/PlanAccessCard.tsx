@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   createEarlyAccessCode,
   redeemEarlyAccessCode,
@@ -31,6 +32,7 @@ export function PlanAccessCard({
   canGenerateCodes = false,
 }: Props) {
   const toast = useToast();
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [lastSuccessText, setLastSuccessText] = useState<string | null>(null);
   const [creatingCode, setCreatingCode] = useState(false);
@@ -63,6 +65,7 @@ export function PlanAccessCard({
         : "Cod aplicat cu succes.";
       setLastSuccessText(text);
       toast.success(text);
+      router.refresh();
     } catch {
       toast.error("Nu am putut valida codul acum. Verifică conexiunea și încearcă din nou.");
     } finally {

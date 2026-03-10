@@ -740,7 +740,9 @@ export function ClientiView({
         <div style={{ marginLeft: 12, fontSize: 12, color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
           {isPremium
             ? "Plan Premium · clienți nelimitați"
-            : `Plan Standard · ${initialClients.length}/${clientLimit ?? 30} clienți`}
+            : (clientLimit ?? 40) === 5
+              ? `Plan gratuit · ${initialClients.length}/5 clienți`
+              : `Plan Standard · ${initialClients.length}/${clientLimit ?? 40} clienți`}
         </div>
         <div className={styles.topbarSpacer} />
         <div className={styles.topbarSearch}>
