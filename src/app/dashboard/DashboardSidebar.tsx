@@ -58,7 +58,7 @@ export function DashboardSidebar({ name, email, signOut, sidebarStyle }: Props) 
             <line x1="9" y1="17" x2="13" y2="17" />
           </svg>
         </div>
-        <span className={styles.logoText}>Vel<em>o</em></span>
+        <span className={styles.logoText}>Vel<em>lo</em></span>
       </Link>
 
       {/* Mai sus: cele 3 butoane (Dashboard, Statistici, Setări) */}

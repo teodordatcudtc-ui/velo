@@ -54,12 +54,12 @@ function formatDocDate(createdAt: string): string {
   return `${day} ${month} ${year} ${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
-function fileIcon(fileName: string): { emoji: string; label: string; bg: string } {
+function fileIcon(fileName: string): { kind: "pdf" | "image" | "sheet" | "doc"; label: string; bg: string } {
   const ext = (fileName.split(".").pop() ?? "").toLowerCase();
-  if (ext === "pdf") return { emoji: "📄", label: "PDF", bg: "var(--terra-light)" };
-  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return { emoji: "🖼️", label: "IMG", bg: "#d6eaf4" };
-  if (["xlsx", "xls", "csv"].includes(ext)) return { emoji: "📊", label: ext.toUpperCase(), bg: "#dcf5e8" };
-  return { emoji: "📄", label: ext.toUpperCase() || "DOC", bg: "var(--paper-2)" };
+  if (ext === "pdf") return { kind: "pdf", label: "PDF", bg: "var(--terra-light)" };
+  if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return { kind: "image", label: "IMG", bg: "#d6eaf4" };
+  if (["xlsx", "xls", "csv"].includes(ext)) return { kind: "sheet", label: ext.toUpperCase(), bg: "#dcf5e8" };
+  return { kind: "doc", label: ext.toUpperCase() || "DOC", bg: "var(--paper-2)" };
 }
 
 function initials(name: string): string {
@@ -786,11 +786,18 @@ export function ClientiView({
       </div>
 
       {/* PAGE CONTENT */}
-      <div className={styles.pageContent}>
+        <div className={styles.pageContent}>
         {/* STATS */}
         <div className={styles.statsRow}>
           <div className={styles.statCard}>
-            <div className={`${styles.statIcon} ${styles.siSage}`}>👥</div>
+            <div className={`${styles.statIcon} ${styles.siSage}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M8 21v-2a4 4 0 0 1 3-3.87" />
+                <circle cx="9" cy="7" r="4" />
+                <circle cx="17" cy="7" r="4" />
+              </svg>
+            </div>
             <div>
               <div className={styles.statLabel}>Total clienți</div>
               <div className={styles.statVal}>{totalClients}</div>
@@ -798,7 +805,12 @@ export function ClientiView({
             </div>
           </div>
           <div className={styles.statCard}>
-            <div className={`${styles.statIcon} ${styles.siTerra}`}>⏰</div>
+            <div className={`${styles.statIcon} ${styles.siTerra}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="8" />
+                <polyline points="12 8 12 12 15 14" />
+              </svg>
+            </div>
             <div>
               <div className={styles.statLabel}>Documente restante</div>
               <div className={styles.statVal} style={{ color: "var(--terra)" }}>{overdueCount}</div>
@@ -806,7 +818,13 @@ export function ClientiView({
             </div>
           </div>
           <div className={styles.statCard}>
-            <div className={`${styles.statIcon} ${styles.siAmber}`}>📤</div>
+            <div className={`${styles.statIcon} ${styles.siAmber}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
             <div>
               <div className={styles.statLabel}>În așteptare</div>
               <div className={styles.statVal} style={{ color: "var(--amber)" }}>{counts.wait}</div>
@@ -814,7 +832,12 @@ export function ClientiView({
             </div>
           </div>
           <div className={styles.statCard}>
-            <div className={`${styles.statIcon} ${styles.siSky}`}>✅</div>
+            <div className={`${styles.statIcon} ${styles.siSky}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+              </svg>
+            </div>
             <div>
               <div className={styles.statLabel}>La zi</div>
               <div className={styles.statVal} style={{ color: "var(--sage)" }}>{counts.ok}</div>
@@ -962,7 +985,13 @@ export function ClientiView({
                   <tr>
                     <td colSpan={3}>
                       <div className={styles.emptyState}>
-                        <span className={styles.emptyIcon}>📦</span>
+                        <span className={styles.emptyIcon} aria-hidden="true">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73L13 3.18a2 2 0 0 0-2 0L4 6.27A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4.09a2 2 0 0 0 2 0l7-4.09A2 2 0 0 0 21 16z" />
+                            <polyline points="3.3 7 12 12 20.7 7" />
+                            <line x1="12" y1="22" x2="12" y2="12" />
+                          </svg>
+                        </span>
                         <div className={styles.emptyTitle}>Niciun client arhivat</div>
                         <div className={styles.emptySub}>Clienții arhivați vor apărea aici. Poți restaura oricând.</div>
                       </div>
@@ -1813,10 +1842,43 @@ function ClientiDrawer({
                 {uploads
                   .filter((u) => u.month === currentMonth && u.year === currentYear)
                   .map((u) => {
-                    const { emoji, label, bg } = fileIcon(u.file_name ?? "");
+                    const { kind, label, bg } = fileIcon(u.file_name ?? "");
                     return (
                       <li key={u.id} style={{ padding: "11px 0", borderBottom: "1px solid var(--paper-3)", display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ width: 36, height: 36, borderRadius: 8, background: bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{emoji}</span>
+                        <span style={{ width: 36, height: 36, borderRadius: 8, background: bg, display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true">
+                          {kind === "pdf" && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                              <path d="M9 13h1v3" />
+                              <path d="M13 16h-1a2 2 0 0 1 0-4h1z" />
+                              <path d="M15 12h2a1 1 0 0 1 0 2h-2v2" />
+                            </svg>
+                          )}
+                          {kind === "image" && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="18" height="18" rx="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <path d="M21 15l-4.5-4.5L9 18" />
+                            </svg>
+                          )}
+                          {kind === "sheet" && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="3" width="18" height="18" rx="2" />
+                              <path d="M8 7h8" />
+                              <path d="M8 12h8" />
+                              <path d="M8 17h4" />
+                            </svg>
+                          )}
+                          {kind === "doc" && (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                              <line x1="9" y1="13" x2="15" y2="13" />
+                              <line x1="9" y1="17" x2="13" y2="17" />
+                            </svg>
+                          )}
+                        </span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 500 }}>{u.file_name ?? "Document"}</div>
                           <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>{label} · {formatDocDate(u.created_at)}</div>
@@ -1827,18 +1889,25 @@ function ClientiDrawer({
                             onClick={() => window.open(`/api/uploads/${u.id}`, "_blank")}
                             className={styles.docDownload}
                             title="Preview"
-                            style={{ padding: 8, borderRadius: 8, color: "var(--ink)", border: "none", background: "transparent", cursor: "pointer" }}
+                            style={{ padding: 8, borderRadius: 8, color: "var(--ink)", border: "none", background: "transparent", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                           >
-                            👁
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
                           </button>
                           <a
                             href={`/api/uploads/${u.id}?download=1`}
                             download={u.file_name ?? undefined}
                             className={styles.docDownload}
                             title="Descarcă"
-                            style={{ padding: 8, borderRadius: 8, color: "var(--ink)" }}
+                            style={{ padding: 8, borderRadius: 8, color: "var(--ink)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                           >
-                            ⬇
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="7 10 12 15 17 10" />
+                              <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
                           </a>
                         </div>
                       </li>

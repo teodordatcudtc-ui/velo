@@ -4,12 +4,12 @@ import { useState } from "react";
 
 const FAQ_ITEMS = [
   {
-    q: "Clientul meu trebuie să creeze un cont pe Velo?",
+    q: "Clientul meu trebuie să creeze un cont pe Vello?",
     a: "Nu, niciodată. Clientul primește un link unic securizat pe email sau SMS. Deschide linkul direct pe telefon, fără instalare, fără înregistrare. Experiența e la fel de simplă ca și cum ar trimite o poză unui prieten.",
   },
   {
     q: "Ce se întâmplă dacă un client nu trimite documentele?",
-    a: "Velo trimite automat un reminder după 3 zile (configurabil). Dacă tot nu răspunde, poți activa o a doua notificare sau primi o alertă ca să poți interveni manual. Tu controlezi tot fluxul.",
+    a: "Vello trimite automat un reminder după 3 zile (configurabil). Dacă tot nu răspunde, poți activa o a doua notificare sau primi o alertă ca să poți interveni manual. Tu controlezi tot fluxul.",
   },
   {
     q: "Documentele sunt în siguranță?",
@@ -21,7 +21,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Pot importa clienții existenți?",
-    a: "Da! Poți importa lista de clienți dintr-un fișier Excel / CSV. Durează 5 minute să ai toți clienții în Velo și să trimiți prima cerere.",
+    a: "Da! Poți importa lista de clienți dintr-un fișier Excel / CSV. Durează 5 minute să ai toți clienții în Vello și să trimiți prima cerere.",
   },
   {
     q: "Mă pot dezabona oricând?",
@@ -47,7 +47,7 @@ export default function FaqSection() {
               Nu găsești ce cauți? Scrie-ne și răspundem în câteva minute.
             </p>
             <a
-              href="mailto:contact@velo.ro"
+              href="mailto:contact@vello.ro"
               className="btn btn-primary"
               style={{ marginTop: 24, display: "inline-flex" }}
             >
@@ -55,7 +55,7 @@ export default function FaqSection() {
             </a>
           </div>
 
-          <div className="faq-list">
+          <div className="faq-list" suppressHydrationWarning>
             {FAQ_ITEMS.map((item, i) => (
               <div
                 key={item.q}
@@ -63,6 +63,7 @@ export default function FaqSection() {
               >
                 <div
                   className="faq-question"
+                  suppressHydrationWarning
                   onClick={() => setOpenIndex(openIndex === i ? -1 : i)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {

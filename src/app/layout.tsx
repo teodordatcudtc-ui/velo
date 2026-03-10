@@ -17,7 +17,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Velo — Scapă de grija actelor întârziate",
+  title: "Vello — Scapă de grija actelor întârziate",
   description:
     "Trimite cereri de documente clienților în 30 secunde. Ei răspund cu un click, tu primești totul organizat. Fără cont pentru client.",
 };

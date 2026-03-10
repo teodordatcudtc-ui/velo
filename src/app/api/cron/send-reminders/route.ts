@@ -61,7 +61,7 @@ export async function GET(request: Request) {
   }
 
   const resend = new Resend(apiKey);
-  const fromEmail = process.env.RESEND_FROM ?? "Velo <onboarding@resend.dev>";
+  const fromEmail = process.env.RESEND_FROM ?? "Vello <onboarding@resend.dev>";
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ??
     (request.headers.get("x-forwarded-host")
@@ -103,7 +103,7 @@ export async function GET(request: Request) {
       <p>Contabilul <strong>${accName}</strong> vă solicită documentele pentru luna curentă.</p>
       <p>Accesați linkul de mai jos pentru a încărca documentele (nu este nevoie de cont):</p>
       <p><a href="${uploadLink}" style="color: #4b7a6e; font-weight: 600;">${uploadLink}</a></p>
-      <p>Mulțumim,<br/>Echipa Velo</p>
+      <p>Mulțumim,<br/>Echipa Vello</p>
     `;
 
     const { error: sendError } = await resend.emails.send({
@@ -182,7 +182,7 @@ export async function GET(request: Request) {
         ${customMessage}
         <p>Le puteți încărca aici:</p>
         <p><a href="${uploadLink}" style="color: #4b7a6e; font-weight: 600;">${uploadLink}</a></p>
-        <p>Mulțumim,<br/>Echipa Velo</p>
+        <p>Mulțumim,<br/>Echipa Vello</p>
       `,
     });
 

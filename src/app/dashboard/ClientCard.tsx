@@ -101,7 +101,7 @@ export function ClientCard({
   const baseUrl =
     typeof window !== "undefined"
       ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_URL || "https://velo.ro";
+      : process.env.NEXT_PUBLIC_APP_URL || "https://vello.ro";
   const uploadLink = `${baseUrl}/upload/${client.unique_token}`;
 
   async function handleAddDoc(formData: FormData) {

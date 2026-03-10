@@ -7,7 +7,7 @@ const PADDING = 8;
 
 const STEPS = [
   {
-    title: "Bine ai venit în Velo",
+    title: "Bine ai venit în Vello",
     text: "În câteva pași poți colecta documente de la clienți — fără cont pentru ei, fără bătăi de cap pentru tine.",
     target: null as string | null,
   },

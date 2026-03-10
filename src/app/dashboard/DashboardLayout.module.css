@@ -265,6 +265,16 @@
   .statsRow { grid-template-columns: 1fr; }
 }
 
+/* Dashboard home – grid carduri responsive */
+.dashboardStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 768px) {
+  .dashboardStatsGrid { grid-template-columns: 1fr; }
+}
+
 /* Stat cards (model) */
 .statCard {
   background: #fff;
@@ -312,13 +322,15 @@
 .alertWarning a { color: var(--sage); font-weight: 600; text-decoration: none; }
 .alertWarning a:hover { text-decoration: underline; }
 
-/* Table wrap (model) */
+/* Table wrap (model) – scroll orizontal pe mobil */
 .tableWrap {
   background: #fff;
   border-radius: var(--r-lg);
   border: 1px solid var(--paper-3);
   box-shadow: var(--shadow-xs);
   overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .tableHeader {
   display: flex;
@@ -336,6 +348,7 @@
 }
 .tableWrap table {
   width: 100%;
+  min-width: 560px;
   border-collapse: collapse;
 }
 .tableWrap thead th {

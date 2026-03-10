@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { UploadRow, ClientOption, DocTypeOption } from "./page";
 
 const MONTH_NAMES = [
@@ -26,22 +27,49 @@ function FilterDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const selected = options.find((o) => o.value === value);
 
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {
-      if (!rootRef.current) return;
-      if (!rootRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      const inButton = !!buttonRef.current && buttonRef.current.contains(target);
+      const inMenu = !!menuRef.current && menuRef.current.contains(target);
+      if (!inButton && !inMenu) setOpen(false);
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function measure() {
+      const btn = buttonRef.current;
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      setMenuPos({
+        top: Math.round(r.bottom + 6),
+        left: Math.round(r.left),
+        width: Math.round(r.width),
+      });
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
   }, [open]);
 
   return (
     <div ref={rootRef} style={{ position: "relative", width, minWidth: width }}>
       <button
         type="button"
+        ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         className="dash-input"
         style={{
@@ -59,50 +87,53 @@ function FilterDropdown({
         <span>{selected?.label ?? label}</span>
         <span style={{ fontSize: 10, color: "var(--ink-muted)" }}>{open ? "▲" : "▼"}</span>
       </button>
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 6px)",
-            left: 0,
-            width: "100%",
-            maxHeight: 220,
-            overflowY: "auto",
-            border: "1px solid var(--paper-3)",
-            borderRadius: "var(--r-md)",
-            background: "#fff",
-            boxShadow: "var(--shadow-md)",
-            zIndex: 40,
-            padding: 6,
-          }}
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.value || "__all"}
-              type="button"
-              onClick={() => {
-                onChange(opt.value);
-                setOpen(false);
-              }}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                border: "none",
-                background:
-                  opt.value === value ? "var(--sage-xlight)" : "transparent",
-                color: opt.value === value ? "var(--sage)" : "var(--ink)",
-                borderRadius: 8,
-                padding: "8px 10px",
-                fontSize: 12.5,
-                fontWeight: opt.value === value ? 600 : 500,
-                cursor: "pointer",
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {open && menuPos && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: "fixed",
+              top: menuPos.top,
+              left: menuPos.left,
+              width: menuPos.width,
+              maxHeight: 220,
+              overflowY: "auto",
+              border: "1px solid var(--paper-3)",
+              borderRadius: "var(--r-md)",
+              background: "#fff",
+              boxShadow: "var(--shadow-md)",
+              zIndex: 50000,
+              padding: 6,
+            }}
+          >
+            {options.map((opt) => (
+              <button
+                key={opt.value || "__all"}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  border: "none",
+                  background:
+                    opt.value === value ? "var(--sage-xlight)" : "transparent",
+                  color: opt.value === value ? "var(--sage)" : "var(--ink)",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  fontSize: 12.5,
+                  fontWeight: opt.value === value ? 600 : 500,
+                  cursor: "pointer",
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -216,7 +247,10 @@ export function DocumenteList({
 
   return (
     <div className="dash-card">
-      <div className="flex flex-nowrap items-center gap-2 mb-4 pb-4 border-b border-[var(--paper-3)] overflow-x-auto">
+      <div
+        className="flex flex-nowrap items-center gap-2 mb-4 pb-4 border-b border-[var(--paper-3)]"
+        style={{ overflowX: "auto", overflowY: "visible", position: "relative", zIndex: 10 }}
+      >
         <span className="text-xs font-medium text-[var(--ink-muted)] shrink-0">
           Filtre:
         </span>

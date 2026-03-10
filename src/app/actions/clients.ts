@@ -503,7 +503,7 @@ export async function sendDocumentRequestNow(
     }
 
     const resend = new Resend(apiKey);
-    const fromEmail = process.env.RESEND_FROM ?? "Velo <onboarding@resend.dev>";
+    const fromEmail = process.env.RESEND_FROM ?? "Vello <onboarding@resend.dev>";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const uploadLink = `${baseUrl}/upload/${client.unique_token}`;
     const accountantName = accountant?.name ?? "Contabil";
@@ -528,7 +528,7 @@ export async function sendDocumentRequestNow(
         ${customMessage}
         <p>Puteți încărca documentele aici:</p>
         <p><a href="${uploadLink}" style="color:#4b7a6e;font-weight:600">${uploadLink}</a></p>
-        <p>Mulțumim,<br/>Echipa Velo</p>
+        <p>Mulțumim,<br/>Echipa Vello</p>
       `,
     });
     if (sendError) return { error: sendError.message };

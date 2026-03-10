@@ -1,4 +1,4 @@
-# Velo
+# Vello
 
 SaaS pentru contabili români — colectare documente de la clienți. Contabilul are cont; clientul primește doar un link unic și uploadează fără cont.
 
@@ -24,9 +24,9 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 **Opțional – programare mesaj lunar (email):**
 
 - `RESEND_API_KEY` – cheie API de la [Resend](https://resend.com) (trimite emailurile).
-- `RESEND_FROM` – adresa expeditor (ex. `Velo <noreply@domeniul-tau.ro>`). Fără domeniu verificat poți folosi `onboarding@resend.dev` doar pentru teste.
+- `RESEND_FROM` – adresa expeditor (ex. `Vello <noreply@domeniul-tau.ro>`). Fără domeniu verificat poți folosi `onboarding@resend.dev` doar pentru teste.
 - `CRON_SECRET` – secret pentru a apela `/api/cron/send-reminders` (cron extern sau [cron-job.org](https://cron-job.org)): `GET /api/cron/send-reminders?secret=CRON_SECRET`.
-- `NEXT_PUBLIC_APP_URL` – URL-ul aplicației (ex. `https://velo.ro`) pentru linkurile din email.
+- `NEXT_PUBLIC_APP_URL` – URL-ul aplicației (ex. `https://vello.ro`) pentru linkurile din email.
 - `EARLY_ACCESS_ADMIN_EMAIL` – un singur email admin care poate genera coduri early access din pagina Setări.
 
 ### 2. Baza de date

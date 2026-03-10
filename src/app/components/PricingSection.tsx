@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 const CHECK = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}>
@@ -9,11 +8,27 @@ const CHECK = (
   </svg>
 );
 
+type PlanKey = "standard" | "premium";
+
 export default function PricingSection() {
   const [annual, setAnnual] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const plans = [
+  const plans: Array<{
+    planId: PlanKey;
+    eyebrow: string;
+    name: string;
+    desc: string;
+    monthly: number;
+    annual: number;
+    features: Array<{ text: string; included: boolean }>;
+    cta: string;
+    note: string;
+    featured: boolean;
+  }> = [
     {
+      planId: "standard",
       eyebrow: "Standard",
       name: "Standard",
       desc: "Ideal pentru început și pentru portofolii mici",
@@ -29,11 +44,11 @@ export default function PricingSection() {
         { text: "Suport prioritar", included: false },
       ],
       cta: "Alege Standard",
-      ctaHref: "/signup",
       note: "Fără costuri ascunse",
       featured: false,
     },
     {
+      planId: "premium",
       eyebrow: "Premium",
       name: "Premium",
       desc: "Pentru contabili care vor automatizări și creștere",
@@ -47,11 +62,44 @@ export default function PricingSection() {
         { text: "Suport prioritar", included: true },
       ],
       cta: "Alege Premium",
-      ctaHref: "/signup",
       note: "Include toate funcțiile Standard",
       featured: true,
     },
   ];
+
+  async function handleCheckout(planId: PlanKey) {
+    setError(null);
+    setLoadingPlan(planId);
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan: planId,
+          interval: annual ? "annual" : "monthly",
+        }),
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + "#pricing")}`;
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error ?? "Ceva a mers greșit.");
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setError("Nu am primit link de plată.");
+    } catch {
+      setError("Eroare de rețea.");
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
 
   return (
     <section id="pricing">
@@ -66,7 +114,7 @@ export default function PricingSection() {
           <p className="body" style={{ marginTop: 8, maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
             Pachete simple, în EUR, fără surprize: Standard sau Premium.
           </p>
-          <div className="pricing-toggle-wrap">
+          <div className="pricing-toggle-wrap" suppressHydrationWarning>
             <span className={`pricing-toggle-label ${!annual ? "active" : ""}`}>Lunar</span>
             <div
               className={`pricing-toggle ${annual ? "on" : ""}`}
@@ -80,6 +128,7 @@ export default function PricingSection() {
               role="button"
               tabIndex={0}
               aria-label={annual ? "Facturare anuală" : "Facturare lunară"}
+              suppressHydrationWarning
             />
             <span className={`pricing-toggle-label ${annual ? "active" : ""}`}>
               Anual <span className="save-badge">-25%</span>
@@ -115,9 +164,19 @@ export default function PricingSection() {
                   </li>
                 ))}
               </ul>
-              <Link href={plan.ctaHref} className="pc-cta-primary">
-                {plan.cta}
-              </Link>
+              {error && (
+                <p className="body" style={{ color: "var(--red)", fontSize: 13, marginBottom: 8 }}>
+                  {error}
+                </p>
+              )}
+              <button
+                type="button"
+                className="pc-cta-primary"
+                onClick={() => handleCheckout(plan.planId)}
+                disabled={!!loadingPlan}
+              >
+                {loadingPlan === plan.planId ? "Se încarcă…" : plan.cta}
+              </button>
               <div className="pc-note">{plan.note}</div>
             </div>
           ))}

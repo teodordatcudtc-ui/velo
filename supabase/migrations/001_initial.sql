@@ -1,4 +1,4 @@
--- Velo: accountants (profile linked to auth.users)
+-- Vello: accountants (profile linked to auth.users)
 create table public.accountants (
   id uuid primary key references auth.users(id) on delete cascade,
   name text not null,

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { DashboardClientsTable } from "./DashboardClientsTable";
+import styles from "./DashboardLayout.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,12 @@ function greeting(name: string): string {
   return `Bună seara, ${name}`;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage(props: {
+  searchParams: Promise<{ checkout?: string }>;
+}) {
+  const searchParams = await props.searchParams;
+  const checkoutSuccess = searchParams.checkout === "success";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -83,12 +89,32 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {checkoutSuccess && (
+        <div
+          style={{
+            padding: "12px 16px",
+            borderRadius: "var(--r-md)",
+            background: "var(--sage-xlight)",
+            color: "var(--sage)",
+            fontSize: 14,
+            fontWeight: 500,
+            border: "1px solid var(--sage-light)",
+          }}
+        >
+          Plată reușită. Planul tău a fost activat.
+        </div>
+      )}
 
       {/* PAGE HEADER */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
         <div>
-          <h1 style={{ fontFamily: "var(--f-display)", fontSize: 24, fontWeight: 600, color: "var(--ink)", lineHeight: 1.2 }}>
-            {greeting(userName)} 👋
+          <h1 style={{ fontFamily: "var(--f-display)", fontSize: 24, fontWeight: 600, color: "var(--ink)", lineHeight: 1.2, display: "flex", alignItems: "center", gap: 8 }}>
+            {greeting(userName)}
+            <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: "999px", background: "var(--sage-light)", color: "var(--sage)" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a7 7 0 0 0-7 7v3.5A3.5 3.5 0 0 0 8.5 16H9l-1 3 4-3h1a7 7 0 0 0 7-7 7 7 0 0 0-7-7z" />
+              </svg>
+            </span>
           </h1>
           <p style={{ fontSize: 14, color: "var(--ink-muted)", marginTop: 6 }}>
             Ai {(clients ?? []).length} clienți și {uploadsThisMonth.length} documente trimise luna aceasta — {dateStr}
@@ -97,7 +123,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* STAT CARDS */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+      <div className={styles.dashboardStatsGrid}>
         {[
           { label: "CLIENȚI ACTIVI", value: (clients ?? []).length, sub: "↑ total în cont", color: "var(--ink)" },
           { label: "DOCUMENTE PRIMITE", value: uploadsThisMonth.length, sub: totalRequested > 0 ? `din ${totalRequested} cerute` : "luna aceasta", color: "var(--sage)" },
@@ -130,7 +156,13 @@ export default async function DashboardPage() {
           borderLeft: "3px solid var(--amber)",
           background: "var(--amber-light)", color: "#7a5010",
         }}>
-          <span>⚠</span>
+          <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", marginTop: 1 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </span>
           <div>
             <strong>
               {(clientsWithDocsNoUpload as { name: string }[]).map((c) => c.name).join(", ")}

@@ -33,7 +33,7 @@ export async function POST() {
   }
 
   const resend = new Resend(apiKey);
-  const fromEmail = process.env.RESEND_FROM ?? "Velo <onboarding@resend.dev>";
+  const fromEmail = process.env.RESEND_FROM ?? "Vello <onboarding@resend.dev>";
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -86,7 +86,7 @@ export async function POST() {
       <p><em>Acesta este un email de test.</em></p>
       <p>Accesați linkul de mai jos pentru a încărca documentele (nu este nevoie de cont):</p>
       <p><a href="${uploadLink}" style="color: #4b7a6e; font-weight: 600;">${uploadLink}</a></p>
-      <p>Mulțumim,<br/>Echipa Velo</p>
+      <p>Mulțumim,<br/>Echipa Vello</p>
     `;
 
     const { error: sendError } = await resend.emails.send({

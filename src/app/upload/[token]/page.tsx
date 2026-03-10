@@ -91,7 +91,7 @@ export default async function UploadPage({
         )}
 
         <p className="mt-10 text-center text-xs text-[var(--ink-muted)]">
-          Vel<em className="text-[var(--sage)] not-italic font-semibold">o</em>
+          Vel<em className="text-[var(--sage)] not-italic font-semibold">lo</em>
         </p>
       </div>
     </main>
