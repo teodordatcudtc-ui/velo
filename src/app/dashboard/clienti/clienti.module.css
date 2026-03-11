@@ -147,6 +147,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 .filterTab:hover { color: var(--ink); }
 .filterTab.active {
@@ -165,6 +166,7 @@
 }
 .filterTab.active .filterTabCount { background: var(--sage-light); color: var(--sage); }
 .filterSpacer { flex: 1; }
+.filterSortRow { display: flex; align-items: center; gap: 8px; }
 .filterSort { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-muted); }
 .filterSelect {
   font-family: var(--f-body);
@@ -621,7 +623,15 @@
     margin: -4px 0;
   }
   .filterTabs::-webkit-scrollbar { height: 4px; }
-  .filterSort { flex-basis: 100%; }
+  /* Sortare + Coloane pe același rând */
+  .filterSort { flex-basis: auto; }
+  .filterSortRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+  .filterSelect { min-width: 130px !important; }
 }
 @media (max-width: 480px) {
   .topbar { padding: 8px 12px; }

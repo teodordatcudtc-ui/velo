@@ -219,6 +219,17 @@ export function ClientiView({
     }
   }, []);
 
+  /* Pe telefon: evită deschiderea tastaturii la intrarea pe pagină (blur primul input) */
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+        const el = document.activeElement;
+        if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") el.blur();
+      }
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+
   const clientsWithStatus = useMemo(() => {
     return initialClients.map((client) => {
       const types = client.document_types ?? [];
@@ -868,6 +879,7 @@ export function ClientiView({
             </button>
           </div>
           <div className={styles.filterSpacer} />
+          <div className={styles.filterSortRow}>
           <div className={styles.filterSort}>
             <span>Sortare:</span>
             <div ref={sortMenuRef} style={{ position: "relative" }}>
@@ -932,7 +944,7 @@ export function ClientiView({
           <button
             type="button"
             className={`${styles.btn} ${styles.btnSecondary}`}
-            style={{ height: 32, fontSize: 12 }}
+            style={{ height: 32, fontSize: 12, flexShrink: 0 }}
             onClick={() => setColumnsModalOpen(true)}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -942,6 +954,7 @@ export function ClientiView({
             </svg>
             Coloane
           </button>
+          </div>
         </div>
 
         {/* TABLE */}
@@ -1491,7 +1504,6 @@ export function ClientiView({
                 onChange={(e) => setLabelInput(e.target.value)}
                 placeholder="Ex: Prioritar, TVA, Restanță"
                 maxLength={40}
-                autoFocus
               />
             </div>
           </div>
