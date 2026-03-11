@@ -632,3 +632,25 @@
   .topbarSearch { width: 100%; }
   .pageContent { padding: 12px; }
 }
+
+/* KPI & căutare mai compacte pe mobil */
+@media (max-width: 768px) {
+  .topbarSearch {
+    width: 100%;
+    flex: 1 1 100%;
+    padding: 9px 12px;
+  }
+  .statCard {
+    padding: 12px 14px;
+  }
+  .statIcon {
+    width: 32px;
+    height: 32px;
+  }
+  .statLabel {
+    font-size: 10px;
+  }
+  .statVal {
+    font-size: 20px;
+  }
+}

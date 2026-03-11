@@ -128,10 +128,10 @@ export function StatisticiCharts({
           ) : (
             <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 10, right: 8, bottom: 10, left: 10 }}>
+                <PieChart margin={{ top: 10, right: 16, bottom: 10, left: 16 }}>
                   <Pie
                     data={sentPieData}
-                    cx="42%"
+                    cx="50%"
                     cy="50%"
                     innerRadius={56}
                     outerRadius={80}
@@ -170,10 +170,10 @@ export function StatisticiCharts({
           ) : (
             <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 10, right: 8, bottom: 10, left: 10 }}>
+                <PieChart margin={{ top: 10, right: 16, bottom: 10, left: 16 }}>
                   <Pie
                     data={docTypePieData}
-                    cx="42%"
+                    cx="50%"
                     cy="50%"
                     innerRadius={56}
                     outerRadius={80}
