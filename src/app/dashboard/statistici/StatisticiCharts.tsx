@@ -77,40 +77,24 @@ export function StatisticiCharts({
 
   return (
     <div className="space-y-8">
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="dash-card">
-          <p className="text-sm font-medium text-[var(--ink-muted)] mb-1">
-            Total clienți
-          </p>
-          <p className="text-2xl font-semibold text-[var(--ink)]">
-            {totalClients}
-          </p>
+      {/* KPI — 2×2, compact, fără iconițe */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="dash-card !p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-muted)] mb-0.5">Total</p>
+          <p className="text-lg font-semibold text-[var(--ink)]">{totalClients}</p>
         </div>
-        <div className="dash-card">
-          <p className="text-sm font-medium text-[var(--ink-muted)] mb-1">
-            Au trimis ({MONTH_LABEL[currentMonth] ?? currentMonth} {currentYear})
-          </p>
-          <p className="text-2xl font-semibold text-[var(--sage)]">
-            {clientsWithUploadsThisMonth}
-          </p>
+        <div className="dash-card !p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-muted)] mb-0.5">Au trimis</p>
+          <p className="text-lg font-semibold text-[var(--sage)]">{clientsWithUploadsThisMonth}</p>
         </div>
-        <div className="dash-card">
-          <p className="text-sm font-medium text-[var(--ink-muted)] mb-1">
-            Nu au trimis
-          </p>
-          <p className="text-2xl font-semibold text-[var(--ink)]">
-            {clientsWithoutUploadsThisMonth}
-          </p>
+        <div className="dash-card !p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-muted)] mb-0.5">Fără</p>
+          <p className="text-lg font-semibold text-[var(--ink)]">{clientsWithoutUploadsThisMonth}</p>
         </div>
-        <div className="dash-card">
-          <p className="text-sm font-medium text-[var(--ink-muted)] mb-1">
-            Rata de trimitere
-          </p>
-          <p className="text-2xl font-semibold text-[var(--ink)]">
-            {totalClients === 0
-              ? "—"
-              : `${Math.round((clientsWithUploadsThisMonth / totalClients) * 100)}%`}
+        <div className="dash-card !p-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-muted)] mb-0.5">Rata %</p>
+          <p className="text-lg font-semibold text-[var(--ink)]">
+            {totalClients === 0 ? "—" : `${Math.round((clientsWithUploadsThisMonth / totalClients) * 100)}%`}
           </p>
         </div>
       </div>

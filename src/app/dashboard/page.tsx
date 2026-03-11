@@ -122,27 +122,16 @@ export default async function DashboardPage(props: {
         </div>
       </div>
 
-      {/* STAT CARDS */}
+      {/* STAT CARDS — 2×2, compact, fără iconițe */}
       <div className={styles.dashboardStatsGrid}>
         {[
-          { label: "CLIENȚI ACTIVI", value: (clients ?? []).length, sub: "↑ total în cont", color: "var(--ink)" },
-          { label: "DOCUMENTE PRIMITE", value: uploadsThisMonth.length, sub: totalRequested > 0 ? `din ${totalRequested} cerute` : "luna aceasta", color: "var(--sage)" },
-          { label: "FĂRĂ DOCUMENTE ÎNCĂ", value: clientsWithDocsNoUpload.length, sub: "clienți cu cereri, netrimis", color: "var(--amber)" },
+          { label: "Clienți", value: (clients ?? []).length, color: "var(--ink)" },
+          { label: "Doc. primite", value: uploadsThisMonth.length, color: "var(--sage)" },
+          { label: "Fără doc.", value: clientsWithDocsNoUpload.length, color: "var(--amber)" },
         ].map((card) => (
-          <div key={card.label} style={{
-            background: "#fff", border: "1px solid var(--paper-3)",
-            borderRadius: "var(--r-lg)", padding: "18px 20px",
-            boxShadow: "0 1px 3px rgba(26,26,46,.06)",
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-muted)", letterSpacing: "0.05em", marginBottom: 8 }}>
-              {card.label}
-            </div>
-            <div style={{ fontFamily: "var(--f-display)", fontSize: 28, fontWeight: 700, color: card.color, lineHeight: 1 }}>
-              {card.value}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--ink-muted)", marginTop: 6 }}>
-              {card.sub}
-            </div>
+          <div key={card.label} className={styles.dashboardStatCard}>
+            <div className={styles.dashboardStatLabel}>{card.label}</div>
+            <div className={styles.dashboardStatValue} style={{ color: card.color }}>{card.value}</div>
           </div>
         ))}
       </div>
