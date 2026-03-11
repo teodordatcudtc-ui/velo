@@ -37,7 +37,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 apoi `supabase/migrations/002_reminder_settings.sql` (pentru programarea mesajului lunar).
 apoi `supabase/migrations/003_reminder_per_client.sql`, `supabase/migrations/004_archived_clients.sql`,
 `supabase/migrations/005_document_requests.sql`, `supabase/migrations/006_subscriptions_and_early_access.sql`
-și `supabase/migrations/007_document_request_reminder_tracking.sql`.
+și `supabase/migrations/007_document_request_reminder_tracking.sql`, plus ulterior `008_none_subscription_plan.sql`, `009_free_plan_5_clients_default_none.sql`, `010_early_access_premium_until.sql` și, dacă folosești login cu Google, `011_google_oauth_accountant_name.sql`.
 
 Aceste scripturi creează tabelele principale, RLS, trigger-ul de contabil, reminder per client, arhivare clienți, cereri de documente, pachete Standard/Premium, coduri early access și limita de 40 clienți pe Standard.
 
@@ -55,6 +55,14 @@ Aceste scripturi creează tabelele principale, RLS, trigger-ul de contabil, remi
 
 - **Site URL**: `http://localhost:3000` (dev) sau domeniul tău.
 - **Redirect URLs**: adaugă `http://localhost:3000/auth/callback` și, pentru producție, `https://domeniul-tau.ro/auth/callback`.
+
+**Autentificare cu Google (opțional):**
+
+1. În **Authentication** → **Providers** → **Google**: activează provider-ul.
+2. În [Google Cloud Console](https://console.cloud.google.com/): creează un proiect (sau folosește unul existent) → **APIs & Services** → **Credentials** → **Create Credentials** → **OAuth client ID** → tip **Web application**.
+3. La **Authorized redirect URIs** adaugă URL-ul din Supabase (în provider-ul Google din Supabase e afișat, de forma `https://xxx.supabase.co/auth/v1/callback`).
+4. Copiază **Client ID** și **Client Secret** în Supabase (Google provider).
+5. Rulează și migrarea `011_google_oauth_accountant_name.sql` ca la primul login cu Google să se creeze rândul în `accountants` cu numele din profil.
 
 ### 5. Instalare și rulare
 
