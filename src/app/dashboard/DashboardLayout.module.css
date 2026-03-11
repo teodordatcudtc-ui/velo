@@ -265,32 +265,44 @@
   .statsRow { grid-template-columns: 1fr; }
 }
 
-/* Dashboard home – KPI 2×2, compact */
+/* Dashboard home – PC: 3 coloane, carduri mari; mobil: 2×2 compact */
 .dashboardStatsGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
 }
 .dashboardStatCard {
   background: #fff;
   border: 1px solid var(--paper-3);
-  border-radius: var(--r-md);
-  padding: 10px 12px;
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
   box-shadow: 0 1px 3px rgba(26,26,46,.06);
 }
 .dashboardStatLabel {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--ink-muted);
-  margin-bottom: 2px;
+  margin-bottom: 8px;
 }
 .dashboardStatValue {
   font-family: var(--f-display);
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1;
+}
+.dashboardStatSub {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-top: 6px;
+}
+@media (max-width: 768px) {
+  .dashboardStatsGrid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .dashboardStatCard { padding: 10px 12px; border-radius: var(--r-md); }
+  .dashboardStatLabel { font-size: 10px; margin-bottom: 2px; }
+  .dashboardStatValue { font-size: 20px; }
+  .dashboardStatSub { display: none; }
 }
 @media (max-width: 768px) {
   .statCard {

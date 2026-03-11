@@ -804,30 +804,56 @@ export function ClientiView({
 
       {/* PAGE CONTENT */}
       <div className={styles.pageContent}>
-        {/* STATS — 2×2, fără iconițe, text redus */}
+        {/* STATS — pe PC: 4 coloane, mari cu iconițe; pe mobil: 2×2 compact (doar CSS) */}
         <div className={styles.statsRow}>
           <div className={styles.statCard}>
+            <div className={`${styles.statIcon} ${styles.siSage}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-3-3.87" /><path d="M8 21v-2a4 4 0 0 1 3-3.87" />
+                <circle cx="9" cy="7" r="4" /><circle cx="17" cy="7" r="4" />
+              </svg>
+            </div>
             <div className={styles.statCardInner}>
-              <div className={styles.statLabel}>Total</div>
+              <div className={styles.statLabel}>Total clienți</div>
               <div className={styles.statVal}>{totalClients}</div>
+              <div className={styles.statDeltaUp}>↑ total în cont</div>
             </div>
           </div>
           <div className={styles.statCard}>
+            <div className={`${styles.statIcon} ${styles.siTerra}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="8" /><polyline points="12 8 12 12 15 14" />
+              </svg>
+            </div>
             <div className={styles.statCardInner}>
-              <div className={styles.statLabel}>Restante</div>
+              <div className={styles.statLabel}>Documente restante</div>
               <div className={styles.statVal} style={{ color: "var(--terra)" }}>{overdueCount}</div>
+              <div className={styles.statDeltaDown}>clienți fără documente luna aceasta</div>
             </div>
           </div>
           <div className={styles.statCard}>
+            <div className={`${styles.statIcon} ${styles.siAmber}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
             <div className={styles.statCardInner}>
-              <div className={styles.statLabel}>Așteptare</div>
+              <div className={styles.statLabel}>În așteptare</div>
               <div className={styles.statVal} style={{ color: "var(--amber)" }}>{counts.wait}</div>
+              <div className={styles.statDeltaNeutral}>parțial trimise</div>
             </div>
           </div>
           <div className={styles.statCard}>
+            <div className={`${styles.statIcon} ${styles.siSky}`}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+              </svg>
+            </div>
             <div className={styles.statCardInner}>
               <div className={styles.statLabel}>La zi</div>
               <div className={styles.statVal} style={{ color: "var(--sage)" }}>{counts.ok}</div>
+              <div className={styles.statDeltaUp}>documente primite</div>
             </div>
           </div>
         </div>

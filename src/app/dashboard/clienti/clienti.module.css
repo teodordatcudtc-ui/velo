@@ -99,26 +99,40 @@
   gap: 16px;
 }
 
+/* Desktop: 4 coloane, carduri mari cu iconițe */
 .statsRow {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
 .statCard {
   background: var(--white, #fff);
   border: 1px solid var(--paper-3);
-  border-radius: var(--r-md);
-  padding: 10px 12px;
+  border-radius: var(--r-lg);
+  padding: 16px 20px;
   box-shadow: var(--shadow-xs);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 14px;
 }
+.statIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.siSage { background: var(--sage-xlight); }
+.siTerra { background: var(--terra-light); }
+.siAmber { background: var(--amber-light); }
+.siSky { background: #d6eaf4; }
 .statCardInner { min-width: 0; }
-.statLabel { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 2px; }
-.statVal { font-family: var(--f-display); font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1; }
-.statDelta { font-size: 10px; margin-top: 2px; font-weight: 500; }
+.statLabel { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 3px; }
+.statVal { font-family: var(--f-display); font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1; }
+.statDelta { font-size: 11px; margin-top: 4px; font-weight: 500; }
 .statDeltaUp { color: var(--sage); }
 .statDeltaDown { color: var(--terra); }
 .statDeltaNeutral { color: var(--ink-muted); }
@@ -645,4 +659,11 @@
     flex: 1 1 100%;
     padding: 9px 12px;
   }
+  /* KPI doar pe mobil: 2×2, compact, fără iconițe */
+  .statsRow { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .statCard { padding: 10px 12px; align-items: center; justify-content: space-between; gap: 8px; }
+  .statIcon { display: none; }
+  .statLabel { font-size: 10px; margin-bottom: 2px; }
+  .statVal { font-size: 20px; }
+  .statDelta { display: none; }
 }

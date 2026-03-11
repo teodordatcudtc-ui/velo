@@ -122,16 +122,17 @@ export default async function DashboardPage(props: {
         </div>
       </div>
 
-      {/* STAT CARDS — 2×2, compact, fără iconițe */}
+      {/* STAT CARDS — PC: 3 coloane mari; mobil: 2×2 compact (CSS) */}
       <div className={styles.dashboardStatsGrid}>
         {[
-          { label: "Clienți", value: (clients ?? []).length, color: "var(--ink)" },
-          { label: "Doc. primite", value: uploadsThisMonth.length, color: "var(--sage)" },
-          { label: "Fără doc.", value: clientsWithDocsNoUpload.length, color: "var(--amber)" },
+          { label: "CLIENȚI ACTIVI", value: (clients ?? []).length, sub: "↑ total în cont", color: "var(--ink)" },
+          { label: "DOCUMENTE PRIMITE", value: uploadsThisMonth.length, sub: totalRequested > 0 ? `din ${totalRequested} cerute` : "luna aceasta", color: "var(--sage)" },
+          { label: "FĂRĂ DOCUMENTE ÎNCĂ", value: clientsWithDocsNoUpload.length, sub: "clienți cu cereri, netrimis", color: "var(--amber)" },
         ].map((card) => (
           <div key={card.label} className={styles.dashboardStatCard}>
             <div className={styles.dashboardStatLabel}>{card.label}</div>
             <div className={styles.dashboardStatValue} style={{ color: card.color }}>{card.value}</div>
+            <div className={styles.dashboardStatSub}>{card.sub}</div>
           </div>
         ))}
       </div>
