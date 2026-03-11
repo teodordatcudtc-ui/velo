@@ -766,6 +766,7 @@ export function ClientiView({
             placeholder="Caută client, email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            autoComplete="off"
           />
         </div>
         <button
@@ -1253,16 +1254,16 @@ export function ClientiView({
             <div className={styles.modalBody}>
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Nume firmă / client *</label>
-                <input className={styles.input} name="name" data-tutorial="clienti-add-name" type="text" placeholder="ex. Popescu Ion SRL" required />
+                <input className={styles.input} name="name" data-tutorial="clienti-add-name" type="text" placeholder="ex. Popescu Ion SRL" autoComplete="off" readOnly onFocus={(e) => e.currentTarget.removeAttribute("readonly")} required />
               </div>
               <div className={styles.grid2}>
                 <div className={styles.field}>
                   <label className={styles.fieldLabel}>Email</label>
-                  <input className={styles.input} name="email" type="email" placeholder="ion@firma.ro" />
+                  <input className={styles.input} name="email" type="email" placeholder="ion@firma.ro" autoComplete="off" readOnly onFocus={(e) => e.currentTarget.removeAttribute("readonly")} />
                 </div>
                 <div className={styles.field}>
                   <label className={styles.fieldLabel}>Telefon</label>
-                  <input className={styles.input} name="phone" type="tel" placeholder="0722 000 000" />
+                  <input className={styles.input} name="phone" type="tel" placeholder="0722 000 000" autoComplete="off" readOnly onFocus={(e) => e.currentTarget.removeAttribute("readonly")} />
                 </div>
               </div>
             </div>
@@ -1316,16 +1317,16 @@ export function ClientiView({
               <div className={styles.modalBody}>
                 <div className={styles.field}>
                   <label className={styles.fieldLabel}>Nume firmă / client *</label>
-                  <input className={styles.input} name="name" type="text" placeholder="ex. Popescu Ion SRL" defaultValue={editClient.name} required />
+                  <input className={styles.input} name="name" type="text" placeholder="ex. Popescu Ion SRL" defaultValue={editClient.name} autoComplete="off" readOnly onFocus={(e) => e.currentTarget.removeAttribute("readonly")} required />
                 </div>
                 <div className={styles.grid2}>
                   <div className={styles.field}>
                     <label className={styles.fieldLabel}>Email</label>
-                    <input className={styles.input} name="email" type="email" placeholder="ion@firma.ro" defaultValue={editClient.email ?? ""} />
+                    <input className={styles.input} name="email" type="email" placeholder="ion@firma.ro" defaultValue={editClient.email ?? ""} autoComplete="off" readOnly onFocus={(e) => e.currentTarget.removeAttribute("readonly")} />
                   </div>
                   <div className={styles.field}>
                     <label className={styles.fieldLabel}>Telefon</label>
-                    <input className={styles.input} name="phone" type="tel" placeholder="0722 000 000" defaultValue={editClient.phone ?? ""} />
+                    <input className={styles.input} name="phone" type="tel" placeholder="0722 000 000" defaultValue={editClient.phone ?? ""} autoComplete="off" readOnly onFocus={(e) => e.currentTarget.removeAttribute("readonly")} />
                   </div>
                 </div>
               </div>
@@ -1530,6 +1531,7 @@ export function ClientiView({
                 onChange={(e) => setLabelInput(e.target.value)}
                 placeholder="Ex: Prioritar, TVA, Restanță"
                 maxLength={40}
+                autoComplete="off"
               />
             </div>
           </div>
