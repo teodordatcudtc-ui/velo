@@ -731,7 +731,7 @@ export function ClientiView({
     status === "ok" ? styles.pfSage : status === "wait" ? styles.pfAmber : styles.pfTerra;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+    <div style={{ display: "flex", flexDirection: "column" }}>
       {/* TOP BAR */}
       <div className={styles.topbar}>
         <div className={styles.topbarTitle}>
@@ -792,7 +792,7 @@ export function ClientiView({
       </div>
 
       {/* PAGE CONTENT */}
-        <div className={styles.pageContent}>
+      <div className={styles.pageContent}>
         {/* STATS */}
         <div className={styles.statsRow}>
           <div className={styles.statCard}>

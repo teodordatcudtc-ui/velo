@@ -80,7 +80,7 @@ export function DashboardClientsTable({
   if (clients.length === 0) return null;
 
   return (
-    <div className={styles.tableWrap}>
+    <div className={styles.tableWrap} style={{ marginTop: 12 }}>
       <div className={styles.tableHeader}>
         <span className={styles.tableHeaderTitle}>Clienți și documente</span>
       </div>

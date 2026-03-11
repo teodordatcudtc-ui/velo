@@ -326,7 +326,6 @@ export function ProgrameazaModal({
                       }
                     }}
                     placeholder="Scrie categoria..."
-                    autoFocus
                     style={{
                       width: 160,
                       padding: "8px 12px",

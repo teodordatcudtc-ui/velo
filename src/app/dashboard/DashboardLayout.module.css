@@ -272,7 +272,19 @@
   gap: 14px;
 }
 @media (max-width: 768px) {
-  .dashboardStatsGrid { grid-template-columns: 1fr; }
+  .dashboardStatsGrid {
+    grid-template-columns: 1fr;
+    row-gap: 10px;
+  }
+  .statCard {
+    padding: 12px 14px;
+  }
+  .statLabel {
+    font-size: 11px;
+  }
+  .statValue {
+    font-size: 22px;
+  }
 }
 
 /* Stat cards (model) */

@@ -116,8 +116,8 @@ export function StatisticiCharts({
       </div>
 
       {/* Clienți luna curentă (stânga) + Tipuri de acte (dreapta) – același tip de grafic */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="dash-card min-w-0">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="dash-card min-w-0 overflow-hidden">
           <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">
             Clienți – luna curentă
           </h2>
@@ -126,12 +126,12 @@ export function StatisticiCharts({
               Nu există date pentru luna curentă. Adaugă clienți și documente.
             </p>
           ) : (
-            <div className="h-[280px] w-full">
+            <div className="h-[260px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 10, right: 16, bottom: 10, left: 16 }}>
+                <PieChart margin={{ top: 10, right: 24, bottom: 10, left: 24 }}>
                   <Pie
                     data={sentPieData}
-                    cx="50%"
+                    cx="45%"
                     cy="50%"
                     innerRadius={56}
                     outerRadius={80}
@@ -159,7 +159,7 @@ export function StatisticiCharts({
           )}
         </div>
 
-        <div className="dash-card min-w-0">
+        <div className="dash-card min-w-0 overflow-hidden">
           <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">
             Tipuri de acte (cele mai trimise)
           </h2>
@@ -168,12 +168,12 @@ export function StatisticiCharts({
               Nu există încă documente încărcate.
             </p>
           ) : (
-            <div className="h-[280px] w-full">
+            <div className="h-[260px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 10, right: 16, bottom: 10, left: 16 }}>
+                <PieChart margin={{ top: 10, right: 24, bottom: 10, left: 24 }}>
                   <Pie
                     data={docTypePieData}
-                    cx="50%"
+                    cx="45%"
                     cy="50%"
                     innerRadius={56}
                     outerRadius={80}
