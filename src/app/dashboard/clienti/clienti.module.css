@@ -665,5 +665,8 @@
   .statIcon { display: none; }
   .statLabel { font-size: 10px; margin-bottom: 2px; }
   .statVal { font-size: 20px; }
-  .statDelta { display: none; }
+  .statDelta,
+  .statDeltaUp,
+  .statDeltaDown,
+  .statDeltaNeutral { display: none; }
 }
