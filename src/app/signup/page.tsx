@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [earlyCode, setEarlyCode] = useState("");
   const router = useRouter();
   const supabase = createClient();
   const toast = useToast();
@@ -38,15 +39,20 @@ export default function SignupPage() {
       toast.error(err.message);
       return;
     }
+    const code = earlyCode.trim().toUpperCase();
+    const nextUrl = code ? `/dashboard?early_code=${encodeURIComponent(code)}` : "/dashboard";
     toast.success("Cont creat. Te poți autentifica.");
-    router.push("/dashboard");
+    router.push(nextUrl);
     router.refresh();
   }
 
   async function handleGoogleSignUp() {
     setError(null);
     setLoading(true);
-    const callbackUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent("/dashboard")}`;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const code = earlyCode.trim().toUpperCase();
+    const nextPath = code ? `/dashboard?early_code=${encodeURIComponent(code)}` : "/dashboard";
+    const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: callbackUrl },
@@ -115,6 +121,20 @@ export default function SignupPage() {
                 <li key={req}>{req}</li>
               ))}
             </ul>
+          </div>
+          <div>
+            <label htmlFor="early_code" className="block text-sm font-500 text-[var(--ink-soft)] mb-1">
+              Cod early access (opțional)
+            </label>
+            <input
+              id="early_code"
+              type="text"
+              value={earlyCode}
+              onChange={(e) => setEarlyCode(e.target.value)}
+              autoComplete="off"
+              className="w-full px-4 py-2 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)] uppercase"
+              placeholder="EX: EARLY-ABC123"
+            />
           </div>
           {error && (
             <p className="text-sm text-[var(--terracotta)] font-500">{error}</p>

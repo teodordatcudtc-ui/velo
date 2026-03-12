@@ -1466,6 +1466,22 @@ footer {
   gap: 20px;
 }
 
+/* Hero: doar pe telefon – titlu pe un rând, butoane mai mici */
+@media (max-width: 768px) {
+  .hero-title-br {
+    display: none;
+  }
+  #hero .hero-title.d1 {
+    font-size: clamp(28px, 7.5vw, 38px);
+  }
+  .hero-actions a,
+  .hero-actions button {
+    min-width: 160px !important;
+    padding: 14px 24px !important;
+    font-size: 14px !important;
+  }
+}
+
 /* Mobile */
 @media (max-width: 900px) {
   .hero-inner {

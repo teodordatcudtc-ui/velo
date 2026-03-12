@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { DashboardClientsTable } from "./DashboardClientsTable";
+import { EarlyAccessAutoRedeem } from "./EarlyAccessAutoRedeem";
 import styles from "./DashboardLayout.module.css";
 
 export const dynamic = "force-dynamic";
@@ -105,6 +106,7 @@ export default async function DashboardPage(props: {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <EarlyAccessAutoRedeem />
       {checkoutSuccess && (
         <div
           style={{
