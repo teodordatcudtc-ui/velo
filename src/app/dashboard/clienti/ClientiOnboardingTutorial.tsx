@@ -260,6 +260,7 @@ export function ClientiOnboardingTutorial({
 
   const primaryLabel = useMemo(() => {
     if (step === 1 && !modalOpen) return "Deschide formularul";
+    if (step === 2) return "OK";
     if (step === 3 && !drawerOpen) return "Deschide client";
     if (step === 4 && !requestModalOpen) return "Deschide Cerere";
     if (isLast) return "Am înțeles";
@@ -269,6 +270,12 @@ export function ClientiOnboardingTutorial({
   function handlePrimary() {
     if (step === 1 && !modalOpen) {
       onOpenAddClient();
+      return;
+    }
+    if (step === 2) {
+      // Ascunde pasul ca utilizatorul să poată completa formularul.
+      // Următorul pas va reapărea automat după ce se adaugă clientul (continueSignal).
+      setOpen(false);
       return;
     }
     if (step === 3 && !drawerOpen) {
