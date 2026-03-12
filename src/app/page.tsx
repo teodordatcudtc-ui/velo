@@ -47,7 +47,7 @@ export default function HomePage() {
             </div>
 
             <div className="hero-title d1">
-              Scapă de grija<br className="hero-title-br" /><em>actelor întârziate.</em>
+              Scapă de grija<br /><em>actelor întârziate.</em>
             </div>
 
             <div className="hero-subtitle lead">
