@@ -68,9 +68,9 @@ export default async function AbonamentePage() {
           <div className="pricing-header" style={{ marginBottom: 16 }}>
             <span className="overline">Pachete</span>
             <div className="h2" style={{ marginTop: 12, marginBottom: 8 }}>
-              Alege planul potrivit
+              Simplu, <em>transparent,</em>
               <br />
-              pentru cabinetul tău
+              fără surprize
             </div>
             <p
               className="body"
@@ -81,8 +81,7 @@ export default async function AbonamentePage() {
                 marginRight: "auto",
               }}
             >
-              Aceleași pachete ca pe landing, dar cu acțiuni directe în contul
-              tău.
+              Pachete simple, în EUR, fără surprize: Standard sau Premium.
             </p>
           </div>
 
@@ -187,17 +186,17 @@ export default async function AbonamentePage() {
           {isOwner && (
             <div className="dash-card max-w-xl mx-auto mt-8 text-center">
               <h3 className="text-base font-semibold text-[var(--ink)] mb-1">
-                Testează plata (1 RON)
+                Testează plata (1 EUR)
               </h3>
               <p className="text-sm text-[var(--ink-soft)] mb-3">
                 Doar pentru tine (owner). Deschide o sesiune Stripe de test cu o plată
-                reală de <strong>1 RON</strong>, ca să verifici că banii intră corect.
+                reală de <strong>1 EUR</strong>, ca să verifici că banii intră corect.
               </p>
               <Link
                 href="/checkout?plan=test&interval=monthly"
                 className="btn btn-secondary"
               >
-                Plată test 1 RON
+                Plată test 1 EUR
               </Link>
             </div>
           )}

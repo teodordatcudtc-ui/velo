@@ -49,12 +49,12 @@ export async function POST(request: Request) {
               {
                 quantity: 1,
                 price_data: {
-                  currency: "ron",
+                  currency: "eur",
                   product_data: {
                     name: "Vello – plată test",
-                    description: "Plată de test 1 RON pentru verificarea integrării Stripe.",
+                    description: "Plată de test 1 EUR pentru verificarea integrării Stripe.",
                   },
-                  unit_amount: 100, // 1 RON
+                  unit_amount: 100, // 1 EUR
                 },
               },
             ],
