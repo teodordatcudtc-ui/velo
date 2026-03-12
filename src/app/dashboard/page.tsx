@@ -41,6 +41,7 @@ export default async function DashboardPage(props: {
     .from("clients")
     .select(`id, name, email, phone, unique_token, created_at, reminder_enabled, reminder_day_of_month, document_types ( id, name )`)
     .eq("accountant_id", user.id)
+    .eq("archived", false)
     .order("created_at", { ascending: false });
 
   const clientIds = (clients ?? []).map((c) => c.id);

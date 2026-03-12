@@ -60,6 +60,8 @@ export function DashboardClientsTable({
   const uploadsThisMonth = uploads.filter(
     (u) => u.month === currentMonth && u.year === currentYear
   );
+  const sentAnyRequestByClient = new Set(Object.keys(nextRequestByClient ?? {}));
+
   const uploadedByClientAndType = new Map<string, Set<string>>();
   for (const u of uploadsThisMonth) {
     const key = u.client_id;
@@ -133,7 +135,9 @@ export function DashboardClientsTable({
                           color: "var(--ink-muted)",
                         }}
                       >
-                        Link unic trimis clientului
+                        {sentAnyRequestByClient.has(client.id)
+                          ? "Link unic trimis clientului"
+                          : "Link unic disponibil (ne-trimis)"}
                       </div>
                     </div>
                   </div>

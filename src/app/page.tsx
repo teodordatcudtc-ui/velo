@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import PricingSection from "./components/PricingSection";
 import FaqSection from "./components/FaqSection";
 import ScrollEffects from "./components/ScrollEffects";
+import { HeroActions } from "./components/HeroActions";
 
 function Logo() {
   return (
@@ -77,20 +78,7 @@ export default async function HomePage() {
               Trimite cereri de documente clienților tăi în 30 de secunde. Ei răspund cu un click, tu primești totul organizat.
             </div>
 
-            <div className="hero-actions">
-              <Link href="/signup" className="btn btn-primary btn-primary-lg">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-                Încearcă 14 zile gratuit
-              </Link>
-              <Link href="#how" className="btn btn-secondary">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
-                </svg>
-                Vezi demo
-              </Link>
-            </div>
+            <HeroActions />
 
             <div className="hero-trust">
               <div className="hero-trust-avatars">
