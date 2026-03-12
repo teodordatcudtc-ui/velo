@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import CancelSubscriptionButton from "@/app/dashboard/abonamente/CancelSubscriptionButton";
 import {
   createEarlyAccessCode,
   redeemEarlyAccessCode,
@@ -38,10 +39,7 @@ export function PlanAccessCard({
   const toast = useToast();
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [cancelConfirming, setCancelConfirming] = useState(false);
-  const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelDone, setCancelDone] = useState(false);
-  const [cancelError, setCancelError] = useState<string | null>(null);
   const [lastSuccessText, setLastSuccessText] = useState<string | null>(null);
   const [creatingCode, setCreatingCode] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
@@ -100,30 +98,6 @@ export function PlanAccessCard({
       toast.error("Nu am putut genera codul acum. Încearcă din nou.");
     } finally {
       setCreatingCode(false);
-    }
-  }
-
-  async function handleCancelSubscription() {
-    setCancelLoading(true);
-    setCancelError(null);
-    try {
-      const res = await fetch("/api/stripe/cancel-subscription", {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setCancelError(data.error ?? "Ceva a mers greșit. Încearcă din nou.");
-        return;
-      }
-      setCancelDone(true);
-      setCancelConfirming(false);
-      toast.success("Reînnoirea automată a fost oprită. Accesul continuă până la finalul perioadei.");
-      router.refresh();
-    } catch {
-      setCancelError("Eroare de rețea. Încearcă din nou.");
-    } finally {
-      setCancelLoading(false);
     }
   }
 
@@ -196,61 +170,18 @@ export function PlanAccessCard({
               Reînnoirea automată este oprită. Accesul continuă până la{" "}
               <strong>{formatDate(premiumUntil)}</strong>, după care contul revine la planul gratuit.
             </p>
-          ) : canCancel ? (
-            cancelConfirming ? (
-              <div style={{ background: "#fff8f8", border: "1px solid #fecaca", borderRadius: "var(--r-md)", padding: 12, marginTop: 8 }}>
-                <p className="text-sm text-[var(--ink)] mb-2" style={{ fontWeight: 600 }}>
-                  Ești sigur că vrei să oprești reînnoirea?
-                </p>
-                <p className="text-sm text-[var(--ink-soft)] mb-3">
-                  Accesul continuă până la <strong>{formatDate(premiumUntil)}</strong>. Nu se face rambursare.
-                </p>
-                {cancelError && (
-                  <p className="text-sm mb-2" style={{ color: "var(--red)" }}>{cancelError}</p>
-                )}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCancelSubscription}
-                    disabled={cancelLoading}
-                    className="btn"
-                    style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: 13 }}
-                  >
-                    {cancelLoading ? "Se procesează…" : "Da, oprește"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setCancelConfirming(false); setCancelError(null); }}
-                    disabled={cancelLoading}
-                    className="btn btn-secondary"
-                    style={{ fontSize: 13 }}
-                  >
-                    Renunță
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p className="text-sm text-[var(--ink-soft)] mb-2">
-                  Abonamentul se reînnoiește automat.
-                  {premiumUntil && ` Perioada curentă expiră pe ${formatDate(premiumUntil)}.`}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setCancelConfirming(true)}
-                  className="text-sm"
-                  style={{ color: "var(--ink-muted)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                >
-                  Oprește reînnoirea automată
-                </button>
-              </div>
-            )
           ) : (
-            <p className="text-sm text-[var(--ink-soft)]">
-              {premiumUntil
-                ? `Accesul expiră pe ${formatDate(premiumUntil)}. Nu există reînnoire automată.`
-                : "Planul tău activ nu se reînnoiește automat."}
-            </p>
+            <div>
+              <p className="text-sm text-[var(--ink-soft)] mb-2">
+                Abonamentul se reînnoiește automat.
+                {premiumUntil && ` Perioada curentă expiră pe ${formatDate(premiumUntil)}.`}
+              </p>
+              <CancelSubscriptionButton
+                premiumUntil={premiumUntil}
+                hasStripeSubscription={canCancel}
+                onCanceled={() => setCancelDone(true)}
+              />
+            </div>
           )}
         </div>
       )}

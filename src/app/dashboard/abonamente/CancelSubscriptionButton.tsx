@@ -1,31 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type Props = {
   premiumUntil: string | null;
   hasStripeSubscription?: boolean;
+  onCanceled?: () => void;
 };
 
-export default function CancelSubscriptionButton({ premiumUntil, hasStripeSubscription = false }: Props) {
-  const router = useRouter();
-  const [confirming, setConfirming] = useState(false);
+function formatDate(iso: string | null): string {
+  if (!iso) return "finalul perioadei";
+  return new Date(iso).toLocaleDateString("ro-RO", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export default function CancelSubscriptionButton({
+  premiumUntil,
+  hasStripeSubscription = false,
+  onCanceled,
+}: Props) {
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const endDate = premiumUntil
-    ? new Date(premiumUntil).toLocaleDateString("ro-RO", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      })
-    : null;
-
-  async function handleCancel() {
-    setLoading(true);
+  async function handleConfirm() {
     setError(null);
+    setLoading(true);
     try {
       const res = await fetch("/api/stripe/cancel-subscription", {
         method: "POST",
@@ -36,9 +39,8 @@ export default function CancelSubscriptionButton({ premiumUntil, hasStripeSubscr
         setError(data.error ?? "Ceva a mers greșit. Încearcă din nou.");
         return;
       }
-      setDone(true);
-      setConfirming(false);
-      router.refresh();
+      setOpen(false);
+      onCanceled?.();
     } catch {
       setError("Eroare de rețea. Încearcă din nou.");
     } finally {
@@ -46,89 +48,6 @@ export default function CancelSubscriptionButton({ premiumUntil, hasStripeSubscr
     }
   }
 
-  if (done) {
-    return (
-      <div
-        style={{
-          background: "var(--paper-2)",
-          border: "1px solid var(--paper-3)",
-          borderRadius: "var(--r-lg)",
-          padding: "14px 16px",
-          fontSize: 13,
-          color: "var(--ink-soft)",
-        }}
-      >
-        ✓ Abonamentul va fi oprit la sfârșitul perioadei curente
-        {endDate && <span style={{ fontWeight: 600, color: "var(--ink)" }}> ({endDate})</span>}.
-        Până atunci ai acces complet.
-      </div>
-    );
-  }
-
-  if (confirming) {
-    return (
-      <div
-        style={{
-          background: "#fff8f8",
-          border: "1px solid #fecaca",
-          borderRadius: "var(--r-lg)",
-          padding: "16px",
-        }}
-      >
-        <p style={{ fontSize: 13, color: "var(--ink)", marginBottom: 8, fontWeight: 600 }}>
-          Ești sigur că vrei să oprești abonamentul?
-        </p>
-        <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 12 }}>
-          Vei păstra accesul până la{" "}
-          <strong style={{ color: "var(--ink)" }}>{endDate ?? "sfârșitul perioadei"}</strong>.
-          După această dată, contul revine la planul gratuit (5 clienți). Nu se face rambursare.
-        </p>
-        {error && (
-          <p style={{ fontSize: 13, color: "var(--red)", marginBottom: 8 }}>{error}</p>
-        )}
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={loading}
-            style={{
-              background: "#dc2626",
-              color: "#fff",
-              border: "none",
-              borderRadius: "var(--r-md)",
-              padding: "8px 16px",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {loading ? "Se procesează…" : "Da, oprește abonamentul"}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setConfirming(false); setError(null); }}
-            disabled={loading}
-            style={{
-              background: "var(--paper-2)",
-              color: "var(--ink)",
-              border: "1px solid var(--paper-3)",
-              borderRadius: "var(--r-md)",
-              padding: "8px 16px",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
-            Anulează
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Dacă nu are stripe_subscription_id (ex: plată one-time sau migrație neaplicată)
-  // → nu putem anula din Stripe, dar afișăm oricum o notă informativă
   if (!hasStripeSubscription) {
     return (
       <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>
@@ -138,25 +57,108 @@ export default function CancelSubscriptionButton({ premiumUntil, hasStripeSubscr
   }
 
   return (
-    <div>
-      {error && (
-        <p style={{ fontSize: 13, color: "var(--red)", marginBottom: 8 }}>{error}</p>
-      )}
+    <>
+      {/* Trigger – text roșu discret */}
       <button
         type="button"
-        onClick={() => setConfirming(true)}
+        onClick={() => { setOpen(true); setError(null); }}
         style={{
           background: "none",
           border: "none",
-          color: "var(--ink-muted)",
+          color: "#dc2626",
           fontSize: 13,
           cursor: "pointer",
           textDecoration: "underline",
           padding: 0,
+          whiteSpace: "nowrap",
         }}
       >
         Oprește reînnoirea automată
       </button>
-    </div>
+
+      {/* Modal overlay */}
+      {open && (
+        <div
+          onClick={() => { if (!loading) { setOpen(false); setError(null); } }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              borderRadius: 16,
+              padding: 28,
+              maxWidth: 420,
+              width: "100%",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+            }}
+          >
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111", marginBottom: 12 }}>
+              Ești sigur că vrei să oprești abonamentul?
+            </h2>
+            <p style={{ fontSize: 14, color: "#555", lineHeight: 1.6, marginBottom: 20 }}>
+              Vei păstra accesul până la{" "}
+              <strong style={{ color: "#111" }}>{formatDate(premiumUntil)}</strong>.
+              După această dată, contul revine la planul gratuit (5 clienți).{" "}
+              <strong>Nu se face rambursare.</strong>
+            </p>
+
+            {error && (
+              <p style={{ fontSize: 13, color: "#dc2626", marginBottom: 12 }}>{error}</p>
+            )}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "11px 16px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.7 : 1,
+                  transition: "opacity 0.15s",
+                }}
+              >
+                {loading ? "Se procesează…" : "Da, oprește abonamentul"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOpen(false); setError(null); }}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  background: "#f4f4f5",
+                  color: "#333",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "11px 16px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                Anulează
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

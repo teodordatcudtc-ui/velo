@@ -87,6 +87,8 @@ export default function AbonamentePricing({
   const [annual, setAnnual] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Optimistic: ascundem butonul imediat după anulare reușită, fără să așteptăm refresh
+  const [localCanceled, setLocalCanceled] = useState(false);
 
   async function handleCheckout(planId: PlanKey) {
     setError(null);
@@ -241,13 +243,17 @@ export default function AbonamentePricing({
               )}
             </p>
           </div>
-          {isCanceling && (
+          {(isCanceling || localCanceled) && (
             <span style={{ fontSize: 12, background: "#fef3c7", color: "#92400e", borderRadius: 100, padding: "4px 12px", fontWeight: 600, whiteSpace: "nowrap" }}>
               Se oprește la finalul perioadei
             </span>
           )}
-          {!isCanceling && (
-            <CancelSubscriptionButton premiumUntil={premiumUntil} hasStripeSubscription={hasStripeSubscription || canCancel} />
+          {!isCanceling && !localCanceled && (
+            <CancelSubscriptionButton
+              premiumUntil={premiumUntil}
+              hasStripeSubscription={hasStripeSubscription || canCancel}
+              onCanceled={() => setLocalCanceled(true)}
+            />
           )}
         </div>
       )}
