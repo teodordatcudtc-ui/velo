@@ -461,8 +461,8 @@ export default async function HomePage() {
               <div className="footer-col-title">Legal</div>
               <Link href="/termeni" className="footer-link">Termeni și condiții</Link>
               <Link href="/privacy" className="footer-link">Politica de confidențialitate</Link>
-              <Link href="#" className="footer-link">GDPR</Link>
-              <Link href="#" className="footer-link">Cookie-uri</Link>
+              <Link href="/gdpr" className="footer-link">GDPR</Link>
+              <Link href="/cookie-uri" className="footer-link">Cookie-uri</Link>
             </div>
           </div>
 
