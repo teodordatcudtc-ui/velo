@@ -187,62 +187,70 @@ export function PlanAccessCard({
         </div>
       )}
 
-      {/* Oprire abonament */}
-      {(canCancel || isCanceling || cancelDone) && (
+      {/* Gestionare abonament – apare ori de câte ori ai un plan activ */}
+      {subscriptionPlan !== "none" && (
         <div className="pt-4 mb-0 border-t border-[var(--paper-3)]">
-          <h3 className="text-sm font-semibold text-[var(--ink)] mb-1">Reînnoire automată</h3>
+          <h3 className="text-sm font-semibold text-[var(--ink)] mb-1">Abonament</h3>
           {(isCanceling || cancelDone) ? (
             <p className="text-sm text-[var(--ink-soft)]">
-              Reînnoirea automată este oprită. Vei păstra accesul până la{" "}
+              Reînnoirea automată este oprită. Accesul continuă până la{" "}
               <strong>{formatDate(premiumUntil)}</strong>, după care contul revine la planul gratuit.
             </p>
-          ) : cancelConfirming ? (
-            <div style={{ background: "#fff8f8", border: "1px solid #fecaca", borderRadius: "var(--r-md)", padding: 12, marginTop: 8 }}>
-              <p className="text-sm text-[var(--ink)] mb-2" style={{ fontWeight: 600 }}>
-                Ești sigur că vrei să oprești reînnoirea?
-              </p>
-              <p className="text-sm text-[var(--ink-soft)] mb-3">
-                Accesul continuă până la <strong>{formatDate(premiumUntil)}</strong>. Nu se face rambursare.
-              </p>
-              {cancelError && (
-                <p className="text-sm mb-2" style={{ color: "var(--red)" }}>{cancelError}</p>
-              )}
-              <div className="flex gap-2">
+          ) : canCancel ? (
+            cancelConfirming ? (
+              <div style={{ background: "#fff8f8", border: "1px solid #fecaca", borderRadius: "var(--r-md)", padding: 12, marginTop: 8 }}>
+                <p className="text-sm text-[var(--ink)] mb-2" style={{ fontWeight: 600 }}>
+                  Ești sigur că vrei să oprești reînnoirea?
+                </p>
+                <p className="text-sm text-[var(--ink-soft)] mb-3">
+                  Accesul continuă până la <strong>{formatDate(premiumUntil)}</strong>. Nu se face rambursare.
+                </p>
+                {cancelError && (
+                  <p className="text-sm mb-2" style={{ color: "var(--red)" }}>{cancelError}</p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelSubscription}
+                    disabled={cancelLoading}
+                    className="btn"
+                    style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: 13 }}
+                  >
+                    {cancelLoading ? "Se procesează…" : "Da, oprește"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setCancelConfirming(false); setCancelError(null); }}
+                    disabled={cancelLoading}
+                    className="btn btn-secondary"
+                    style={{ fontSize: 13 }}
+                  >
+                    Renunță
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-[var(--ink-soft)] mb-2">
+                  Abonamentul se reînnoiește automat.
+                  {premiumUntil && ` Perioada curentă expiră pe ${formatDate(premiumUntil)}.`}
+                </p>
                 <button
                   type="button"
-                  onClick={handleCancelSubscription}
-                  disabled={cancelLoading}
-                  className="btn"
-                  style={{ background: "#dc2626", color: "#fff", border: "none", fontSize: 13 }}
+                  onClick={() => setCancelConfirming(true)}
+                  className="text-sm"
+                  style={{ color: "var(--ink-muted)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", padding: 0 }}
                 >
-                  {cancelLoading ? "Se procesează…" : "Da, oprește"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setCancelConfirming(false); setCancelError(null); }}
-                  disabled={cancelLoading}
-                  className="btn btn-secondary"
-                  style={{ fontSize: 13 }}
-                >
-                  Renunță
+                  Oprește reînnoirea automată
                 </button>
               </div>
-            </div>
+            )
           ) : (
-            <div>
-              <p className="text-sm text-[var(--ink-soft)] mb-2">
-                Abonamentul se reînnoiește automat. Poți opri oricând — accesul rămâne activ până la{" "}
-                <strong>{formatDate(premiumUntil)}</strong>.
-              </p>
-              <button
-                type="button"
-                onClick={() => setCancelConfirming(true)}
-                className="text-sm"
-                style={{ color: "var(--ink-muted)", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-              >
-                Oprește reînnoirea automată
-              </button>
-            </div>
+            <p className="text-sm text-[var(--ink-soft)]">
+              {premiumUntil
+                ? `Accesul expiră pe ${formatDate(premiumUntil)}. Nu există reînnoire automată.`
+                : "Planul tău activ nu se reînnoiește automat."}
+            </p>
           )}
         </div>
       )}

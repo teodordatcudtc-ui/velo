@@ -31,12 +31,12 @@ export default async function SetariPage() {
     ?.stripe_subscription_id ?? null;
   const stripeSubStatus = (accountant as { stripe_subscription_status?: string | null } | null)
     ?.stripe_subscription_status ?? null;
+  const isCanceling = stripeSubStatus === "canceling";
   const canCancel =
     !!stripeSubId &&
-    stripeSubStatus !== "canceling" &&
+    !isCanceling &&
     stripeSubStatus !== "canceled" &&
     subscriptionPlan !== "none";
-  const isCanceling = stripeSubStatus === "canceling";
   const canGenerateCodes =
     !!user.email &&
     (process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase() ===

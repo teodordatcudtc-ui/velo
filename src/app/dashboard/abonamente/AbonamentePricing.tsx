@@ -18,6 +18,8 @@ type Props = {
   currentPlan: string;
   canCancel?: boolean;
   isCanceling?: boolean;
+  showSubscriptionSection?: boolean;
+  hasStripeSubscription?: boolean;
   premiumUntil?: string | null;
 };
 
@@ -78,6 +80,8 @@ export default function AbonamentePricing({
   currentPlan,
   canCancel = false,
   isCanceling = false,
+  showSubscriptionSection = false,
+  hasStripeSubscription = false,
   premiumUntil = null,
 }: Props) {
   const [annual, setAnnual] = useState(false);
@@ -203,8 +207,8 @@ export default function AbonamentePricing({
         })}
       </div>
 
-      {/* Secțiunea de oprire abonament */}
-      {(canCancel || isCanceling) && (
+      {/* Secțiunea de gestionare abonament – apare când ai orice plan activ */}
+      {showSubscriptionSection && (
         <div
           style={{
             maxWidth: 860,
@@ -220,33 +224,32 @@ export default function AbonamentePricing({
             flexWrap: "wrap",
           }}
         >
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 2 }}>
-              {isCanceling ? "Abonamentul se oprește" : "Gestionează abonamentul"}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>
+              {isCanceling
+                ? "Abonamentul se oprește la finalul perioadei"
+                : "Gestionează abonamentul"}
             </p>
             <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
               {isCanceling
-                ? `Reînnoirea automată a fost oprită. Accesul continuă până la finalul perioadei curente.`
-                : "Poți opri reînnoirea automată oricând. Accesul rămâne activ până la finalul perioadei plătite."}
+                ? "Reînnoirea automată a fost oprită. Accesul continuă până la finalul perioadei plătite."
+                : hasStripeSubscription
+                  ? "Abonamentul se reînnoiește automat. Poți opri oricând — accesul rămâne activ până la finalul perioadei."
+                  : premiumUntil
+                    ? `Accesul expiră pe ${new Date(premiumUntil).toLocaleDateString("ro-RO", { day: "2-digit", month: "long", year: "numeric" })}. Nu există reînnoire automată.`
+                    : "Planul tău activ nu se reînnoiește automat."}
             </p>
           </div>
+          {isCanceling && (
+            <span style={{ fontSize: 12, background: "#fef3c7", color: "#92400e", borderRadius: 100, padding: "4px 12px", fontWeight: 600, whiteSpace: "nowrap" }}>
+              Se oprește la finalul perioadei
+            </span>
+          )}
           {canCancel && !isCanceling && (
             <CancelSubscriptionButton premiumUntil={premiumUntil} />
           )}
-          {isCanceling && (
-            <span
-              style={{
-                fontSize: 12,
-                background: "#fef3c7",
-                color: "#92400e",
-                borderRadius: 100,
-                padding: "4px 12px",
-                fontWeight: 600,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Se oprește la finalul perioadei
-            </span>
+          {!canCancel && !isCanceling && hasStripeSubscription && (
+            <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>Activ</span>
           )}
         </div>
       )}

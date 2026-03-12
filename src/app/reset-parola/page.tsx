@@ -18,7 +18,7 @@ export default function ResetParolaPage() {
 
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/reset-parola/confirmare`,
+      redirectTo: `${origin}/auth/callback?next=/reset-parola/confirmare`,
     });
 
     setLoading(false);

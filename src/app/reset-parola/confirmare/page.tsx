@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,20 +11,8 @@ export default function ConfirmareResetParolaPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sessionReady, setSessionReady] = useState(false);
   const supabase = createClient();
   const router = useRouter();
-
-  // Supabase trimite token-ul în hash-ul URL (#access_token=...&type=recovery)
-  // createClient() îl preia automat din hash la încărcare
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setSessionReady(true);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [supabase]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,12 +32,14 @@ export default function ConfirmareResetParolaPage() {
     setLoading(false);
 
     if (err) {
-      setError("Nu am putut seta parola. Linkul poate fi expirat — solicită un nou link de resetare.");
+      setError(
+        "Nu am putut seta parola. Linkul poate fi expirat — solicită un nou link de resetare."
+      );
       return;
     }
 
     setDone(true);
-    setTimeout(() => router.push("/dashboard"), 3000);
+    setTimeout(() => router.push("/dashboard"), 2500);
   }
 
   if (done) {
@@ -60,37 +50,20 @@ export default function ConfirmareResetParolaPage() {
             style={{
               width: 56,
               height: 56,
-              background: "var(--sage-light, #e8f5e9)",
+              background: "#e8f5e9",
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               margin: "0 auto 20px",
-              fontSize: 24,
+              fontSize: 28,
             }}
           >
             ✓
           </div>
           <h1 className="text-2xl font-bold text-[var(--ink)] mb-3">Parolă actualizată!</h1>
           <p className="text-sm text-[var(--ink-soft)]">
-            Parola a fost setată cu succes. Vei fi redirecționat la dashboard în câteva secunde.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  if (!sessionReady) {
-    return (
-      <main className="min-h-screen flex items-center justify-center px-4 bg-[var(--paper)]">
-        <div className="w-full max-w-sm text-center">
-          <p className="text-sm text-[var(--ink-soft)] mb-4">Se verifică linkul de resetare...</p>
-          <p className="text-xs text-[var(--ink-muted)]">
-            Dacă pagina nu se încarcă,{" "}
-            <Link href="/reset-parola" className="text-[var(--sage)] hover:underline">
-              solicită un nou link
-            </Link>
-            .
+            Parola a fost setată cu succes. Te redirecționăm la dashboard...
           </p>
         </div>
       </main>
@@ -106,7 +79,10 @@ export default function ConfirmareResetParolaPage() {
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="password" className="block text-sm font-500 text-[var(--ink-soft)] mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-500 text-[var(--ink-soft)] mb-1"
+            >
               Parolă nouă
             </label>
             <input
@@ -122,7 +98,10 @@ export default function ConfirmareResetParolaPage() {
             />
           </div>
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-500 text-[var(--ink-soft)] mb-1">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-500 text-[var(--ink-soft)] mb-1"
+            >
               Confirmă parola
             </label>
             <input
@@ -147,6 +126,11 @@ export default function ConfirmareResetParolaPage() {
             {loading ? "Se salvează..." : "Setează parola nouă"}
           </button>
         </form>
+        <p className="mt-4 text-center text-sm">
+          <Link href="/reset-parola" className="text-[var(--ink-muted)] hover:underline">
+            ← Solicită un nou link
+          </Link>
+        </p>
       </div>
     </main>
   );
