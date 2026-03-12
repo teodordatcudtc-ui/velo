@@ -17,6 +17,15 @@ type ParsedCsvRow = {
   phone: string | null;
 };
 
+function buildFromWithAccountantName(accountantName: string | null | undefined): string {
+  const base = process.env.RESEND_FROM ?? "Vello <noreply@vello.ro>";
+  const name = accountantName?.trim();
+  if (!name) return base;
+  const match = base.match(/<(.+)>/);
+  const address = match ? match[1] : base;
+  return `${name} – Vello <${address}>`;
+}
+
 async function getAccountantPlanInfo(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
   const { data: accountant, error } = await supabase
     .from("accountants")
@@ -507,7 +516,6 @@ export async function sendDocumentRequestNow(
     }
 
     const resend = new Resend(apiKey);
-    const fromEmail = process.env.RESEND_FROM ?? "Vello <onboarding@resend.dev>";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const uploadLink = `${baseUrl}/upload/${client.unique_token}`;
     const accountantName = accountant?.name ?? "Contabil";
@@ -522,7 +530,7 @@ export async function sendDocumentRequestNow(
       : "";
 
     const { error: sendError } = await resend.emails.send({
-      from: fromEmail,
+      from: buildFromWithAccountantName(accountantName),
       to: client.email,
       subject: `Cerere documente - ${accountantName}`,
       html: `

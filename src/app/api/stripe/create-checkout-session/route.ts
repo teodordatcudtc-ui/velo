@@ -18,12 +18,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Body invalid." }, { status: 400 });
   }
 
-  const plan = (body.plan === "premium" ? "premium" : "standard") as PlanId;
-  const interval = (body.interval === "annual" ? "annual" : "monthly") as Interval;
-
-  const amountCents = getAmountCents(plan, interval);
-  const description = getDescription(plan, interval);
-
   const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const successUrl = body.successUrl ?? `${origin}/dashboard?checkout=success`;
   const cancelUrl = body.cancelUrl ?? `${origin}/#pricing`;
@@ -38,31 +32,67 @@ export async function POST(request: Request) {
     );
   }
   try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      customer_email: user.email ?? undefined,
-      client_reference_id: user.id,
-      metadata: {
-        accountant_id: user.id,
-        plan,
-        interval,
-      },
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "eur",
-            product_data: {
-              name: description,
-              description: interval === "annual" ? "12 luni de acces" : "1 lună de acces",
+    const isTestPlan = body.plan === "test";
+
+    const session = await stripe.checkout.sessions.create(
+      isTestPlan
+        ? {
+            mode: "payment",
+            customer_email: user.email ?? undefined,
+            client_reference_id: user.id,
+            metadata: {
+              accountant_id: user.id,
+              plan: "test",
+              interval: "one_time",
             },
-            unit_amount: amountCents,
-          },
-        },
-      ],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-    });
+            line_items: [
+              {
+                quantity: 1,
+                price_data: {
+                  currency: "ron",
+                  product_data: {
+                    name: "Vello – plată test",
+                    description: "Plată de test 1 RON pentru verificarea integrării Stripe.",
+                  },
+                  unit_amount: 100, // 1 RON
+                },
+              },
+            ],
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+          }
+        : (() => {
+            const plan = (body.plan === "premium" ? "premium" : "standard") as PlanId;
+            const interval = (body.interval === "annual" ? "annual" : "monthly") as Interval;
+            const amountCents = getAmountCents(plan, interval);
+            const description = getDescription(plan, interval);
+            return {
+              mode: "payment" as const,
+              customer_email: user.email ?? undefined,
+              client_reference_id: user.id,
+              metadata: {
+                accountant_id: user.id,
+                plan,
+                interval,
+              },
+              line_items: [
+                {
+                  quantity: 1,
+                  price_data: {
+                    currency: "eur",
+                    product_data: {
+                      name: description,
+                      description: interval === "annual" ? "12 luni de acces" : "1 lună de acces",
+                    },
+                    unit_amount: amountCents,
+                  },
+                },
+              ],
+              success_url: successUrl,
+              cancel_url: cancelUrl,
+            };
+          })()
+    );
 
     if (!session.url) {
       return NextResponse.json({ error: "Stripe nu a returnat URL." }, { status: 500 });

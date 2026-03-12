@@ -4,6 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+function buildFromWithAccountantName(accountantName: string | null | undefined): string {
+  const base = process.env.RESEND_FROM ?? "Vello <noreply@vello.ro>";
+  const name = accountantName?.trim();
+  if (!name) return base;
+  const match = base.match(/<(.+)>/);
+  const address = match ? match[1] : base;
+  return `${name} – Vello <${address}>`;
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
@@ -26,7 +35,7 @@ export async function POST(request: NextRequest) {
       toEmail = body.to.trim();
     }
   } catch {
-    // ignore JSON errors, we'll fall back more jos
+    // ignore JSON errors, we'll fall back mai jos
   }
 
   if (!toEmail) {
@@ -41,22 +50,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const { data: accountant } = await supabase
+    .from("accountants")
+    .select("name")
+    .eq("id", user.id)
+    .single();
+  const accountantName = accountant?.name ?? "Contabil";
+
   const resend = new Resend(apiKey);
-  const fromEmail = process.env.RESEND_FROM ?? "Vello <onboarding@resend.dev>";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  const subject = "Test email Vello (Resend + vello.ro)";
-  const html = `
-    <p>Bună,</p>
-    <p>Aceasta este un email de test trimis din aplicația Vello folosind domeniul <strong>vello.ro</strong>.</p>
-    <p>Dacă vezi acest mesaj, configurarea cu Resend și domeniul este funcțională.</p>
-    <p>Pentru verificare rapidă poți apăsa linkul de mai jos:</p>
-    <p><a href="${appUrl}" style="color:#4b7a6e;font-weight:600;">Deschide Vello</a></p>
-    <p>Mulțumim,<br/>Echipa Vello</p>
+  const demoClientName = "Client Demo SRL";
+  const uploadLink = `${appUrl}/upload/EXEMPLU-TOKEN-TEST`;
+  const docsHtml = `
+    <ul>
+      <li>Facturi vânzare (PDF)</li>
+      <li>Extrase bancare</li>
+      <li>Bonuri și chitanțe relevante</li>
+    </ul>
+  `;
+  const customMessage = `
+    <p><strong>Mesaj:</strong> acesta este un email de test, pentru a vedea cum arată cererea de documente pentru client.</p>
   `;
 
+  const subject = `Cerere documente - ${accountantName}`;
+  const html = `
+        <p>Bună ziua, ${demoClientName},</p>
+        <p>${accountantName} vă solicită documentele pentru perioada curentă.</p>
+        ${docsHtml}
+        ${customMessage}
+        <p>Puteți încărca documentele aici:</p>
+        <p><a href="${uploadLink}" style="color:#4b7a6e;font-weight:600">${uploadLink}</a></p>
+        <p>Mulțumim,<br/>Echipa Vello</p>
+      `;
+
   const { error } = await resend.emails.send({
-    from: fromEmail,
+    from: buildFromWithAccountantName(accountantName),
     to: toEmail,
     subject,
     html,

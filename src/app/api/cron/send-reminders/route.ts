@@ -40,6 +40,15 @@ type RequestReminderRow = {
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+function buildFromWithAccountantName(accountantName: string | null | undefined): string {
+  const base = process.env.RESEND_FROM ?? "Vello <noreply@vello.ro>";
+  const name = accountantName?.trim();
+  if (!name) return base;
+  const match = base.match(/<(.+)>/);
+  const address = match ? match[1] : base;
+  return `${name} – Vello <${address}>`;
+}
+
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
@@ -61,7 +70,6 @@ export async function GET(request: Request) {
   }
 
   const resend = new Resend(apiKey);
-  const fromEmail = process.env.RESEND_FROM ?? "Vello <onboarding@resend.dev>";
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ??
     (request.headers.get("x-forwarded-host")
@@ -107,7 +115,7 @@ export async function GET(request: Request) {
     `;
 
     const { error: sendError } = await resend.emails.send({
-      from: fromEmail,
+      from: buildFromWithAccountantName(accName),
       to: client.email!,
       subject,
       html,
@@ -172,7 +180,7 @@ export async function GET(request: Request) {
       : "";
 
     const { error: sendError } = await resend.emails.send({
-      from: fromEmail,
+      from: buildFromWithAccountantName(accName),
       to: client.email,
       subject: `Reminder documente – ${accName}`,
       html: `
