@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 
 export async function POST() {
+  // Autentificare cu client normal (respectă sesiunea user-ului)
   const supabase = await createClient();
   const {
     data: { user },
@@ -13,11 +15,16 @@ export async function POST() {
   }
 
   // Luăm subscription_id din baza de date
-  const { data: accountant } = await supabase
+  const { data: accountant, error: fetchError } = await supabase
     .from("accountants")
-    .select("stripe_subscription_id, subscription_plan, premium_until")
+    .select("stripe_subscription_id")
     .eq("id", user.id)
     .single();
+
+  if (fetchError) {
+    console.error("cancel-subscription fetch error:", fetchError);
+    return NextResponse.json({ error: "Nu am putut citi datele contului." }, { status: 500 });
+  }
 
   const subscriptionId = (accountant as { stripe_subscription_id?: string | null } | null)
     ?.stripe_subscription_id;
@@ -42,11 +49,18 @@ export async function POST() {
       cancel_at_period_end: true,
     });
 
-    // Marcăm în DB că abonamentul e în curs de anulare
-    await (supabase
-      .from("accountants") as unknown as { update: (v: Record<string, unknown>) => { eq: (col: string, val: string) => Promise<unknown> } })
+    // Update DB cu admin client (bypass RLS) – la fel ca webhook-ul
+    const admin = createAdminClient();
+    const { error: updateError } = await admin
+      .from("accountants")
       .update({ stripe_subscription_status: "canceling" })
       .eq("id", user.id);
+
+    if (updateError) {
+      console.error("cancel-subscription DB update error:", updateError);
+      // Stripe a setat cancel_at_period_end, dar DB nu s-a actualizat – returnăm succes oricum
+      // la urmatorul webhook customer.subscription.updated se va actualiza și DB-ul
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {
