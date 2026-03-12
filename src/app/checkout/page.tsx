@@ -12,7 +12,7 @@ function CheckoutContent() {
   const [message, setMessage] = useState<string>("");
 
   useEffect(() => {
-    const planId = plan === "premium" ? "premium" : "standard";
+    const planId = plan === "premium" || plan === "test" ? plan : "standard";
     const intervalVal = interval === "annual" ? "annual" : "monthly";
 
     fetch("/api/stripe/create-checkout-session", {
