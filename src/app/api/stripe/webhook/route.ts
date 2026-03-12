@@ -218,12 +218,19 @@ export async function POST(request: Request) {
 
       if (!accountantId) break;
 
+      // Dacă este marcat cu cancel_at_period_end dar încă activ în Stripe,
+      // în aplicație vrem să afișăm status „canceling” (se oprește la finalul perioadei)
+      const appStatus =
+        subscription.cancel_at_period_end && subscription.status === "active"
+          ? "canceling"
+          : subscription.status;
+
       await supabase
         .from("accountants")
         // @ts-expect-error - Supabase inferred type
         .update({
           ...(plan ? { subscription_plan: plan } : {}),
-          stripe_subscription_status: subscription.status,
+          stripe_subscription_status: appStatus,
         })
         .eq("id", accountantId);
 
