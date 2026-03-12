@@ -1514,9 +1514,20 @@ footer {
   }
   nav {
     padding: 0 16px;
+    display: flex;
+    justify-content: space-between;
+    grid-template-columns: unset;
+    gap: 12px;
   }
   .nav-links {
     display: none;
+  }
+  .nav-start {
+    min-width: 0;
+  }
+  .nav-cta {
+    margin-left: auto;
+    flex-shrink: 0;
   }
 }
 

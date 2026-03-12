@@ -34,7 +34,7 @@ const STEPS = [
   {
     title: "Pasul 2: completează datele",
     text: "Completează cel puțin numele clientului și apasă „Adaugă client”.",
-    target: "[data-tutorial=\"clienti-add-modal\"]",
+    target: "[data-tutorial=\"clienti-add-name\"]",
   },
   {
     title: "Pasul 3: deschide clientul",
@@ -217,6 +217,21 @@ export function ClientiOnboardingTutorial({
 
     const margin = 24;
     const gap = 14;
+    const isNarrow = viewport.w < 700;
+
+    if (isNarrow) {
+      const maxCardH = 280;
+      const belowTop = rect.top + rect.height + gap;
+      const canPlaceBelow = belowTop + maxCardH < viewport.h - margin;
+      return {
+        ...base,
+        left: margin,
+        right: margin,
+        maxWidth: "none",
+        transform: "none",
+        top: canPlaceBelow ? belowTop : margin,
+      };
+    }
     const rightSpace = viewport.w - (rect.left + rect.width) - margin;
     const leftSpace = rect.left - margin;
     const desiredTop = Math.max(
