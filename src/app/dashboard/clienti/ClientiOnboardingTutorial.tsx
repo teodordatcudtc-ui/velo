@@ -299,19 +299,19 @@ export function ClientiOnboardingTutorial({
 
   return (
     <>
-      {(step === 0 || forceCentered) && (
+      {(step === 0 || step === 3 || forceCentered) && (
         <div
           className="fixed inset-0 z-[10040] pointer-events-none"
           style={{
-            background: "rgba(26,26,46,0.35)",
-            backdropFilter: "blur(5px)",
+            background: step === 3 ? "rgba(26,26,46,0.45)" : "rgba(26,26,46,0.35)",
+            backdropFilter: step === 3 ? "blur(6px)" : "blur(5px)",
           }}
           aria-hidden
         />
       )}
 
       {hasTarget && rect && (
-        <div className="fixed inset-0 z-[10040] pointer-events-none" aria-hidden>
+        <div className="fixed inset-0 z-[10041] pointer-events-none" aria-hidden>
           <div
             style={{
               position: "absolute",
@@ -320,7 +320,7 @@ export function ClientiOnboardingTutorial({
               right: 0,
               height: Math.max(0, rect.top),
               background: "rgba(26,26,46,0.35)",
-              backdropFilter: "blur(3px)",
+              backdropFilter: "blur(4px)",
             }}
           />
           <div
@@ -331,7 +331,7 @@ export function ClientiOnboardingTutorial({
               right: 0,
               bottom: 0,
               background: "rgba(26,26,46,0.35)",
-              backdropFilter: "blur(3px)",
+              backdropFilter: "blur(4px)",
             }}
           />
           <div
@@ -342,7 +342,7 @@ export function ClientiOnboardingTutorial({
               width: Math.max(0, rect.left),
               height: rect.height,
               background: "rgba(26,26,46,0.35)",
-              backdropFilter: "blur(3px)",
+              backdropFilter: "blur(4px)",
             }}
           />
           <div
@@ -353,7 +353,7 @@ export function ClientiOnboardingTutorial({
               right: 0,
               height: rect.height,
               background: "rgba(26,26,46,0.35)",
-              backdropFilter: "blur(3px)",
+              backdropFilter: "blur(4px)",
             }}
           />
           <div
@@ -364,7 +364,7 @@ export function ClientiOnboardingTutorial({
               width: rect.width,
               height: rect.height,
               borderRadius: "var(--r-md)",
-              outline: "2px solid var(--sage)",
+              outline: "3px solid var(--sage)",
               outlineOffset: 3,
               pointerEvents: "none",
             }}
