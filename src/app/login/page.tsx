@@ -80,9 +80,14 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-500 text-[var(--ink-soft)] mb-1">
+            <div className="flex items-center justify-between mb-1">
+            <label htmlFor="password" className="block text-sm font-500 text-[var(--ink-soft)]">
               Parolă
             </label>
+            <Link href="/reset-parola" className="text-xs text-[var(--sage)] hover:underline">
+              Ai uitat parola?
+            </Link>
+          </div>
             <input
               id="password"
               type="password"

@@ -57,9 +57,6 @@ export function ProfileForm({
           readOnly
           className="dash-input bg-[var(--paper)] cursor-not-allowed"
         />
-        <p className="text-xs text-[var(--ink-muted)] mt-1">
-          Emailul se modifică din contul Supabase / recuperare parolă.
-        </p>
       </div>
       {error && <p className="text-sm text-[var(--terracotta)]">{error}</p>}
       {success && <p className="text-sm text-[var(--sage)]">Profil actualizat.</p>}

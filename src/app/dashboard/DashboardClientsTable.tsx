@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import styles from "./DashboardLayout.module.css";
 import { ProgrameazaModal } from "./ProgrameazaModal";
 import { useToast } from "@/app/components/ToastProvider";
-import { saveDocumentRequest, sendDocumentRequestNow } from "@/app/actions/clients";
+import { saveDocumentRequest, sendDocumentRequestNow, markLinkCopied } from "@/app/actions/clients";
 
 type DocType = { id: string; name: string };
 type Client = {
@@ -41,6 +41,7 @@ export function DashboardClientsTable({
   clients,
   uploads,
   nextRequestByClient = {},
+  everSentClientIds = new Set(),
   currentMonth,
   currentYear,
   baseUrl,
@@ -48,6 +49,7 @@ export function DashboardClientsTable({
   clients: Client[];
   uploads: Upload[];
   nextRequestByClient?: Record<string, string>;
+  everSentClientIds?: Set<string>;
   currentMonth: number;
   currentYear: number;
   baseUrl: string;
@@ -55,12 +57,17 @@ export function DashboardClientsTable({
   const router = useRouter();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [programeazaClient, setProgrameazaClient] = useState<Client | null>(null);
+  // Optimistic: clienți pentru care tocmai s-a copiat linkul în această sesiune
+  const [localSentIds, setLocalSentIds] = useState<Set<string>>(new Set());
   const toast = useToast();
 
   const uploadsThisMonth = uploads.filter(
     (u) => u.month === currentMonth && u.year === currentYear
   );
-  const sentAnyRequestByClient = new Set(Object.keys(nextRequestByClient ?? {}));
+  const sentAnyRequestByClient = new Set([
+    ...everSentClientIds,
+    ...localSentIds,
+  ]);
 
   const uploadedByClientAndType = new Map<string, Set<string>>();
   for (const u of uploadsThisMonth) {
@@ -73,9 +80,14 @@ export function DashboardClientsTable({
   const copyLink = (client: Client) => {
     const origin = typeof window !== "undefined" ? window.location.origin : baseUrl || "";
     const url = `${origin || baseUrl}/upload/${client.unique_token}`;
-    void navigator.clipboard.writeText(url).then(() => {
+    void navigator.clipboard.writeText(url).then(async () => {
       setCopiedId(client.id);
       setTimeout(() => setCopiedId(null), 2000);
+      // Marchează linkul ca trimis (optimistic + server)
+      if (!sentAnyRequestByClient.has(client.id)) {
+        setLocalSentIds((prev) => new Set([...prev, client.id]));
+        await markLinkCopied(client.id);
+      }
     });
   };
 

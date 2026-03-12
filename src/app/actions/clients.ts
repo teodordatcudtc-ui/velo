@@ -706,12 +706,46 @@ export async function updateClientReminder(
     .from("clients")
     .update({
       reminder_enabled: enabled,
-      reminder_day_of_month: enabled ? day ?? 1 : null,
+      reminder_day_of_month: enabled ? (day ?? 1) : null,
     })
     .eq("id", clientId);
 
   if (error) return { error: error.message };
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/clienti");
+  return { ok: true };
+}
+
+/** Marcheaza linkul ca trimis manual (copiat) fara a trimite email. */
+export async function markLinkCopied(clientId: string): Promise<{ ok?: true; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Neautentificat.' };
+
+  const { data: client } = await supabase
+    .from('clients')
+    .select('id')
+    .eq('id', clientId)
+    .eq('accountant_id', user.id)
+    .single();
+  if (!client) return { error: 'Client negasit.' };
+
+  const now = new Date();
+  const { error } = await supabase.from('document_requests').insert({
+    client_id: clientId,
+    accountant_id: user.id,
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+    channel: 'manual',
+    doc_type_names: [],
+    message: null,
+    reminder_after_3_days: false,
+    sent_at: now.toISOString(),
+    reminder_sent_at: null,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/clienti');
   return { ok: true };
 }

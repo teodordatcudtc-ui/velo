@@ -53,14 +53,26 @@ export default async function DashboardPage(props: {
           .in("client_id", clientIds)
       : { data: [] };
 
+  const nowIso = new Date().toISOString();
+
+  // Cereri viitoare – pentru data programată afișată în modal
   const { data: upcomingRequests } =
     clientIds.length > 0
       ? await supabase
           .from("document_requests")
           .select("client_id, sent_at")
           .in("client_id", clientIds)
-          .gte("sent_at", new Date().toISOString())
+          .gte("sent_at", nowIso)
           .order("sent_at", { ascending: true })
+      : { data: [] };
+
+  // Orice cerere trimisă vreodată (inclusiv manual) – pentru statusul "trimis/ne-trimis"
+  const { data: anySentRequests } =
+    clientIds.length > 0
+      ? await supabase
+          .from("document_requests")
+          .select("client_id")
+          .in("client_id", clientIds)
       : { data: [] };
 
   const nextRequestByClient: Record<string, string> = {};
@@ -69,6 +81,9 @@ export default async function DashboardPage(props: {
       nextRequestByClient[req.client_id] = req.sent_at;
     }
   }
+
+  // Set cu toți clienții cărora li s-a trimis/copiat linkul vreodată
+  const everSentClientIds = new Set((anySentRequests ?? []).map((r) => r.client_id));
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
@@ -171,6 +186,7 @@ export default async function DashboardPage(props: {
         clients={clients ?? []}
         uploads={uploads ?? []}
         nextRequestByClient={nextRequestByClient}
+        everSentClientIds={everSentClientIds}
         currentMonth={currentMonth}
         currentYear={currentYear}
         baseUrl={baseUrl}
