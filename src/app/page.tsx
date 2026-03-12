@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import PricingSection from "./components/PricingSection";
 import FaqSection from "./components/FaqSection";
 import ScrollEffects from "./components/ScrollEffects";
 import { HeroActions } from "./components/HeroActions";
+import { LandingNavCta } from "./components/LandingNavCta";
 
 function Logo() {
   return (
@@ -21,10 +21,7 @@ function Logo() {
   );
 }
 
-export default async function HomePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
+export default function HomePage() {
   return (
     <>
       <nav id="navbar">
@@ -37,28 +34,7 @@ export default async function HomePage() {
           <Link href="#pricing" className="nav-link">Prețuri</Link>
           <Link href="#faq" className="nav-link">FAQ</Link>
         </div>
-        <div className="nav-cta">
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="btn btn-primary"
-              style={{ padding: "10px 20px", fontSize: 14, borderRadius: "var(--r-md)" }}
-            >
-              Dashboard
-            </Link>
-          ) : (
-            <Link href="/login" className="btn btn-ghost">Intră în cont</Link>
-          )}
-          {!user ? (
-            <Link
-              href="/signup"
-              className="btn btn-primary"
-              style={{ padding: "10px 20px", fontSize: 14, borderRadius: "var(--r-md)" }}
-            >
-              Încearcă gratuit
-            </Link>
-          ) : null}
-        </div>
+        <LandingNavCta />
       </nav>
 
       {/* Hero — centered, no right column */}
