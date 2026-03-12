@@ -69,6 +69,7 @@ export function ClientiOnboardingTutorial({
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<Rect>(null);
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
+  const forceCentered = step === 5;
 
   const storageKey = userId
     ? `${STORAGE_KEY_PREFIX}${userId}`
@@ -189,7 +190,7 @@ export function ClientiOnboardingTutorial({
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
-  const hasTarget = !!rect && !!current.target;
+  const hasTarget = !forceCentered && !!rect && !!current.target;
   const cardWidth = 370;
 
   const cardStyle = useMemo(() => {
@@ -213,6 +214,7 @@ export function ClientiOnboardingTutorial({
       transform: "translate(-50%, -50%)",
     };
 
+    if (forceCentered) return centered;
     if (!rect || viewport.w === 0 || viewport.h === 0) return centered;
 
     const margin = 24;
@@ -256,7 +258,7 @@ export function ClientiOnboardingTutorial({
     }
 
     return centered;
-  }, [rect, viewport.h, viewport.w]);
+  }, [forceCentered, rect, viewport.h, viewport.w]);
 
   const primaryLabel = useMemo(() => {
     if (step === 1 && !modalOpen) return "Deschide formularul";
@@ -297,12 +299,12 @@ export function ClientiOnboardingTutorial({
 
   return (
     <>
-      {step === 0 && (
+      {(step === 0 || forceCentered) && (
         <div
           className="fixed inset-0 z-[10040] pointer-events-none"
           style={{
             background: "rgba(26,26,46,0.35)",
-            backdropFilter: "blur(4px)",
+            backdropFilter: "blur(5px)",
           }}
           aria-hidden
         />
