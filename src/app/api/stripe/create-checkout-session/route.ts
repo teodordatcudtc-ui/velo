@@ -42,8 +42,8 @@ export async function POST(request: Request) {
             client_reference_id: user.id,
             metadata: {
               accountant_id: user.id,
-              plan: "test",
-              interval: "one_time",
+              plan: "premium",
+              interval: "monthly",
             },
             line_items: [
               {
@@ -51,8 +51,8 @@ export async function POST(request: Request) {
                 price_data: {
                   currency: "eur",
                   product_data: {
-                    name: "Vello – plată test",
-                    description: "Plată de test 1 EUR pentru verificarea integrării Stripe.",
+                    name: "Vello – plată test Premium (1 EUR)",
+                    description: "Plată de test 1 EUR – activează planul Premium.",
                   },
                   unit_amount: 100, // 1 EUR
                 },

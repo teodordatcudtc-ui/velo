@@ -86,7 +86,7 @@ export default async function AbonamentePage() {
           </div>
 
           <div className="pricing-grid">
-            <div className="pricing-card">
+            <div className="pricing-card visible">
               <div className="pc-eyebrow">Standard</div>
               <div className="pc-name">Standard</div>
               <div className="pc-desc">
@@ -126,7 +126,7 @@ export default async function AbonamentePage() {
               <div className="pc-note">Fără costuri ascunse</div>
             </div>
 
-            <div className="pricing-card featured">
+            <div className="pricing-card featured visible">
               <div className="popular-badge">⚡ Cel mai popular</div>
               <div className="pc-eyebrow">Premium</div>
               <div className="pc-name">Premium</div>
@@ -184,20 +184,29 @@ export default async function AbonamentePage() {
           </p>
 
           {isOwner && (
-            <div className="dash-card max-w-xl mx-auto mt-8 text-center">
-              <h3 className="text-base font-semibold text-[var(--ink)] mb-1">
-                Testează plata (1 EUR)
-              </h3>
-              <p className="text-sm text-[var(--ink-soft)] mb-3">
-                Doar pentru tine (owner). Deschide o sesiune Stripe de test cu o plată
-                reală de <strong>1 EUR</strong>, ca să verifici că banii intră corect.
-              </p>
+            <div className="pricing-card visible" style={{ maxWidth: 420, margin: "32px auto 0", textAlign: "center" }}>
+              <div className="pc-eyebrow">Test owner</div>
+              <div className="pc-name" style={{ fontSize: 24 }}>Testează plata</div>
+              <div className="pc-desc">
+                Activează planul <strong>Premium</strong> cu o plată reală de <strong>1 EUR</strong>.
+                Folosit doar pentru verificarea integrării Stripe.
+              </div>
+              <div className="pc-price-wrap">
+                <div className="pc-price">
+                  <sup>EUR</sup>
+                  <span>1</span>
+                  <sub>/test</sub>
+                </div>
+                <div className="pc-annual-note">Plată unică de test – activează Premium</div>
+              </div>
+              <div className="pc-divider" />
               <Link
                 href="/checkout?plan=test&interval=monthly"
-                className="btn btn-secondary"
+                className="pc-cta-primary"
               >
-                Plată test 1 EUR
+                Plată test 1 EUR → Premium
               </Link>
+              <div className="pc-note">Doar pentru contul owner</div>
             </div>
           )}
         </div>
