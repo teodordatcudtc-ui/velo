@@ -131,27 +131,29 @@ export function PlanAccessCard({
             : "Plan Standard: maxim 40 clienți activi. Upgrade la Premium pentru clienți nelimitați."}
       </div>
 
-      <div className="pt-4 mb-4 border-t border-[var(--paper-3)]">
-        <h3 className="text-sm font-semibold text-[var(--ink)] mb-2">Schimbă planul (test)</h3>
-        <p className="text-sm text-[var(--ink-muted)] mb-3">
-          Temporar poți selecta manual planul pentru a testa restricțiile și funcțiile.
-        </p>
-        <form action={handlePlanSwitch} className="flex items-center gap-2">
-          <select
-            name="plan"
-            defaultValue={subscriptionPlan}
-            className="dash-input"
-            style={{ minWidth: 200 }}
-          >
-            <option value="none">Plan gratuit (5 clienți)</option>
-            <option value="standard">Standard (40 clienți)</option>
-            <option value="premium">Premium (nelimitat)</option>
-          </select>
-          <button type="submit" className="btn btn-secondary" disabled={switchingPlan}>
-            {switchingPlan ? "Se salvează..." : "Aplică planul"}
-          </button>
-        </form>
-      </div>
+      {canGenerateCodes && (
+        <div className="pt-4 mb-4 border-t border-[var(--paper-3)]">
+          <h3 className="text-sm font-semibold text-[var(--ink)] mb-2">Schimbă planul (test)</h3>
+          <p className="text-sm text-[var(--ink-muted)] mb-3">
+            Temporar poți selecta manual planul pentru a testa restricțiile și funcțiile.
+          </p>
+          <form action={handlePlanSwitch} className="flex items-center gap-2">
+            <select
+              name="plan"
+              defaultValue={subscriptionPlan}
+              className="dash-input"
+              style={{ minWidth: 200 }}
+            >
+              <option value="none">Plan gratuit (5 clienți)</option>
+              <option value="standard">Standard (40 clienți)</option>
+              <option value="premium">Premium (nelimitat)</option>
+            </select>
+            <button type="submit" className="btn btn-secondary" disabled={switchingPlan}>
+              {switchingPlan ? "Se salvează..." : "Aplică planul"}
+            </button>
+          </form>
+        </div>
+      )}
 
       <div className="pt-4 border-t border-[var(--paper-3)]">
         <h3 className="text-sm font-semibold text-[var(--ink)] mb-2">Cod early access</h3>

@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,6 +17,20 @@ export async function POST() {
   const adminEmail = process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase();
   if (!adminEmail || user.email.toLowerCase() !== adminEmail) {
     return NextResponse.json({ error: "Doar contul admin poate folosi acest test." }, { status: 403 });
+  }
+
+  let toEmail: string | null = null;
+  try {
+    const body = await request.json();
+    if (body && typeof body.to === "string" && body.to.includes("@")) {
+      toEmail = body.to.trim();
+    }
+  } catch {
+    // ignore JSON errors, we'll fall back more jos
+  }
+
+  if (!toEmail) {
+    return NextResponse.json({ error: "Adresa destinatarului lipsește sau nu este validă." }, { status: 400 });
   }
 
   const apiKey = process.env.RESEND_API_KEY;
@@ -43,7 +57,7 @@ export async function POST() {
 
   const { error } = await resend.emails.send({
     from: fromEmail,
-    to: user.email,
+    to: toEmail,
     subject,
     html,
   });
@@ -52,6 +66,6 @@ export async function POST() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, to: user.email });
+  return NextResponse.json({ ok: true, to: toEmail });
 }
 
