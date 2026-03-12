@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 
 type Props = {
   premiumUntil: string | null;
+  hasStripeSubscription?: boolean;
 };
 
-export default function CancelSubscriptionButton({ premiumUntil }: Props) {
+export default function CancelSubscriptionButton({ premiumUntil, hasStripeSubscription = false }: Props) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -123,6 +124,16 @@ export default function CancelSubscriptionButton({ premiumUntil }: Props) {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Dacă nu are stripe_subscription_id (ex: plată one-time sau migrație neaplicată)
+  // → nu putem anula din Stripe, dar afișăm oricum o notă informativă
+  if (!hasStripeSubscription) {
+    return (
+      <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>
+        Reînnoire automată activă
+      </span>
     );
   }
 

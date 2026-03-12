@@ -233,11 +233,12 @@ export default function AbonamentePricing({
             <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
               {isCanceling
                 ? "Reînnoirea automată a fost oprită. Accesul continuă până la finalul perioadei plătite."
-                : hasStripeSubscription
-                  ? "Abonamentul se reînnoiește automat. Poți opri oricând — accesul rămâne activ până la finalul perioadei."
-                  : premiumUntil
-                    ? `Accesul expiră pe ${new Date(premiumUntil).toLocaleDateString("ro-RO", { day: "2-digit", month: "long", year: "numeric" })}. Nu există reînnoire automată.`
-                    : "Planul tău activ nu se reînnoiește automat."}
+                : "Abonamentul se reînnoiește automat. Poți opri oricând — accesul rămâne activ până la finalul perioadei."}
+              {!isCanceling && premiumUntil && (
+                <span style={{ marginLeft: 4, color: "var(--ink-muted)" }}>
+                  (perioadă curentă până pe {new Date(premiumUntil).toLocaleDateString("ro-RO", { day: "2-digit", month: "long", year: "numeric" })})
+                </span>
+              )}
             </p>
           </div>
           {isCanceling && (
@@ -245,39 +246,37 @@ export default function AbonamentePricing({
               Se oprește la finalul perioadei
             </span>
           )}
-          {canCancel && !isCanceling && (
-            <CancelSubscriptionButton premiumUntil={premiumUntil} />
-          )}
-          {!canCancel && !isCanceling && hasStripeSubscription && (
-            <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>Activ</span>
+          {!isCanceling && (
+            <CancelSubscriptionButton premiumUntil={premiumUntil} hasStripeSubscription={hasStripeSubscription || canCancel} />
           )}
         </div>
       )}
 
-      {/* Card test plată – doar pentru owner */}
-      {isOwner && (
-        <div className="pricing-card visible" style={{ maxWidth: 420, margin: "32px auto 0", textAlign: "center" }}>
-          <div className="pc-eyebrow">Test owner</div>
-          <div className="pc-name" style={{ fontSize: 24 }}>Testează plata</div>
-          <div className="pc-desc">
-            Activează planul <strong>Premium</strong> cu o plată reală de <strong>1 EUR</strong>.
-            Verificare integrare Stripe.
-          </div>
-          <div className="pc-price-wrap">
-            <div className="pc-price">
-              <sup>EUR</sup>
-              <span>1</span>
-              <sub>/test</sub>
-            </div>
-            <div className="pc-annual-note">Plată unică de test – activează Premium 30 zile</div>
-          </div>
-          <div className="pc-divider" />
-          <Link href="/checkout?plan=test&interval=monthly" className="pc-cta-primary">
-            Plată test 1 EUR → Premium
-          </Link>
-          <div className="pc-note">Doar pentru contul owner</div>
+      {/* Card test plată – vizibil pentru toți */}
+      <div className="pricing-card visible" style={{ maxWidth: 420, margin: "32px auto 0", textAlign: "center" }}>
+        <div className="pc-eyebrow">Testare</div>
+        <div className="pc-name" style={{ fontSize: 24 }}>Testează plata</div>
+        <div className="pc-desc">
+          Verifică integrarea cu Stripe cu o plată reală de <strong>1 EUR</strong>.
+          Activează planul <strong>Premium</strong> 30 de zile.
         </div>
-      )}
+        <div className="pc-price-wrap">
+          <div className="pc-price">
+            <sup>EUR</sup>
+            <span>1</span>
+            <sub>/test</sub>
+          </div>
+          <div className="pc-annual-note">Plată unică – activează Premium 30 zile</div>
+        </div>
+        <div className="pc-divider" />
+        <Link href="/checkout?plan=test&interval=monthly" className="pc-cta-primary">
+          Plată test 1 EUR → Premium
+        </Link>
+        <div className="pc-note">Fără reînnoire automată</div>
+      </div>
+
+      {/* Cardul de owner rămâne separat pentru funcțiile de admin */}
+      {isOwner && null}
     </div>
   );
 }

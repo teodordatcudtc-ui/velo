@@ -42,58 +42,36 @@ export async function POST(request: Request) {
   try {
     const isTestPlan = body.plan === "test";
 
-    if (isTestPlan) {
-      // Plată unică de test 1 EUR → activează Premium 30 zile
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        customer_email: user.email ?? undefined,
-        client_reference_id: user.id,
-        metadata: {
-          accountant_id: user.id,
-          plan: "premium",
-          interval: "monthly",
-        },
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: "eur",
-              product_data: {
-                name: "Vello – plată test Premium (1 EUR)",
-                description: "Plată de test 1 EUR – activează planul Premium.",
-              },
-              unit_amount: 100,
-            },
-          },
-        ],
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-      });
-
-      if (!session.url) {
-        return NextResponse.json({ error: "Stripe nu a returnat URL." }, { status: 500 });
-      }
-      return NextResponse.json({ url: session.url });
-    }
-
-    // Abonament recurent (Standard sau Premium)
-    const plan = (body.plan === "premium" ? "premium" : "standard") as PlanId;
+    // Planul ales: test → premium cu 1 EUR, altfel standard sau premium
+    const plan = (isTestPlan || body.plan === "premium" ? "premium" : "standard") as PlanId;
     const interval = (body.interval === "annual" ? "annual" : "monthly") as Interval;
-    const amountCents = getAmountCents(plan, interval);
-    const description = getDescription(plan, interval);
     const stripeInterval = getStripeInterval(interval);
 
-    // Dacă userul are deja un customer Stripe, îl refolosim
+    // Prețul: 1 EUR pentru test, normal pentru standard/premium
+    const amountCents = isTestPlan ? 100 : getAmountCents(plan, interval);
+    const productName = isTestPlan
+      ? "Vello Premium – test (1 EUR/lună)"
+      : getDescription(plan, interval);
+    const productDesc = isTestPlan
+      ? "Abonament recurent de test – 1 EUR/lună, anulabil oricând din dashboard."
+      : interval === "annual"
+        ? "12 luni de acces – reînnoire anuală automată"
+        : "1 lună de acces – reînnoire lunară automată";
+
+    // Refolosim customer Stripe dacă există deja
     const { data: accountant } = await supabase
       .from("accountants")
       .select("stripe_customer_id")
       .eq("id", user.id)
       .single();
 
+    const existingCustomerId = (accountant as { stripe_customer_id?: string | null } | null)
+      ?.stripe_customer_id ?? undefined;
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer: accountant?.stripe_customer_id ?? undefined,
-      customer_email: accountant?.stripe_customer_id ? undefined : (user.email ?? undefined),
+      customer: existingCustomerId,
+      customer_email: existingCustomerId ? undefined : (user.email ?? undefined),
       client_reference_id: user.id,
       metadata: {
         accountant_id: user.id,
@@ -113,8 +91,8 @@ export async function POST(request: Request) {
           price_data: {
             currency: "eur",
             product_data: {
-              name: description,
-              description: interval === "annual" ? "12 luni de acces – reînnoire anuală automată" : "1 lună de acces – reînnoire lunară automată",
+              name: productName,
+              description: productDesc,
             },
             unit_amount: amountCents,
             recurring: {
