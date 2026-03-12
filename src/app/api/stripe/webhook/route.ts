@@ -54,14 +54,20 @@ export async function POST(request: Request) {
         const premiumUntil = new Date();
         premiumUntil.setDate(premiumUntil.getDate() + 30);
 
-        await supabase
+        const { error: payErr } = await supabase
           .from("accountants")
           // @ts-expect-error - Supabase inferred type
           .update({
             subscription_plan: plan,
-            premium_until: premiumUntil.toISOString().slice(0, 10),
+            premium_until: premiumUntil.toISOString(),
           })
           .eq("id", accountantId);
+
+        if (payErr) {
+          console.error("checkout.session.completed payment update error:", payErr);
+          return NextResponse.json({ error: "Update failed." }, { status: 500 });
+        }
+        console.log(`checkout.session.completed: activated ${plan} for ${accountantId} until ${premiumUntil.toISOString().slice(0, 10)}`);
       } else if (session.mode === "subscription") {
         // Subscription – salvăm customer_id și subscription_id
         const customerId = typeof session.customer === "string"
@@ -71,7 +77,12 @@ export async function POST(request: Request) {
           ? session.subscription
           : session.subscription?.id ?? null;
 
-        await supabase
+        const premiumUntil = new Date();
+        interval === "annual"
+          ? premiumUntil.setFullYear(premiumUntil.getFullYear() + 1)
+          : premiumUntil.setDate(premiumUntil.getDate() + 31);
+
+        const { error: subErr } = await supabase
           .from("accountants")
           // @ts-expect-error - Supabase inferred type
           .update({
@@ -79,17 +90,29 @@ export async function POST(request: Request) {
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             stripe_subscription_status: "active",
-            // premium_until setat la 30 zile ca fallback
-            // va fi actualizat corect de invoice.payment_succeeded
-            premium_until: (() => {
-              const d = new Date();
-              interval === "annual"
-                ? d.setFullYear(d.getFullYear() + 1)
-                : d.setDate(d.getDate() + 31);
-              return d.toISOString().slice(0, 10);
-            })(),
+            premium_until: premiumUntil.toISOString(),
           })
           .eq("id", accountantId);
+
+        if (subErr) {
+          console.error("checkout.session.completed subscription update error:", subErr);
+          // Fallback: dacă migrația 012 nu e aplicată încă, actualizăm doar câmpurile de bază
+          const { error: fallbackErr } = await supabase
+            .from("accountants")
+            // @ts-expect-error - Supabase inferred type
+            .update({
+              subscription_plan: plan,
+              premium_until: premiumUntil.toISOString(),
+            })
+            .eq("id", accountantId);
+          if (fallbackErr) {
+            console.error("checkout.session.completed fallback update error:", fallbackErr);
+            return NextResponse.json({ error: "Update failed." }, { status: 500 });
+          }
+          console.log(`checkout.session.completed: fallback activated ${plan} for ${accountantId}`);
+        } else {
+          console.log(`checkout.session.completed: activated subscription ${plan} for ${accountantId}`);
+        }
       }
       break;
     }
