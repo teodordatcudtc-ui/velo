@@ -107,6 +107,11 @@ export function SidebarNav({ clientCount = 0 }: Props) {
       {/* SETĂRI */}
       <div style={{ ...SECTION_LABEL, paddingTop: 16, marginTop: 4 }}>SETĂRI</div>
 
+      <Link href="/dashboard/abonamente" style={isActive("/dashboard/abonamente") ? LINK_ACTIVE : LINK_BASE}>
+        {ICONS.settings}
+        Abonamente
+      </Link>
+
       <Link href="/dashboard/setari" style={isActive("/dashboard/setari") ? LINK_ACTIVE : LINK_BASE}>
         {ICONS.settings}
         Setări

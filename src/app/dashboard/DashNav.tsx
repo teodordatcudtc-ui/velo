@@ -6,6 +6,7 @@ import styles from "./DashboardLayout.module.css";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  { href: "/dashboard/abonamente", label: "Abonamente", icon: "settings" },
   { href: "/dashboard/setari", label: "Setări", icon: "settings" },
 ];
 
