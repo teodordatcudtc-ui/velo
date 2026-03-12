@@ -1,6 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { getStripe, getAmountCents, getDescription, type PlanId, type Interval } from "@/lib/stripe";
+import {
+  getStripe,
+  getAmountCents,
+  getDescription,
+  getStripeInterval,
+  type PlanId,
+  type Interval,
+} from "@/lib/stripe";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -31,68 +38,94 @@ export async function POST(request: Request) {
       { status: 503 }
     );
   }
+
   try {
     const isTestPlan = body.plan === "test";
 
-    const session = await stripe.checkout.sessions.create(
-      isTestPlan
-        ? {
-            mode: "payment",
-            customer_email: user.email ?? undefined,
-            client_reference_id: user.id,
-            metadata: {
-              accountant_id: user.id,
-              plan: "premium",
-              interval: "monthly",
+    if (isTestPlan) {
+      // Plată unică de test 1 EUR → activează Premium 30 zile
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer_email: user.email ?? undefined,
+        client_reference_id: user.id,
+        metadata: {
+          accountant_id: user.id,
+          plan: "premium",
+          interval: "monthly",
+        },
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: "eur",
+              product_data: {
+                name: "Vello – plată test Premium (1 EUR)",
+                description: "Plată de test 1 EUR – activează planul Premium.",
+              },
+              unit_amount: 100,
             },
-            line_items: [
-              {
-                quantity: 1,
-                price_data: {
-                  currency: "eur",
-                  product_data: {
-                    name: "Vello – plată test Premium (1 EUR)",
-                    description: "Plată de test 1 EUR – activează planul Premium.",
-                  },
-                  unit_amount: 100, // 1 EUR
-                },
-              },
-            ],
-            success_url: successUrl,
-            cancel_url: cancelUrl,
-          }
-        : (() => {
-            const plan = (body.plan === "premium" ? "premium" : "standard") as PlanId;
-            const interval = (body.interval === "annual" ? "annual" : "monthly") as Interval;
-            const amountCents = getAmountCents(plan, interval);
-            const description = getDescription(plan, interval);
-            return {
-              mode: "payment" as const,
-              customer_email: user.email ?? undefined,
-              client_reference_id: user.id,
-              metadata: {
-                accountant_id: user.id,
-                plan,
-                interval,
-              },
-              line_items: [
-                {
-                  quantity: 1,
-                  price_data: {
-                    currency: "eur",
-                    product_data: {
-                      name: description,
-                      description: interval === "annual" ? "12 luni de acces" : "1 lună de acces",
-                    },
-                    unit_amount: amountCents,
-                  },
-                },
-              ],
-              success_url: successUrl,
-              cancel_url: cancelUrl,
-            };
-          })()
-    );
+          },
+        ],
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      });
+
+      if (!session.url) {
+        return NextResponse.json({ error: "Stripe nu a returnat URL." }, { status: 500 });
+      }
+      return NextResponse.json({ url: session.url });
+    }
+
+    // Abonament recurent (Standard sau Premium)
+    const plan = (body.plan === "premium" ? "premium" : "standard") as PlanId;
+    const interval = (body.interval === "annual" ? "annual" : "monthly") as Interval;
+    const amountCents = getAmountCents(plan, interval);
+    const description = getDescription(plan, interval);
+    const stripeInterval = getStripeInterval(interval);
+
+    // Dacă userul are deja un customer Stripe, îl refolosim
+    const { data: accountant } = await supabase
+      .from("accountants")
+      .select("stripe_customer_id")
+      .eq("id", user.id)
+      .single();
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: accountant?.stripe_customer_id ?? undefined,
+      customer_email: accountant?.stripe_customer_id ? undefined : (user.email ?? undefined),
+      client_reference_id: user.id,
+      metadata: {
+        accountant_id: user.id,
+        plan,
+        interval,
+      },
+      subscription_data: {
+        metadata: {
+          accountant_id: user.id,
+          plan,
+          interval,
+        },
+      },
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "eur",
+            product_data: {
+              name: description,
+              description: interval === "annual" ? "12 luni de acces – reînnoire anuală automată" : "1 lună de acces – reînnoire lunară automată",
+            },
+            unit_amount: amountCents,
+            recurring: {
+              interval: stripeInterval,
+            },
+          },
+        },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    });
 
     if (!session.url) {
       return NextResponse.json({ error: "Stripe nu a returnat URL." }, { status: 500 });

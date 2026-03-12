@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getClientLimit, hasPremiumAccess } from "@/lib/subscription";
-import Link from "next/link";
+import AbonamentePricing from "./AbonamentePricing";
 
 export const dynamic = "force-dynamic";
 
@@ -9,11 +9,7 @@ export default async function AbonamentePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
-    // Next.js middleware or route protection should already redirect,
-    // dar pentru siguranță:
-    return null;
-  }
+  if (!user) return null;
 
   const { data: accountant } = await supabase
     .from("accountants")
@@ -23,12 +19,11 @@ export default async function AbonamentePage() {
 
   const limit = getClientLimit(accountant);
   const isPremium = hasPremiumAccess(accountant);
-  const plan =
-    isPremium
-      ? "Premium"
-      : accountant?.subscription_plan === "none"
-        ? "Gratuit"
-        : "Standard";
+  const planLabel = isPremium
+    ? "Premium"
+    : accountant?.subscription_plan === "none"
+      ? "Gratuit"
+      : "Standard";
 
   const isOwner =
     !!user.email &&
@@ -37,181 +32,53 @@ export default async function AbonamentePage() {
       user.email.toLowerCase();
 
   return (
-    <div className="space-y-8">
-      <header>
+    <div>
+      {/* Header pagină */}
+      <header style={{ textAlign: "center", marginBottom: 8 }}>
         <h1 className="dash-page-title">Abonamente</h1>
-        <p className="dash-page-sub">
-          Vezi ce plan ai acum și opțiunile pentru mai mulți clienți.
-        </p>
       </header>
 
-      <div className="dash-card max-w-2xl">
-        <h2 className="text-lg font-semibold text-[var(--ink)] mb-1">
-          Planul tău actual
-        </h2>
-        <p className="text-sm text-[var(--ink-soft)] mb-3">
-          {plan === "Gratuit" &&
-            "Plan gratuit: poți avea până la 5 clienți activi."}
-          {plan === "Standard" &&
-            "Plan Standard: poți avea până la 40 clienți activi."}
-          {plan === "Premium" &&
-            "Plan Premium: clienți nelimitați și acces la toate funcțiile noi."}
-        </p>
-        <p className="text-sm text-[var(--ink-muted)]">
-          Limită curentă de clienți:{" "}
-          <strong>{limit === null ? "nelimitat" : `${limit} clienți`}</strong>.
-        </p>
+      {/* Planul actual – subtil, centrat */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: 40,
+        }}
+      >
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            background: "var(--paper-2)",
+            border: "1px solid var(--paper-3)",
+            borderRadius: 100,
+            padding: "6px 16px",
+            fontSize: 13,
+            color: "var(--ink-soft)",
+          }}
+        >
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: planLabel === "Gratuit" ? "var(--ink-muted)" : "var(--sage)",
+              flexShrink: 0,
+            }}
+          />
+          <span>
+            Plan actual:{" "}
+            <strong style={{ color: "var(--ink)" }}>{planLabel}</strong>
+            {" · "}
+            {limit === null ? "clienți nelimitați" : `până la ${limit} clienți`}
+          </span>
+        </div>
       </div>
 
-      <section>
-        <div className="container">
-          <div className="pricing-header" style={{ marginBottom: 16 }}>
-            <span className="overline">Pachete</span>
-            <div className="h2" style={{ marginTop: 12, marginBottom: 8 }}>
-              Simplu, <em>transparent,</em>
-              <br />
-              fără surprize
-            </div>
-            <p
-              className="body"
-              style={{
-                marginTop: 8,
-                maxWidth: 520,
-                marginLeft: "auto",
-                marginRight: "auto",
-              }}
-            >
-              Pachete simple, în EUR, fără surprize: Standard sau Premium.
-            </p>
-          </div>
-
-          <div className="pricing-grid">
-            <div className="pricing-card visible">
-              <div className="pc-eyebrow">Standard</div>
-              <div className="pc-name">Standard</div>
-              <div className="pc-desc">
-                Ideal pentru început și pentru portofolii mici.
-              </div>
-              <div className="pc-price-wrap">
-                <div className="pc-price">
-                  <sup>EUR</sup>
-                  <span>19</span>
-                  <sub>/lună</sub>
-                </div>
-                <div className="pc-annual-note">
-                  Limita de până la 40 clienți activi.
-                </div>
-              </div>
-              <div className="pc-divider" />
-              <ul className="pc-features">
-                <li className="pc-feature">
-                  <div className="pc-feature-check">✓</div>
-                  Până la 40 clienți
-                </li>
-                <li className="pc-feature">
-                  <div className="pc-feature-check">✓</div>
-                  Linkuri unice per client
-                </li>
-                <li className="pc-feature">
-                  <div className="pc-feature-check">✓</div>
-                  Dashboard documente și categorii
-                </li>
-              </ul>
-              <Link
-                href="/checkout?plan=standard&interval=monthly"
-                className="pc-cta-primary"
-              >
-                Alege Standard
-              </Link>
-              <div className="pc-note">Fără costuri ascunse</div>
-            </div>
-
-            <div className="pricing-card featured visible">
-              <div className="popular-badge">⚡ Cel mai popular</div>
-              <div className="pc-eyebrow">Premium</div>
-              <div className="pc-name">Premium</div>
-              <div className="pc-desc">
-                Pentru contabili care vor automatizări și creștere.
-              </div>
-              <div className="pc-price-wrap">
-                <div className="pc-price">
-                  <sup>EUR</sup>
-                  <span>39</span>
-                  <sub>/lună</sub>
-                </div>
-                <div className="pc-annual-note">
-                  Clienți nelimitați și toate funcțiile noi.
-                </div>
-              </div>
-              <div className="pc-divider" />
-              <ul className="pc-features">
-                <li className="pc-feature">
-                  <div className="pc-feature-check">✓</div>
-                  Clienți nelimitați
-                </li>
-                <li className="pc-feature">
-                  <div className="pc-feature-check">✓</div>
-                  Tot ce este în Standard
-                </li>
-                <li className="pc-feature">
-                  <div className="pc-feature-check">✓</div>
-                  Reminder automat SMS (când devine disponibil)
-                </li>
-                <li className="pc-feature">
-                  <div className="pc-feature-check">✓</div>
-                  Export ZIP lunar (când devine disponibil)
-                </li>
-              </ul>
-              <Link
-                href="/checkout?plan=premium&interval=monthly"
-                className="pc-cta-primary"
-              >
-                Alege Premium
-              </Link>
-              <div className="pc-note">
-                Include toate funcțiile Standard
-              </div>
-            </div>
-          </div>
-
-          <p className="text-xs text-[var(--ink-muted)] mt-6 text-center">
-            Pentru mai multe detalii despre prețuri și facturare, poți verifica și
-            secțiunea de prețuri de pe landing:{" "}
-            <Link href="/#pricing" className="text-[var(--sage)] font-600">
-              vezi prețuri complete
-            </Link>
-            .
-          </p>
-
-          {isOwner && (
-            <div className="pricing-card visible" style={{ maxWidth: 420, margin: "32px auto 0", textAlign: "center" }}>
-              <div className="pc-eyebrow">Test owner</div>
-              <div className="pc-name" style={{ fontSize: 24 }}>Testează plata</div>
-              <div className="pc-desc">
-                Activează planul <strong>Premium</strong> cu o plată reală de <strong>1 EUR</strong>.
-                Folosit doar pentru verificarea integrării Stripe.
-              </div>
-              <div className="pc-price-wrap">
-                <div className="pc-price">
-                  <sup>EUR</sup>
-                  <span>1</span>
-                  <sub>/test</sub>
-                </div>
-                <div className="pc-annual-note">Plată unică de test – activează Premium</div>
-              </div>
-              <div className="pc-divider" />
-              <Link
-                href="/checkout?plan=test&interval=monthly"
-                className="pc-cta-primary"
-              >
-                Plată test 1 EUR → Premium
-              </Link>
-              <div className="pc-note">Doar pentru contul owner</div>
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Pachete prețuri cu toggle anual/lunar */}
+      <AbonamentePricing isOwner={isOwner} currentPlan={planLabel} />
     </div>
   );
 }
-
