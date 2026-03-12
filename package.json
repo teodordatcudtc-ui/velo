@@ -12,6 +12,7 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.10",
     "@vercel/analytics": "^2.0.0",
+    "@vercel/speed-insights": "^2.0.0",
     "jszip": "^3.10.1",
     "nanoid": "^5.0.9",
     "next": "15.2.6",
