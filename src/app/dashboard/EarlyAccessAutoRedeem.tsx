@@ -49,9 +49,8 @@ export function EarlyAccessAutoRedeem() {
       } catch {
         toast.error("Eroare la aplicarea codului de early access.");
       } finally {
-        // Curățăm parametrul din URL
+        // Curățăm parametrul din URL fără să refacem toată pagina (ca să nu stricăm tutorialul)
         router.replace("/dashboard");
-        router.refresh();
       }
     })();
   }, [router, searchParams, toast]);
