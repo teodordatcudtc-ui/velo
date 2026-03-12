@@ -27,7 +27,13 @@ export function HeroActions() {
         </Link>
         <button
           type="button"
-          className="btn btn-secondary btn-primary-lg"
+          className="btn btn-secondary"
+          style={{
+            padding: "18px 36px",      // la fel ca .btn-primary-lg
+            fontSize: 16,              // la fel ca .btn-primary-lg
+            fontWeight: 600,           // la fel ca .btn-primary-lg
+            borderRadius: "var(--r-lg)", // la fel ca .btn-primary-lg
+          }}
           onClick={() => setOpen(true)}
         >
           <svg
