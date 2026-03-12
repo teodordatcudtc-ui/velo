@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ProfileForm } from "./ProfileForm";
 import { PasswordForm } from "./PasswordForm";
 import { PlanAccessCard } from "./PlanAccessCard";
+import { TestEmailButton } from "./TestEmailButton";
 import { hasPremiumAccess } from "@/lib/subscription";
 
 export default async function SetariPage() {
@@ -76,6 +77,18 @@ export default async function SetariPage() {
         premiumUntil={premiumUntil}
         canGenerateCodes={canGenerateCodes}
       />
+
+      {canGenerateCodes && (
+        <div className="dash-card max-w-xl">
+          <h2 className="text-lg font-semibold text-[var(--ink)] mb-2">
+            Testează trimiterea emailurilor
+          </h2>
+          <p className="text-sm text-[var(--ink-muted)] mb-3">
+            Trimite un email de test către adresa ta, folosind domeniul vello.ro și configurarea actuală Resend.
+          </p>
+          <TestEmailButton />
+        </div>
+      )}
 
     </div>
   );
