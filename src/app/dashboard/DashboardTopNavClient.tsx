@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 const PILLS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/documente", label: "Documente" },
-  { href: "/dashboard/statistici", label: "Statistici" },
 ] as const;
 
 const pillBase: React.CSSProperties = {

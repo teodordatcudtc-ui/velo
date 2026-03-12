@@ -38,13 +38,25 @@ export default async function HomePage() {
         </div>
         <div className="nav-cta">
           {user ? (
-            <Link href="/dashboard" className="btn btn-ghost">Dashboard</Link>
+            <Link
+              href="/dashboard"
+              className="btn btn-primary"
+              style={{ padding: "10px 20px", fontSize: 14, borderRadius: "var(--r-md)" }}
+            >
+              Dashboard
+            </Link>
           ) : (
             <Link href="/login" className="btn btn-ghost">Intră în cont</Link>
           )}
-          <Link href="#cta" className="btn btn-primary" style={{ padding: "10px 20px", fontSize: 14, borderRadius: "var(--r-md)" }}>
-            Încearcă gratuit
-          </Link>
+          {!user ? (
+            <Link
+              href="/signup"
+              className="btn btn-primary"
+              style={{ padding: "10px 20px", fontSize: 14, borderRadius: "var(--r-md)" }}
+            >
+              Încearcă gratuit
+            </Link>
+          ) : null}
         </div>
       </nav>
 
@@ -66,7 +78,7 @@ export default async function HomePage() {
             </div>
 
             <div className="hero-actions">
-              <Link href="#cta" className="btn btn-primary btn-primary-lg">
+              <Link href="/signup" className="btn btn-primary btn-primary-lg">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
@@ -447,8 +459,8 @@ export default async function HomePage() {
 
             <div>
               <div className="footer-col-title">Legal</div>
-              <Link href="#" className="footer-link">Termeni și condiții</Link>
-              <Link href="#" className="footer-link">Politica de confidențialitate</Link>
+              <Link href="/termeni" className="footer-link">Termeni și condiții</Link>
+              <Link href="/privacy" className="footer-link">Politica de confidențialitate</Link>
               <Link href="#" className="footer-link">GDPR</Link>
               <Link href="#" className="footer-link">Cookie-uri</Link>
             </div>
@@ -457,9 +469,9 @@ export default async function HomePage() {
           <div className="footer-bottom">
           <div className="footer-bottom-text">© {new Date().getFullYear()} Vello · Creat în România</div>
             <div className="footer-legal">
-              <Link href="#" className="footer-link" style={{ marginBottom: 0 }}>Termeni</Link>
-              <Link href="#" className="footer-link" style={{ marginBottom: 0 }}>Privacy</Link>
-              <Link href="#" className="footer-link" style={{ marginBottom: 0 }}>Contact</Link>
+              <Link href="/termeni" className="footer-link" style={{ marginBottom: 0 }}>Termeni</Link>
+              <Link href="/privacy" className="footer-link" style={{ marginBottom: 0 }}>Privacy</Link>
+              <Link href="/contact" className="footer-link" style={{ marginBottom: 0 }}>Contact</Link>
             </div>
           </div>
         </div>

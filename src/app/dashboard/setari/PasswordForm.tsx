@@ -6,6 +6,7 @@ import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/password";
 import { useToast } from "@/app/components/ToastProvider";
 
 export function PasswordForm() {
+  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -40,12 +41,21 @@ export function PasswordForm() {
     (document.getElementById("password-form") as HTMLFormElement)?.reset();
   }
 
+  if (!open) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-[var(--ink-muted)]">
+          Pentru a schimba parola, apasă butonul de mai jos.
+        </p>
+        <button type="button" className="btn btn-secondary" onClick={() => setOpen(true)}>
+          Resetează parola
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <form
-      id="password-form"
-      action={handleSubmit}
-      className="space-y-4"
-    >
+    <form id="password-form" action={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="password" className="block text-sm font-medium text-[var(--ink-soft)] mb-1">
           Parolă nouă
@@ -81,9 +91,24 @@ export function PasswordForm() {
       </div>
       {error && <p className="text-sm text-[var(--terracotta)]">{error}</p>}
       {success && <p className="text-sm text-[var(--sage)]">Parola a fost actualizată.</p>}
-      <button type="submit" disabled={pending} className="btn btn-primary">
-        {pending ? "Se actualizează..." : "Actualizează parola"}
-      </button>
+      <div className="flex items-center gap-2">
+        <button type="submit" disabled={pending} className="btn btn-primary">
+          {pending ? "Se actualizează..." : "Actualizează parola"}
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          disabled={pending}
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+            setSuccess(false);
+            (document.getElementById("password-form") as HTMLFormElement)?.reset();
+          }}
+        >
+          Anulează
+        </button>
+      </div>
     </form>
   );
 }

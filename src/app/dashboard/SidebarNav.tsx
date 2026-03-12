@@ -28,13 +28,6 @@ const ICONS = {
       <line x1="16" y1="17" x2="8" y2="17" />
     </svg>
   ),
-  chart: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={ICON_STYLE}>
-      <line x1="18" y1="20" x2="18" y2="10" />
-      <line x1="12" y1="20" x2="12" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="14" />
-    </svg>
-  ),
   settings: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={ICON_STYLE}>
       <circle cx="12" cy="12" r="3" />
@@ -109,11 +102,6 @@ export function SidebarNav({ clientCount = 0 }: Props) {
       <Link href="/dashboard/documente" style={isActive("/dashboard/documente") ? LINK_ACTIVE : LINK_BASE}>
         {ICONS.documents}
         Documente
-      </Link>
-
-      <Link href="/dashboard/statistici" style={isActive("/dashboard/statistici") ? LINK_ACTIVE : LINK_BASE}>
-        {ICONS.chart}
-        Statistici
       </Link>
 
       {/* SETĂRI */}
