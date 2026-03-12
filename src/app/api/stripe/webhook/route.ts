@@ -96,31 +96,34 @@ export async function POST(request: Request) {
 
     // ─── Factură plătită cu succes (reînnoire lunară/anuală automată) ────────
     case "invoice.payment_succeeded": {
-      const invoice = event.data.object as Stripe.Invoice;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const invoice = event.data.object as any;
 
       // Ignorăm prima factură – e deja gestionată de checkout.session.completed
       if (invoice.billing_reason === "subscription_create") break;
 
-      const subscriptionId = typeof invoice.subscription === "string"
-        ? invoice.subscription
-        : invoice.subscription?.id ?? null;
+      const subscriptionId: string | null =
+        typeof invoice.subscription === "string"
+          ? invoice.subscription
+          : invoice.subscription?.id ?? null;
 
       if (!subscriptionId) break;
 
       // Găsim accountantul după stripe_subscription_id
-      const { data: accountant } = await supabase
+      const { data: accountantRow } = await supabase
         .from("accountants")
         .select("id, subscription_plan")
         .eq("stripe_subscription_id", subscriptionId)
         .single();
 
-      if (!accountant) {
+      if (!accountantRow) {
         console.error("invoice.payment_succeeded: no accountant for sub", subscriptionId);
         break;
       }
+      const accountant = accountantRow as { id: string; subscription_plan: string };
 
       // Extindem premium_until cu perioada corespunzătoare
-      const periodEnd = invoice.lines?.data?.[0]?.period?.end;
+      const periodEnd: number | undefined = invoice.lines?.data?.[0]?.period?.end;
       let premiumUntil: string;
       if (periodEnd) {
         premiumUntil = new Date(periodEnd * 1000).toISOString().slice(0, 10);
@@ -144,10 +147,12 @@ export async function POST(request: Request) {
 
     // ─── Factură eșuată (card expirat, fonduri insuficiente etc.) ───────────
     case "invoice.payment_failed": {
-      const invoice = event.data.object as Stripe.Invoice;
-      const subscriptionId = typeof invoice.subscription === "string"
-        ? invoice.subscription
-        : invoice.subscription?.id ?? null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const invoice = event.data.object as any;
+      const subscriptionId: string | null =
+        typeof invoice.subscription === "string"
+          ? invoice.subscription
+          : invoice.subscription?.id ?? null;
 
       if (!subscriptionId) break;
 
