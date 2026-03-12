@@ -4,19 +4,32 @@ import { useState } from "react";
 import Link from "next/link";
 
 const CHECK = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} style={{ width: 14, height: 14 }}>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}>
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
+
+type PlanKey = "standard" | "premium";
 
 type Props = {
   isOwner: boolean;
   currentPlan: string;
 };
 
-const PLANS = [
+const PLANS: Array<{
+  planId: PlanKey;
+  eyebrow: string;
+  name: string;
+  desc: string;
+  monthly: number;
+  annual: number;
+  features: Array<{ text: string; included: boolean }>;
+  cta: string;
+  note: string;
+  featured: boolean;
+}> = [
   {
-    id: "standard",
+    planId: "standard",
     eyebrow: "Standard",
     name: "Standard",
     desc: "Ideal pentru început și pentru portofolii mici",
@@ -36,7 +49,7 @@ const PLANS = [
     featured: false,
   },
   {
-    id: "premium",
+    planId: "premium",
     eyebrow: "Premium",
     name: "Premium",
     desc: "Pentru contabili care vor automatizări și creștere",
@@ -53,14 +66,52 @@ const PLANS = [
     note: "Include toate funcțiile Standard",
     featured: true,
   },
-] as const;
+];
 
 export default function AbonamentePricing({ isOwner, currentPlan }: Props) {
   const [annual, setAnnual] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCheckout(planId: PlanKey) {
+    setError(null);
+    setLoadingPlan(planId);
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan: planId,
+          interval: annual ? "annual" : "monthly",
+        }),
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        const interval = annual ? "annual" : "monthly";
+        const checkoutUrl = `/checkout?plan=${encodeURIComponent(planId)}&interval=${encodeURIComponent(interval)}`;
+        window.location.href = `/login?redirect=${encodeURIComponent(checkoutUrl)}`;
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error ?? "Ceva a mers greșit.");
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setError("Nu am primit link de plată.");
+    } catch {
+      setError("Eroare de rețea.");
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
 
   return (
     <div>
-      {/* Toggle Lunar / Anual */}
+      {/* Toggle Lunar / Anual – identic cu landing page */}
       <div className="pricing-toggle-wrap" style={{ marginBottom: 40 }}>
         <span className={`pricing-toggle-label ${!annual ? "active" : ""}`}>Lunar</span>
         <div
@@ -81,12 +132,12 @@ export default function AbonamentePricing({ isOwner, currentPlan }: Props) {
         </span>
       </div>
 
-      {/* Carduri pachete */}
+      {/* Carduri – identice cu landing page, cu clasa `visible` adăugată direct */}
       <div className="pricing-grid">
         {PLANS.map((plan) => {
-          const isCurrent = currentPlan.toLowerCase() === plan.id;
+          const isCurrent = currentPlan.toLowerCase() === plan.planId;
           return (
-            <div key={plan.id} className={`pricing-card visible ${plan.featured ? "featured" : ""}`}>
+            <div key={plan.planId} className={`pricing-card visible ${plan.featured ? "featured" : ""}`}>
               {plan.featured && <div className="popular-badge">⚡ Cel mai popular</div>}
               <div className="pc-eyebrow">{plan.eyebrow}</div>
               <div className="pc-name">{plan.name}</div>
@@ -112,25 +163,24 @@ export default function AbonamentePricing({ isOwner, currentPlan }: Props) {
                   </li>
                 ))}
               </ul>
+              {error && (
+                <p style={{ color: "var(--red)", fontSize: 13, marginBottom: 8 }}>
+                  {error}
+                </p>
+              )}
               {isCurrent ? (
-                <div
-                  className="pc-cta-primary"
-                  style={{
-                    opacity: 0.5,
-                    cursor: "default",
-                    textAlign: "center",
-                    pointerEvents: "none",
-                  }}
-                >
+                <button type="button" className="pc-cta-primary" disabled style={{ opacity: 0.45, cursor: "default" }}>
                   Planul tău actual
-                </div>
+                </button>
               ) : (
-                <Link
-                  href={`/checkout?plan=${plan.id}&interval=${annual ? "annual" : "monthly"}`}
+                <button
+                  type="button"
                   className="pc-cta-primary"
+                  onClick={() => handleCheckout(plan.planId)}
+                  disabled={!!loadingPlan}
                 >
-                  {plan.cta}
-                </Link>
+                  {loadingPlan === plan.planId ? "Se încarcă…" : plan.cta}
+                </button>
               )}
               <div className="pc-note">{plan.note}</div>
             </div>
@@ -138,19 +188,14 @@ export default function AbonamentePricing({ isOwner, currentPlan }: Props) {
         })}
       </div>
 
-      {/* Card test owner */}
+      {/* Card test plată – doar pentru owner */}
       {isOwner && (
-        <div
-          className="pricing-card visible"
-          style={{ maxWidth: 420, margin: "32px auto 0", textAlign: "center" }}
-        >
+        <div className="pricing-card visible" style={{ maxWidth: 420, margin: "32px auto 0", textAlign: "center" }}>
           <div className="pc-eyebrow">Test owner</div>
-          <div className="pc-name" style={{ fontSize: 24 }}>
-            Testează plata
-          </div>
+          <div className="pc-name" style={{ fontSize: 24 }}>Testează plata</div>
           <div className="pc-desc">
-            Activează planul <strong>Premium</strong> cu o plată reală de{" "}
-            <strong>1 EUR</strong>. Folosit doar pentru verificarea integrării Stripe.
+            Activează planul <strong>Premium</strong> cu o plată reală de <strong>1 EUR</strong>.
+            Verificare integrare Stripe.
           </div>
           <div className="pc-price-wrap">
             <div className="pc-price">
@@ -158,7 +203,7 @@ export default function AbonamentePricing({ isOwner, currentPlan }: Props) {
               <span>1</span>
               <sub>/test</sub>
             </div>
-            <div className="pc-annual-note">Plată unică de test – activează Premium</div>
+            <div className="pc-annual-note">Plată unică de test – activează Premium 30 zile</div>
           </div>
           <div className="pc-divider" />
           <Link href="/checkout?plan=test&interval=monthly" className="pc-cta-primary">
