@@ -91,7 +91,7 @@ export default function PricingSection() {
         { text: "Clienți nelimitați", included: true },
         { text: "Tot ce este în Standard", included: true },
         { text: "Reminder automat SMS (coming soon)", included: true },
-        { text: "Export ZIP lunar (coming soon)", included: true },
+        { text: "Export ZIP lunar", included: true },
         { text: "Suport prioritar", included: true },
       ],
       cta: "Alege Premium",
