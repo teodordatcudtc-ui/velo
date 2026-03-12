@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 
 const CHECK = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}>
@@ -257,29 +256,6 @@ export default function AbonamentePricing({
           )}
         </div>
       )}
-
-      {/* Card test plată – vizibil pentru toți */}
-      <div className="pricing-card visible" style={{ maxWidth: 420, margin: "32px auto 0", textAlign: "center" }}>
-        <div className="pc-eyebrow">Testare</div>
-        <div className="pc-name" style={{ fontSize: 24 }}>Testează plata</div>
-        <div className="pc-desc">
-          Verifică integrarea cu Stripe cu o plată reală de <strong>1 EUR</strong>.
-          Activează planul <strong>Premium</strong> 30 de zile.
-        </div>
-        <div className="pc-price-wrap">
-          <div className="pc-price">
-            <sup>EUR</sup>
-            <span>1</span>
-            <sub>/test</sub>
-          </div>
-          <div className="pc-annual-note">Plată unică – activează Premium 30 zile</div>
-        </div>
-        <div className="pc-divider" />
-        <Link href="/checkout?plan=test&interval=monthly" className="pc-cta-primary">
-          Plată test 1 EUR → Premium
-        </Link>
-        <div className="pc-note">Fără reînnoire automată</div>
-      </div>
 
       {/* Cardul de owner rămâne separat pentru funcțiile de admin */}
       {isOwner && null}

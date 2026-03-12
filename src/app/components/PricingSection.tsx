@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 const CHECK = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}>
@@ -9,11 +10,43 @@ const CHECK = (
 );
 
 type PlanKey = "standard" | "premium";
+type SubscriptionPlan = "none" | "standard" | "premium";
 
 export default function PricingSection() {
   const [annual, setAnnual] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan>("none");
+
+  // Dacă userul este logat și are deja un plan activ,
+  // blocăm achiziția planurilor nepotrivite (la fel ca în /dashboard/abonamente).
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth
+      .getUser()
+      .then(async ({ data }) => {
+        const user = data.user;
+        if (!user) {
+          setSubscriptionPlan("none");
+          return;
+        }
+        const { data: accountant } = await supabase
+          .from("accountants")
+          .select("subscription_plan")
+          .eq("id", user.id)
+          .single();
+        const rawPlan = (accountant as { subscription_plan?: string | null } | null)?.subscription_plan;
+        const normalized = (rawPlan ?? "none").toLowerCase();
+        if (normalized === "standard" || normalized === "premium") {
+          setSubscriptionPlan(normalized);
+        } else {
+          setSubscriptionPlan("none");
+        }
+      })
+      .catch(() => {
+        setSubscriptionPlan("none");
+      });
+  }, []);
 
   const plans: Array<{
     planId: PlanKey;
@@ -171,14 +204,30 @@ export default function PricingSection() {
                   {error}
                 </p>
               )}
-              <button
-                type="button"
-                className="pc-cta-primary"
-                onClick={() => handleCheckout(plan.planId)}
-                disabled={!!loadingPlan}
-              >
-                {loadingPlan === plan.planId ? "Se încarcă…" : plan.cta}
-              </button>
+              {(() => {
+                const userHasPlan = subscriptionPlan === "standard" || subscriptionPlan === "premium";
+                const isCurrent = userHasPlan && subscriptionPlan === plan.planId;
+                const isDowngrade = userHasPlan && subscriptionPlan === "premium" && plan.planId === "standard";
+                const isBlocked = userHasPlan && (isCurrent || isDowngrade);
+                const label = isCurrent
+                  ? "Planul tău actual"
+                  : isDowngrade
+                  ? "Inclus în Premium"
+                  : plan.cta;
+                return (
+                  <button
+                    type="button"
+                    className="pc-cta-primary"
+                    onClick={() => {
+                      if (!isBlocked) handleCheckout(plan.planId);
+                    }}
+                    disabled={!!loadingPlan || isBlocked}
+                    style={isBlocked ? { opacity: 0.5, cursor: "default" } : undefined}
+                  >
+                    {loadingPlan === plan.planId ? "Se încarcă…" : label}
+                  </button>
+                );
+              })()}
               <div className="pc-note">{plan.note}</div>
             </div>
           ))}
