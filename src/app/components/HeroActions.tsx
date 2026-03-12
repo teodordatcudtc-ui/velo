@@ -27,17 +27,7 @@ export function HeroActions() {
         </Link>
         <button
           type="button"
-          className="btn btn-secondary"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "10px 18px",
-            height: 46,
-            fontSize: 14,
-            fontWeight: 500,
-            borderRadius: "var(--r-md)",
-          }}
+          className="btn btn-secondary btn-primary-lg"
           onClick={() => setOpen(true)}
         >
           <svg
@@ -72,7 +62,7 @@ export function HeroActions() {
         >
           <div
             style={{
-              maxWidth: 960,
+              maxWidth: 1120,
               width: "100%",
               background: "var(--paper)",
               borderRadius: "var(--r-xl)",
