@@ -51,7 +51,8 @@ export async function POST() {
 
     // Update DB cu admin client (bypass RLS) – la fel ca webhook-ul
     const admin = createAdminClient();
-    const { error: updateError } = await admin
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updateError } = await (admin as any)
       .from("accountants")
       .update({ stripe_subscription_status: "canceling" })
       .eq("id", user.id);
