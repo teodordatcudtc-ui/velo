@@ -2,7 +2,7 @@
  * Cerințe parolă: protecție la creare cont și la resetare/schimbare parolă.
  */
 
-export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MIN_LENGTH = 6;
 
 export const PASSWORD_REQUIREMENTS = [
   `Minim ${PASSWORD_MIN_LENGTH} caractere`,

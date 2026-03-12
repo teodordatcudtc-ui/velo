@@ -65,9 +65,9 @@ export function PasswordForm() {
           name="password"
           type="password"
           required
-          minLength={10}
+          minLength={6}
           className="dash-input"
-          placeholder="Min. 10 caractere, litere, cifre, simbol"
+          placeholder="Min. 6 caractere, litere, cifre, simbol"
         />
         <ul className="mt-1.5 text-xs text-[var(--ink-muted)] list-disc list-inside space-y-0.5">
           {PASSWORD_REQUIREMENTS.map((req) => (
@@ -84,7 +84,7 @@ export function PasswordForm() {
           name="confirm"
           type="password"
           required
-          minLength={10}
+          minLength={6}
           className="dash-input"
           placeholder="Repetă parola"
         />

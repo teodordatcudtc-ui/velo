@@ -111,10 +111,10 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={10}
+              minLength={6}
               autoComplete="new-password"
               className="w-full px-4 py-2 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)]"
-              placeholder="Min. 10 caractere, litere, cifre, simbol"
+              placeholder="Min. 6 caractere, litere, cifre, simbol"
             />
             <ul className="mt-1.5 text-xs text-[var(--ink-muted)] list-disc list-inside space-y-0.5">
               {PASSWORD_REQUIREMENTS.map((req) => (
