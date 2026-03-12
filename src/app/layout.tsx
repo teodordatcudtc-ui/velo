@@ -19,9 +19,19 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Vello — Scapă de grija actelor întârziate",
+  title: "Vello — Aplicație pentru contabili, colectare documente de la clienți",
   description:
-    "Trimite cereri de documente clienților în 30 secunde. Ei răspund cu un click, tu primești totul organizat. Fără cont pentru client.",
+    "Vello este o aplicație pentru contabili și cabinete de contabilitate care automatizează colectarea documentelor de la clienți: cereri de documente, reminder automat, link securizat de upload și arhivare organizată pe client și lună.",
+  keywords: [
+    "vello",
+    "aplicație contabili",
+    "software pentru contabili",
+    "program contabili clienți",
+    "colectare documente contabile",
+    "reminder automat documente",
+    "aplicație cabinete de contabilitate",
+    "saas contabili românia",
+  ],
 };
 
 export default function RootLayout({
