@@ -15,7 +15,7 @@ export default async function SetariPage() {
 
   const { data: accountant } = await supabase
     .from("accountants")
-    .select("name, subscription_plan, premium_until")
+    .select("name, subscription_plan, premium_until, stripe_subscription_id, stripe_subscription_status")
     .eq("id", user.id)
     .single();
 
@@ -27,6 +27,16 @@ export default async function SetariPage() {
         ? "none"
         : "standard";
   const premiumUntil = accountant?.premium_until ?? null;
+  const stripeSubId = (accountant as { stripe_subscription_id?: string | null } | null)
+    ?.stripe_subscription_id ?? null;
+  const stripeSubStatus = (accountant as { stripe_subscription_status?: string | null } | null)
+    ?.stripe_subscription_status ?? null;
+  const canCancel =
+    !!stripeSubId &&
+    stripeSubStatus !== "canceling" &&
+    stripeSubStatus !== "canceled" &&
+    subscriptionPlan !== "none";
+  const isCanceling = stripeSubStatus === "canceling";
   const canGenerateCodes =
     !!user.email &&
     (process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase() ===
@@ -76,6 +86,8 @@ export default async function SetariPage() {
         subscriptionPlan={subscriptionPlan}
         premiumUntil={premiumUntil}
         canGenerateCodes={canGenerateCodes}
+        canCancel={canCancel}
+        isCanceling={isCanceling}
       />
 
       {canGenerateCodes && (

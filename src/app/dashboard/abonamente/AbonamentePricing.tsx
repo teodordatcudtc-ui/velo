@@ -11,9 +11,14 @@ const CHECK = (
 
 type PlanKey = "standard" | "premium";
 
+import CancelSubscriptionButton from "./CancelSubscriptionButton";
+
 type Props = {
   isOwner: boolean;
   currentPlan: string;
+  canCancel?: boolean;
+  isCanceling?: boolean;
+  premiumUntil?: string | null;
 };
 
 const PLANS: Array<{
@@ -68,7 +73,13 @@ const PLANS: Array<{
   },
 ];
 
-export default function AbonamentePricing({ isOwner, currentPlan }: Props) {
+export default function AbonamentePricing({
+  isOwner,
+  currentPlan,
+  canCancel = false,
+  isCanceling = false,
+  premiumUntil = null,
+}: Props) {
   const [annual, setAnnual] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -136,6 +147,10 @@ export default function AbonamentePricing({ isOwner, currentPlan }: Props) {
       <div className="pricing-grid">
         {PLANS.map((plan) => {
           const isCurrent = currentPlan.toLowerCase() === plan.planId;
+          // Nu poți cumpăra un plan inferior celui actual
+          const isDowngrade =
+            currentPlan.toLowerCase() === "premium" && plan.planId === "standard";
+          const isBlocked = isCurrent || isDowngrade;
           return (
             <div key={plan.planId} className={`pricing-card visible ${plan.featured ? "featured" : ""}`}>
               {plan.featured && <div className="popular-badge">⚡ Cel mai popular</div>}
@@ -168,9 +183,9 @@ export default function AbonamentePricing({ isOwner, currentPlan }: Props) {
                   {error}
                 </p>
               )}
-              {isCurrent ? (
+              {isBlocked ? (
                 <button type="button" className="pc-cta-primary" disabled style={{ opacity: 0.45, cursor: "default" }}>
-                  Planul tău actual
+                  {isCurrent ? "Planul tău actual" : "Inclus în Premium"}
                 </button>
               ) : (
                 <button
@@ -187,6 +202,54 @@ export default function AbonamentePricing({ isOwner, currentPlan }: Props) {
           );
         })}
       </div>
+
+      {/* Secțiunea de oprire abonament */}
+      {(canCancel || isCanceling) && (
+        <div
+          style={{
+            maxWidth: 860,
+            margin: "32px auto 0",
+            padding: "16px 20px",
+            background: "var(--paper-2)",
+            border: "1px solid var(--paper-3)",
+            borderRadius: "var(--r-lg)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 2 }}>
+              {isCanceling ? "Abonamentul se oprește" : "Gestionează abonamentul"}
+            </p>
+            <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+              {isCanceling
+                ? `Reînnoirea automată a fost oprită. Accesul continuă până la finalul perioadei curente.`
+                : "Poți opri reînnoirea automată oricând. Accesul rămâne activ până la finalul perioadei plătite."}
+            </p>
+          </div>
+          {canCancel && !isCanceling && (
+            <CancelSubscriptionButton premiumUntil={premiumUntil} />
+          )}
+          {isCanceling && (
+            <span
+              style={{
+                fontSize: 12,
+                background: "#fef3c7",
+                color: "#92400e",
+                borderRadius: 100,
+                padding: "4px 12px",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Se oprește la finalul perioadei
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Card test plată – doar pentru owner */}
       {isOwner && (
