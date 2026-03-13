@@ -27,6 +27,14 @@ const FAQ_ITEMS = [
     q: "Mă pot dezabona oricând?",
     a: "Absolut. Nu există contract minim sau penalitate. Anulezi cu un click, fără întrebări. Poți exporta toate datele tale oricând.",
   },
+  {
+    q: "Cum mă ajută Vello la colectare documente contabili?",
+    a: "Vello automatizează colectare documente contabili: trimiți cereri de documente către clienți și urmărești într-un singur loc cine a trimis și ce lipsește. Fiecare încărcare este asociată de aplicație cu clientul și luna fiscală corectă.",
+  },
+  {
+    q: "Cum funcționează upload documente clienți contabil în Vello?",
+    a: "Pentru upload documente clienți contabil, trimiți fiecărui client un link unic de încărcare. Clientul deschide linkul pe telefon sau laptop, încarcă PDF-uri sau poze, iar documentele apar instant în contul tău, sortate pe client, tip de document și perioadă.",
+  },
 ];
 
 export default function FaqSection() {
@@ -35,6 +43,24 @@ export default function FaqSection() {
   return (
     <section id="faq">
       <div className="container">
+        <script
+          type="application/ld+json"
+          // FAQ schema pentru Google / AI, bazat pe aceleași întrebări vizibile
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: FAQ_ITEMS.map((item) => ({
+                "@type": "Question",
+                name: item.q,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: item.a,
+                },
+              })),
+            }),
+          }}
+        />
         <div className="faq-inner">
           <div className="faq-left">
             <span className="overline">Întrebări frecvente</span>
