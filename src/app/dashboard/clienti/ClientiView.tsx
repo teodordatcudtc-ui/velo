@@ -1972,7 +1972,7 @@ function ClientiDrawer({
                 </div>
                 <EmailToggle
                   clientId={client.id}
-                  initialOn={client.reminder_enabled}
+                  initialOn={!!client.reminder_enabled}
                   isPremium={isPremium}
                 />
               </div>
