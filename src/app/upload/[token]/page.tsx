@@ -25,7 +25,26 @@ export default async function UploadPage({
     .eq("unique_token", token)
     .single();
 
-  if (clientError || !data) notFound();
+  if (clientError || !data) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-[var(--paper)]">
+        <div className="w-full max-w-xl text-center">
+          <p className="text-xs font-700 uppercase tracking-wider text-[var(--terracotta)] mb-2">
+            Link invalid sau expirat
+          </p>
+          <h1 className="font-[var(--f-display)] text-2xl font-600 text-[var(--ink)] tracking-tight mb-3">
+            Acest link de încărcare nu mai este activ.
+          </h1>
+          <p className="text-[var(--ink-soft)] text-base mb-4">
+            Te rugăm să contactezi contabilul tău pentru un nou link de încărcare a documentelor.
+          </p>
+          <p className="text-xs text-[var(--ink-muted)]">
+            Dacă ai deschis acest link dintr-un email mai vechi, este posibil să fi fost înlocuit cu unul nou.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   const client = data as unknown as ClientWithDocs;
   const docTypes = client.document_types ?? [];
