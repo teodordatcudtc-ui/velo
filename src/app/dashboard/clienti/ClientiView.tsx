@@ -28,6 +28,7 @@ type Client = {
   unique_token: string;
   created_at: string;
   reminder_enabled?: boolean;
+  reminder_day_of_month?: number | null;
   nextRequestAt?: string | null;
   document_types: DocType[] | null;
 };
@@ -43,6 +44,22 @@ type Upload = {
 
 const MONTH_NAMES = ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"];
 const MONTH_NAMES_FULL = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
+
+function nextRecurringDateFromDay(dayOfMonth: number): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-based
+
+  // Data pentru luna curentă
+  let next = new Date(year, month, dayOfMonth);
+
+  // Dacă ziua din luna curentă a trecut deja (sau este chiar azi), mutăm pe luna următoare
+  if (next.getTime() <= now.getTime()) {
+    next = new Date(year, month + 1, dayOfMonth);
+  }
+
+  return next.toISOString();
+}
 
 function formatDocDate(createdAt: string): string {
   const d = new Date(createdAt);
@@ -267,6 +284,17 @@ export function ClientiView({
       const lastActivityTs = lastUploadAny
         ? new Date(lastUploadAny.created_at).getTime()
         : 0;
+
+      // Dată recurentă lunară bazată pe setările clientului (reminder_enabled + reminder_day_of_month)
+      let recurringNext: string | null = null;
+      if (client.reminder_enabled && typeof (client as any).reminder_day_of_month === "number") {
+        const day = (client as any).reminder_day_of_month as number;
+        if (day >= 1 && day <= 31) {
+          recurringNext = nextRecurringDateFromDay(day);
+        }
+      }
+
+      const nextRequestAt = recurringNext ?? nextRequestByClient[client.id] ?? null;
       return {
         ...client,
         status,
@@ -275,7 +303,7 @@ export function ClientiView({
         totalTypes: total,
         receivedCount: count,
         lastActivityTs,
-        nextRequestAt: nextRequestByClient[client.id] ?? null,
+        nextRequestAt,
       };
     });
   }, [initialClients, uploads, currentMonth, currentYear, hasRequestThisMonth, nextRequestByClient]);
