@@ -59,7 +59,10 @@ export function ProgrameazaModal({
   tutorialTargetId,
   onSend,
 }: Props) {
-  const todayIso = new Date().toISOString().slice(0, 10);
+  // Build today's date in LOCAL time (not UTC) to avoid off-by-one on late evenings
+  const _now = new Date();
+  const _pad = (n: number) => String(n).padStart(2, "0");
+  const todayIso = `${_now.getFullYear()}-${_pad(_now.getMonth() + 1)}-${_pad(_now.getDate())}`;
   const clientDocNames = (client.document_types ?? []).map((t) => t.name);
   const [customDocTypes, setCustomDocTypes] = useState<string[]>([]);
   const allDocOptions = [...new Set([...PREDEFINED_DOC_TYPES, ...clientDocNames, ...customDocTypes])];
@@ -492,12 +495,10 @@ export function ProgrameazaModal({
                     if (day == null) {
                       return <div key={`empty-${i}`} style={{ height: 34 }} />;
                     }
-                    const cellDate = new Date(
-                      calendarMonth.getFullYear(),
-                      calendarMonth.getMonth(),
-                      day
-                    );
-                    const iso = cellDate.toISOString().slice(0, 10);
+                    // Build ISO date from local parts to avoid timezone off-by-one
+                    const cy = calendarMonth.getFullYear();
+                    const cm = calendarMonth.getMonth() + 1; // 1-based
+                    const iso = `${cy}-${_pad(cm)}-${_pad(day)}`;
                     const disabled = iso < todayIso;
                     const selected = sendDate === iso;
                     return (
@@ -534,7 +535,10 @@ export function ProgrameazaModal({
             )}
             {sendMode === "scheduled" && sendDate && (
               <div style={{ fontSize: 12, color: "var(--ink-muted)", marginTop: 8 }}>
-                Data selectată: {new Date(sendDate).toLocaleDateString("ro-RO")}
+                Data selectată: {(() => {
+                  const [y, m, d] = sendDate.split("-").map(Number);
+                  return new Date(y, m - 1, d).toLocaleDateString("ro-RO");
+                })()}
               </div>
             )}
           </div>

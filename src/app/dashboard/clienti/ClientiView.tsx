@@ -308,12 +308,16 @@ export function ClientiView({
       const scheduledIso = nextRequestByClient[client.id] ?? null;
       const scheduledDateStr = scheduledIso ? scheduledIso.slice(0, 10) : null;
 
-      // Pick the earliest future date (string comparison works for YYYY-MM-DD)
-      const candidates = [recurringDateStr, scheduledDateStr]
-        .filter((d): d is string => !!d && d > todayStr)
-        .sort();
-
-      const nextRequestAt = candidates.length > 0 ? candidates[0] : null;
+      // Priority: explicit scheduled request > recurring monthly date
+      // This avoids showing a recurring date from the same month when the actual
+      // scheduled request is months away (e.g. program Sept 20 → reminder_day_of_month=20
+      // would otherwise show March 20 as "next" before September).
+      let nextRequestAt: string | null = null;
+      if (scheduledDateStr && scheduledDateStr > todayStr) {
+        nextRequestAt = scheduledDateStr;
+      } else if (recurringDateStr && recurringDateStr > todayStr) {
+        nextRequestAt = recurringDateStr;
+      }
       return {
         ...client,
         status,
