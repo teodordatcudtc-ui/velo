@@ -88,7 +88,7 @@ export async function POST() {
 
   for (const client of withEmail) {
     const uploadLink = `${baseUrl}/upload/${client.unique_token}`;
-    const subject = `[Test] Documente lunare – ${acc.name}`;
+    const subject = `Documente lunare – ${acc.name}`;
     const html = `
       <p>Bună ziua, ${client.name},</p>
       <p>Contabilul <strong>${acc.name}</strong> vă solicită documentele pentru luna curentă.</p>

@@ -1970,30 +1970,11 @@ function ClientiDrawer({
                     <div className={styles.notifCardMeta}>{client.email ?? "—"} · Fallback</div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  disabled={!isPremium || emailTogglePending}
-                  className={styles.toggleSwitch}
-                  data-active={client.reminder_enabled ? "true" : "false"}
-                  onClick={async () => {
-                    if (!isPremium) {
-                      toast.info("Reminder automat este disponibil doar pe Premium.");
-                      return;
-                    }
-                    setEmailTogglePending(true);
-                    const next = !client.reminder_enabled;
-                    const fd = new FormData();
-                    fd.set("reminder_enabled", next ? "true" : "false");
-                    if (next) fd.set("reminder_day_of_month", "1");
-                    const result = await updateClientReminder(client.id, fd);
-                    setEmailTogglePending(false);
-                    if (result?.error) toast.error(result.error);
-                    else router.refresh();
-                  }}
-                  aria-label={client.reminder_enabled ? "Dezactivează" : "Activează"}
-                >
-                  <span className={styles.toggleThumb} />
-                </button>
+                <EmailToggle
+                  clientId={client.id}
+                  initialOn={client.reminder_enabled}
+                  isPremium={isPremium}
+                />
               </div>
               {!isPremium && (
                 <p style={{ marginTop: 8, fontSize: 12, color: "var(--ink-muted)" }}>
@@ -2054,5 +2035,60 @@ function ClientiDrawer({
         )}
       </div>
     </>
+  );
+}
+
+function EmailToggle({
+  clientId,
+  initialOn,
+  isPremium,
+}: {
+  clientId: string;
+  initialOn: boolean;
+  isPremium: boolean;
+}) {
+  const [on, setOn] = useState(initialOn);
+  const [pending, setPending] = useState(false);
+  const toast = useToast();
+  const router = useRouter();
+
+  useEffect(() => {
+    setOn(initialOn);
+  }, [initialOn, clientId]);
+
+  return (
+    <button
+      type="button"
+      disabled={!isPremium || pending}
+      className={styles.toggleSwitch}
+      data-active={on ? "true" : "false"}
+      onClick={async () => {
+        if (!isPremium) {
+          toast.info("Reminder automat este disponibil doar pe Premium.");
+          return;
+        }
+        const next = !on;
+        setOn(next); // actualizare optimistă pentru animație live
+        setPending(true);
+        const fd = new FormData();
+        fd.set("reminder_enabled", next ? "true" : "false");
+        if (next) {
+          // când activăm, setăm o zi de lună implicită (1)
+          fd.set("reminder_day_of_month", "1");
+        }
+        const result = await updateClientReminder(clientId, fd);
+        setPending(false);
+        if (result?.error) {
+          // revenim la starea anterioară dacă a eșuat
+          setOn(!next);
+          toast.error(result.error);
+        } else {
+          router.refresh();
+        }
+      }}
+      aria-label={on ? "Dezactivează" : "Activează"}
+    >
+      <span className={styles.toggleThumb} />
+    </button>
   );
 }
