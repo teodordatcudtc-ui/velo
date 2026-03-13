@@ -142,7 +142,7 @@ export function ClientiView({
   clients: initialClients,
   archivedClients = [],
   uploads,
-  clientIdsWithRequest = [],
+  requestThisMonthByClient = {},
   nextRequestByClient = {},
   currentMonth,
   currentYear,
@@ -153,7 +153,7 @@ export function ClientiView({
   clients: Client[];
   archivedClients?: Client[];
   uploads: Upload[];
-  clientIdsWithRequest?: string[];
+  requestThisMonthByClient?: Record<string, string>;
   nextRequestByClient?: Record<string, string>;
   currentMonth: number;
   currentYear: number;
@@ -161,10 +161,6 @@ export function ClientiView({
   clientLimit: number | null;
   userId?: string;
 }) {
-  const hasRequestThisMonth = useMemo(
-    () => new Set(clientIdsWithRequest),
-    [clientIdsWithRequest]
-  );
   const router = useRouter();
   const toast = useToast();
   const [search, setSearch] = useState("");
@@ -268,28 +264,6 @@ export function ClientiView({
           .map((u) => u.document_type_id)
       );
       const count = received.size;
-      const hasRequest = hasRequestThisMonth.has(client.id);
-      let status: Status =
-        total === 0
-          ? "none"
-          : count === total
-            ? "ok"
-            : count === 0
-              ? hasRequest
-                ? "wait"
-                : "late"
-              : "wait";
-      const pct = total === 0 ? 0 : Math.round((count / total) * 100);
-      const docsLabel = total === 0 ? "—" : `${count}/${total}`;
-      const lastUploadAny = uploads
-        .filter((u) => u.client_id === client.id)
-        .sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )[0];
-      const lastActivityTs = lastUploadAny
-        ? new Date(lastUploadAny.created_at).getTime()
-        : 0;
 
       // Compare dates as "YYYY-MM-DD" strings to avoid timezone issues
       const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -309,15 +283,51 @@ export function ClientiView({
       const scheduledDateStr = scheduledIso ? scheduledIso.slice(0, 10) : null;
 
       // Priority: explicit scheduled request > recurring monthly date
-      // This avoids showing a recurring date from the same month when the actual
-      // scheduled request is months away (e.g. program Sept 20 → reminder_day_of_month=20
-      // would otherwise show March 20 as "next" before September).
       let nextRequestAt: string | null = null;
       if (scheduledDateStr && scheduledDateStr > todayStr) {
         nextRequestAt = scheduledDateStr;
       } else if (recurringDateStr && recurringDateStr > todayStr) {
         nextRequestAt = recurringDateStr;
       }
+
+      // The sent_at of this client's request for the current month (if any)
+      const thisMonthSentAt = requestThisMonthByClient[client.id] ?? null;
+      // Request date has passed (today >= sent_at date) → truly sent/overdue
+      const requestDatePassed =
+        thisMonthSentAt !== null && thisMonthSentAt.slice(0, 10) <= todayStr;
+
+      // Status logic:
+      // "Restant" = request date has passed AND not all docs uploaded
+      // "Așteptare" = request exists but date hasn't passed yet (waiting for the date)
+      // "Neinițiat" = no request sent or scheduled
+      let status: Status;
+      if (total === 0) {
+        status = "none";
+      } else if (count === total) {
+        status = "ok";
+      } else if (requestDatePassed) {
+        // Request was due, docs not complete → Restant
+        status = "late";
+      } else if (thisMonthSentAt || nextRequestAt) {
+        // Future request (this month or later) → Așteptare
+        status = "wait";
+      } else {
+        // No request at all → Neinițiat
+        status = "none";
+      }
+
+      const pct = total === 0 ? 0 : Math.round((count / total) * 100);
+      const docsLabel = total === 0 ? "—" : `${count}/${total}`;
+      const lastUploadAny = uploads
+        .filter((u) => u.client_id === client.id)
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
+      const lastActivityTs = lastUploadAny
+        ? new Date(lastUploadAny.created_at).getTime()
+        : 0;
+
       return {
         ...client,
         status,
@@ -329,7 +339,7 @@ export function ClientiView({
         nextRequestAt,
       };
     });
-  }, [initialClients, uploads, currentMonth, currentYear, hasRequestThisMonth, nextRequestByClient]);
+  }, [initialClients, uploads, currentMonth, currentYear, requestThisMonthByClient, nextRequestByClient]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();

@@ -65,7 +65,17 @@ export default async function ClientiPage() {
           .eq("month", currentMonth)
           .eq("year", currentYear)
       : { data: [] };
-  const clientIdsWithRequest = (requestsThisMonth ?? []).map((r) => r.client_id);
+  // Map clientId → sent_at for requests this month (to check if the date has passed)
+  const requestThisMonthByClient: Record<string, string> = {};
+  for (const req of requestsThisMonth ?? []) {
+    // Keep the latest (most recent sent_at) per client
+    if (
+      !requestThisMonthByClient[req.client_id] ||
+      req.sent_at > requestThisMonthByClient[req.client_id]
+    ) {
+      requestThisMonthByClient[req.client_id] = req.sent_at;
+    }
+  }
 
   const { data: upcomingRequests } =
     activeIds.length > 0
@@ -89,7 +99,7 @@ export default async function ClientiPage() {
       clients={activeClients ?? []}
       archivedClients={archivedClients ?? []}
       uploads={uploads ?? []}
-      clientIdsWithRequest={clientIdsWithRequest}
+      requestThisMonthByClient={requestThisMonthByClient}
       nextRequestByClient={nextRequestByClient}
       currentMonth={currentMonth}
       currentYear={currentYear}
