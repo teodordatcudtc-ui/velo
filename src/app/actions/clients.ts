@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { generateUploadToken } from "@/lib/upload-token";
 import { customAlphabet } from "nanoid";
@@ -16,6 +17,39 @@ type ParsedCsvRow = {
   email: string | null;
   phone: string | null;
 };
+
+async function ensureAccountantExists(user: {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+}) {
+  const admin = createAdminClient();
+
+  // Verificăm dacă există deja rândul în accountants
+  const { data: existing } = await admin
+    .from("accountants")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existing) return;
+
+  const metaName =
+    (user.user_metadata?.name as string | undefined)?.trim() ||
+    (user.user_metadata?.full_name as string | undefined)?.trim();
+  const emailFallback =
+    (user.email ?? "").split("@")[0] || "Contabil";
+  const name = metaName || emailFallback;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (admin as any)
+    .from("accountants")
+    .insert({ id: user.id, name });
+
+  if (error && !String(error.message).toLowerCase().includes("duplicate")) {
+    console.error("ensureAccountantExists insert error:", error);
+  }
+}
 
 function buildFromWithAccountantName(accountantName: string | null | undefined): string {
   const base = process.env.RESEND_FROM ?? "Vello <noreply@vello.ro>";
@@ -161,6 +195,14 @@ export async function addClient(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
 
+  // Sigurăm existența rândului în `accountants` pentru acest user (altfel FK-ul pică la insert în clients)
+  await ensureAccountantExists({
+    id: user.id,
+    email: user.email,
+    // @ts-expect-error - raw_user_meta_data nu este tipat strict în supabase-js
+    user_metadata: user.user_metadata ?? user.user_metadata,
+  });
+
   const name = formData.get("name") as string;
   const email = (formData.get("email") as string) || null;
   const phone = (formData.get("phone") as string) || null;
@@ -223,6 +265,13 @@ export async function importClientsFromCsv(csvText: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+
+  await ensureAccountantExists({
+    id: user.id,
+    email: user.email,
+    // @ts-expect-error - raw_user_meta_data nu este tipat strict în supabase-js
+    user_metadata: user.user_metadata ?? user.user_metadata,
+  });
 
   if (!csvText?.trim()) return { error: "Fișierul CSV este gol." };
 
