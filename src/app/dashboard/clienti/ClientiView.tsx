@@ -45,20 +45,24 @@ type Upload = {
 const MONTH_NAMES = ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"];
 const MONTH_NAMES_FULL = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
 
+// Returns "YYYY-MM-DD" string to avoid timezone issues
 function nextRecurringDateFromDay(dayOfMonth: number): string {
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth(); // 0-based
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-  // Data pentru luna curentă
-  let next = new Date(year, month, dayOfMonth);
+  const y = now.getFullYear();
+  const m = now.getMonth(); // 0-based
 
-  // Dacă ziua din luna curentă a trecut deja (sau este chiar azi), mutăm pe luna următoare
-  if (next.getTime() <= now.getTime()) {
-    next = new Date(year, month + 1, dayOfMonth);
-  }
+  // Try current month
+  const thisMonthStr = `${y}-${pad(m + 1)}-${pad(dayOfMonth)}`;
+  if (thisMonthStr > todayStr) return thisMonthStr;
 
-  return next.toISOString();
+  // Move to next month
+  const nm = m + 1; // 0-based next month
+  const nextYear = nm >= 12 ? y + 1 : y;
+  const nextMonthNum = nm >= 12 ? 1 : nm + 1; // 1-based
+  return `${nextYear}-${pad(nextMonthNum)}-${pad(dayOfMonth)}`;
 }
 
 function formatDocDate(createdAt: string): string {
@@ -287,25 +291,29 @@ export function ClientiView({
         ? new Date(lastUploadAny.created_at).getTime()
         : 0;
 
-      // Dată recurentă lunară (dacă reminderul lunar este activ)
-      let recurringNext: Date | null = null;
+      // Compare dates as "YYYY-MM-DD" strings to avoid timezone issues
+      const pad2 = (n: number) => String(n).padStart(2, "0");
+      const todayStr = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+
+      // Recurring monthly date (if enabled)
+      let recurringDateStr: string | null = null;
       if (client.reminder_enabled && typeof client.reminder_day_of_month === "number") {
         const day = client.reminder_day_of_month;
         if (day >= 1 && day <= 31) {
-          recurringNext = new Date(nextRecurringDateFromDay(day));
+          recurringDateStr = nextRecurringDateFromDay(day);
         }
       }
 
-      // Dată din cereri programate (document_requests.sent_at în viitor)
+      // Scheduled date from document_requests (take only the YYYY-MM-DD part)
       const scheduledIso = nextRequestByClient[client.id] ?? null;
-      const scheduledNext = scheduledIso ? new Date(scheduledIso) : null;
+      const scheduledDateStr = scheduledIso ? scheduledIso.slice(0, 10) : null;
 
-      // Alegem cea mai apropiată dată viitoare (lunară sau punctuală)
-      const candidates = [recurringNext, scheduledNext]
-        .filter((d): d is Date => !!d && d.getTime() > now.getTime())
-        .sort((a, b) => a.getTime() - b.getTime());
+      // Pick the earliest future date (string comparison works for YYYY-MM-DD)
+      const candidates = [recurringDateStr, scheduledDateStr]
+        .filter((d): d is string => !!d && d > todayStr)
+        .sort();
 
-      const nextRequestAt = candidates.length > 0 ? candidates[0].toISOString() : null;
+      const nextRequestAt = candidates.length > 0 ? candidates[0] : null;
       return {
         ...client,
         status,
@@ -1852,11 +1860,15 @@ function ClientiDrawer({
                   <div className={styles.infoKey}>Cerere programată</div>
                   <div className={styles.infoVal}>
                     {client.nextRequestAt
-                      ? new Date(client.nextRequestAt).toLocaleDateString("ro-RO", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })
+                      ? (() => {
+                          // Parse YYYY-MM-DD directly to avoid timezone shifts
+                          const [y, m, d] = client.nextRequestAt!.split("-").map(Number);
+                          return new Date(y, m - 1, d).toLocaleDateString("ro-RO", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          });
+                        })()
                       : "Nicio cerere programată"}
                   </div>
                 </div>

@@ -491,27 +491,30 @@ export async function saveDocumentRequest(
 
   await ensureDocumentTypesExist(supabase, clientId, data.docTypes);
 
-  const d = new Date(data.sendDate);
-  const month = d.getMonth() + 1;
-  const year = d.getFullYear();
+  // Parse date parts directly to avoid timezone shifts
+  const [sendYear, sendMonth, sendDay] = data.sendDate.split("-").map(Number);
+  const month = sendMonth;
+  const year = sendYear;
   const channel = data.methods[0] ?? "email";
-  const scheduledIso = `${data.sendDate}T09:00:00.000Z`;
+  // Store at noon UTC so the date is the same in all timezones (UTC-11 to UTC+12)
+  const scheduledIso = `${data.sendDate}T12:00:00.000Z`;
+  const dayOfMonthFromSend = sendDay;
 
-  // 1) Ștergem orice cereri viitoare existente pentru acest client + contabil.
-  // Astfel, ultima programare setată devine singura „cerere programată”.
-  await supabase
+  // 1) Delete all future requests for this client using admin client to bypass RLS.
+  const adminForDelete = createAdminClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (adminForDelete as any)
     .from("document_requests")
     .delete()
     .eq("client_id", clientId)
     .gte("sent_at", new Date().toISOString());
 
   // 2) Sincronizăm și ziua de reminder lunar cu data nouă (pornim recurența de la această zi).
-  const dayOfMonth = d.getDate();
   await supabase
     .from("clients")
     .update({
       reminder_enabled: true,
-      reminder_day_of_month: dayOfMonth,
+      reminder_day_of_month: dayOfMonthFromSend,
     })
     .eq("id", clientId)
     .eq("accountant_id", user.id);

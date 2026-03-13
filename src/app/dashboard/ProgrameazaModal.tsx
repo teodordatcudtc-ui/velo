@@ -242,11 +242,16 @@ export function ProgrameazaModal({
           >
             <span style={{ fontWeight: 700 }}>Cerere deja programată:</span>{" "}
             <strong style={{ color: "var(--sage)" }}>
-              {new Date(existingScheduledAt).toLocaleDateString("ro-RO", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              })}
+              {(() => {
+                // Parse YYYY-MM-DD to avoid timezone shifts
+                const dateStr = existingScheduledAt!.slice(0, 10);
+                const [y, m, d] = dateStr.split("-").map(Number);
+                return new Date(y, m - 1, d).toLocaleDateString("ro-RO", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                });
+              })()}
             </strong>
             <span style={{ color: "var(--ink-soft)" }}>
               {" "}
