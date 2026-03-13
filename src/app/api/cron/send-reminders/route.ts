@@ -114,9 +114,10 @@ export async function GET(request: Request) {
     if (docErr) {
       errors.push(`doc_types ${client.id}: ${docErr.message}`);
     }
+    const docs = (docTypes ?? []) as { name: string }[];
     const docsHtml =
-      docTypes && docTypes.length > 0
-        ? `<ul>${docTypes.map((d) => `<li>${d.name}</li>`).join("")}</ul>`
+      docs.length > 0
+        ? `<ul>${docs.map((d) => `<li>${d.name}</li>`).join("")}</ul>`
         : "";
 
     const uploadLink = `${baseUrl}/upload/${client.unique_token}`;
