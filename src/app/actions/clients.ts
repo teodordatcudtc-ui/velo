@@ -509,6 +509,28 @@ export async function saveDocumentRequest(
   const year = d.getFullYear();
   const channel = data.methods[0] ?? "email";
   const scheduledIso = `${data.sendDate}T09:00:00.000Z`;
+
+  // 1) Ștergem orice cereri viitoare existente pentru acest client + contabil.
+  // Astfel, ultima programare setată devine singura „cerere programată”.
+  await supabase
+    .from("document_requests")
+    .delete()
+    .eq("client_id", clientId)
+    .eq("accountant_id", user.id)
+    .gte("sent_at", new Date().toISOString());
+
+  // 2) Sincronizăm și ziua de reminder lunar cu data nouă (pornim recurența de la această zi).
+  const dayOfMonth = d.getDate();
+  await supabase
+    .from("clients")
+    .update({
+      reminder_enabled: true,
+      reminder_day_of_month: dayOfMonth,
+    })
+    .eq("id", clientId)
+    .eq("accountant_id", user.id);
+
+  // 3) Inserăm cererea programată pentru data aleasă.
   const upsert = await upsertDocumentRequestForPeriod(supabase, {
     clientId,
     accountantId: user.id,
