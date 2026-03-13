@@ -516,7 +516,6 @@ export async function saveDocumentRequest(
     .from("document_requests")
     .delete()
     .eq("client_id", clientId)
-    .eq("accountant_id", user.id)
     .gte("sent_at", new Date().toISOString());
 
   // 2) Sincronizăm și ziua de reminder lunar cu data nouă (pornim recurența de la această zi).
