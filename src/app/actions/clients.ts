@@ -199,8 +199,9 @@ export async function addClient(formData: FormData) {
   await ensureAccountantExists({
     id: user.id,
     email: user.email,
-    // @ts-expect-error - raw_user_meta_data nu este tipat strict în supabase-js
-    user_metadata: user.user_metadata ?? user.user_metadata,
+    // user_metadata poate avea structură variabilă; îl tratăm ca obiect generic
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    user_metadata: (user as any).user_metadata,
   });
 
   const name = formData.get("name") as string;
@@ -269,8 +270,8 @@ export async function importClientsFromCsv(csvText: string) {
   await ensureAccountantExists({
     id: user.id,
     email: user.email,
-    // @ts-expect-error - raw_user_meta_data nu este tipat strict în supabase-js
-    user_metadata: user.user_metadata ?? user.user_metadata,
+    // eslint-disable-next-line @typescript-eslint/no-explicitany
+    user_metadata: (user as any).user_metadata,
   });
 
   if (!csvText?.trim()) return { error: "Fișierul CSV este gol." };
