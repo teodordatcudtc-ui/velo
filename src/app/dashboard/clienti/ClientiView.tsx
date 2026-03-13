@@ -248,6 +248,8 @@ export function ClientiView({
   }, []);
 
   const clientsWithStatus = useMemo(() => {
+    const now = new Date();
+
     return initialClients.map((client) => {
       const types = client.document_types ?? [];
       const total = types.length;
@@ -285,16 +287,25 @@ export function ClientiView({
         ? new Date(lastUploadAny.created_at).getTime()
         : 0;
 
-      // Dată recurentă lunară bazată pe setările clientului (reminder_enabled + reminder_day_of_month)
-      let recurringNext: string | null = null;
-      if (client.reminder_enabled && typeof (client as any).reminder_day_of_month === "number") {
-        const day = (client as any).reminder_day_of_month as number;
+      // Dată recurentă lunară (dacă reminderul lunar este activ)
+      let recurringNext: Date | null = null;
+      if (client.reminder_enabled && typeof client.reminder_day_of_month === "number") {
+        const day = client.reminder_day_of_month;
         if (day >= 1 && day <= 31) {
-          recurringNext = nextRecurringDateFromDay(day);
+          recurringNext = new Date(nextRecurringDateFromDay(day));
         }
       }
 
-      const nextRequestAt = recurringNext ?? nextRequestByClient[client.id] ?? null;
+      // Dată din cereri programate (document_requests.sent_at în viitor)
+      const scheduledIso = nextRequestByClient[client.id] ?? null;
+      const scheduledNext = scheduledIso ? new Date(scheduledIso) : null;
+
+      // Alegem cea mai apropiată dată viitoare (lunară sau punctuală)
+      const candidates = [recurringNext, scheduledNext]
+        .filter((d): d is Date => !!d && d.getTime() > now.getTime())
+        .sort((a, b) => a.getTime() - b.getTime());
+
+      const nextRequestAt = candidates.length > 0 ? candidates[0].toISOString() : null;
       return {
         ...client,
         status,

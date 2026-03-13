@@ -23,14 +23,18 @@ export default async function ClientiPage() {
 
   const { data: activeClients } = await supabase
     .from("clients")
-    .select(`id, name, email, phone, unique_token, created_at, reminder_enabled, document_types ( id, name )`)
+    .select(
+      `id, name, email, phone, unique_token, created_at, reminder_enabled, reminder_day_of_month, document_types ( id, name )`
+    )
     .eq("accountant_id", user.id)
     .eq("archived", false)
     .order("created_at", { ascending: false });
 
   const { data: archivedClients } = await supabase
     .from("clients")
-    .select(`id, name, email, phone, unique_token, created_at, reminder_enabled, document_types ( id, name )`)
+    .select(
+      `id, name, email, phone, unique_token, created_at, reminder_enabled, reminder_day_of_month, document_types ( id, name )`
+    )
     .eq("accountant_id", user.id)
     .eq("archived", true)
     .order("created_at", { ascending: false });
