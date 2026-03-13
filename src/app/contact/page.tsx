@@ -13,17 +13,27 @@ export default function ContactPage() {
         </Link>
         <h1 className="mt-3 text-3xl font-bold text-[var(--ink)]">Contact</h1>
         <p className="mt-3 text-[var(--ink-soft)]">
-          Pentru întrebări sau suport, ne poți scrie și revenim cât mai repede.
+          Pentru întrebări sau suport, ne poți scrie sau suna și revenim cât mai repede.
         </p>
 
         <div className="mt-8 space-y-3 text-[var(--ink-soft)]">
           <div className="dash-card" style={{ padding: 16 }}>
             <div className="text-sm text-[var(--ink-muted)]">Email</div>
-            <div className="text-[var(--ink)] font-semibold">support@vello.ro</div>
+            <a
+              href="mailto:teodordatcu29@gmail.com"
+              className="text-[var(--ink)] font-semibold hover:underline"
+            >
+              teodordatcu29@gmail.com
+            </a>
           </div>
           <div className="dash-card" style={{ padding: 16 }}>
-            <div className="text-sm text-[var(--ink-muted)]">Program</div>
-            <div className="text-[var(--ink)] font-semibold">Luni–Vineri, 09:00–18:00</div>
+            <div className="text-sm text-[var(--ink-muted)]">Telefon</div>
+            <a
+              href="tel:0762444577"
+              className="text-[var(--ink)] font-semibold hover:underline"
+            >
+              0762 444 577
+            </a>
           </div>
         </div>
       </div>

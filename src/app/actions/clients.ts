@@ -165,6 +165,9 @@ async function insertClientWithTokenFallback(
   userId: string,
   row: ParsedCsvRow
 ) {
+  const today = new Date();
+  const dayOfMonth = today.getDate();
+
   let unique_token = generateUploadToken(row.name.trim());
   const { error } = await supabase.from("clients").insert({
     accountant_id: userId,
@@ -172,6 +175,8 @@ async function insertClientWithTokenFallback(
     email: row.email,
     phone: row.phone,
     unique_token,
+    reminder_enabled: true,
+    reminder_day_of_month: dayOfMonth,
   });
 
   if (!error) return null;
@@ -184,6 +189,8 @@ async function insertClientWithTokenFallback(
     email: row.email,
     phone: row.phone,
     unique_token,
+    reminder_enabled: true,
+    reminder_day_of_month: dayOfMonth,
   });
   return retryError ? retryError.message : null;
 }
@@ -231,6 +238,8 @@ export async function addClient(formData: FormData) {
   }
 
   let unique_token = generateUploadToken(name.trim());
+  const today = new Date();
+  const dayOfMonth = today.getDate();
 
   const { error } = await supabase.from("clients").insert({
     accountant_id: user.id,
@@ -238,6 +247,8 @@ export async function addClient(formData: FormData) {
     email: email?.trim() || null,
     phone: phone?.trim() || null,
     unique_token,
+    reminder_enabled: true,
+    reminder_day_of_month: dayOfMonth,
   });
 
   if (error) {
@@ -249,6 +260,8 @@ export async function addClient(formData: FormData) {
         email: email?.trim() || null,
         phone: phone?.trim() || null,
         unique_token,
+        reminder_enabled: true,
+        reminder_day_of_month: dayOfMonth,
       });
       if (retryError) return { error: retryError.message };
     } else {

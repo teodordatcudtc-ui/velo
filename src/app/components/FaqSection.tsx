@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 const FAQ_ITEMS = [
   {
@@ -70,15 +71,15 @@ export default function FaqSection() {
               Avem răspunsuri.
             </div>
             <p className="body">
-              Nu găsești ce cauți? Scrie-ne și răspundem în câteva minute.
+              Nu găsești ce cauți? Vezi pagina de contact sau scrie-ne direct.
             </p>
-            <a
-              href="mailto:contact@vello.ro"
+            <Link
+              href="/contact"
               className="btn btn-primary"
               style={{ marginTop: 24, display: "inline-flex" }}
             >
               Vorbește cu noi
-            </a>
+            </Link>
           </div>
 
           <div className="faq-list" suppressHydrationWarning>

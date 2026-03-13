@@ -104,11 +104,27 @@ export async function GET(request: Request) {
     const accName =
       client.accountants?.name ??
       "Contabilul tău";
+
+    // preluăm lista curentă de documente setate pentru acest client,
+    // astfel încât fiecare email lunar să reflecte modificările recente
+    const { data: docTypes, error: docErr } = await supabase
+      .from("document_types")
+      .select("name")
+      .eq("client_id", client.id);
+    if (docErr) {
+      errors.push(`doc_types ${client.id}: ${docErr.message}`);
+    }
+    const docsHtml =
+      docTypes && docTypes.length > 0
+        ? `<ul>${docTypes.map((d) => `<li>${d.name}</li>`).join("")}</ul>`
+        : "";
+
     const uploadLink = `${baseUrl}/upload/${client.unique_token}`;
     const subject = `Documente lunare – ${accName}`;
     const html = `
       <p>Bună ziua, ${client.name},</p>
       <p>Contabilul <strong>${accName}</strong> vă solicită documentele pentru luna curentă.</p>
+      ${docsHtml}
       <p>Accesați linkul de mai jos pentru a încărca documentele (nu este nevoie de cont):</p>
       <p><a href="${uploadLink}" style="color: #4b7a6e; font-weight: 600;">${uploadLink}</a></p>
       <p>Mulțumim,<br/>Echipa Vello</p>

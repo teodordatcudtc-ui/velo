@@ -352,13 +352,6 @@ export default function HomePage() {
             </div>
             <div className="cta-sub">14 zile gratuit, fără card. Configurezi în 10 minute.</div>
 
-            <form action="/signup" method="get" className="cta-input-group" suppressHydrationWarning>
-              <input className="cta-input" type="email" name="email" placeholder="emailul tău de contabil..." required suppressHydrationWarning />
-              <button type="submit" className="btn btn-primary btn-primary-lg" style={{ flexShrink: 0, borderRadius: "var(--r-md)" }} suppressHydrationWarning>
-                Încearcă gratuit
-              </button>
-            </form>
-
             <div className="cta-note">✓ Fără card de credit &nbsp;·&nbsp; ✓ 14 zile trial complet &nbsp;·&nbsp; ✓ Anulezi oricând</div>
 
             <div className="cta-stats">

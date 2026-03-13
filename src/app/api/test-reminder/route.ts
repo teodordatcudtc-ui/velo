@@ -24,6 +24,15 @@ export async function POST() {
     return NextResponse.json({ error: "Neautentificat" }, { status: 401 });
   }
 
+  const adminEmail = process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase();
+  const userEmail = user.email?.toLowerCase() ?? "";
+  if (!adminEmail || userEmail !== adminEmail) {
+    return NextResponse.json(
+      { error: "Doar contul de admin poate folosi acest test." },
+      { status: 403 }
+    );
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
