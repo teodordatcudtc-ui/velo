@@ -78,6 +78,12 @@ export async function GET(request: Request) {
 
   const today = new Date();
   const dayOfMonth = today.getDate();
+  const currentMonth = today.getMonth() + 1;
+  const currentYear = today.getFullYear();
+  // Start of today in UTC — used for deduplication check
+  const todayStartIso = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  ).toISOString();
 
   const supabase = createAdminClient();
 
@@ -86,6 +92,7 @@ export async function GET(request: Request) {
     .select("id, name, email, unique_token, accountant_id, accountants(name)")
     .eq("reminder_enabled", true)
     .eq("reminder_day_of_month", dayOfMonth)
+    .eq("archived", false)          // skip archived clients
     .not("email", "is", null);
 
   if (clientsError) {
@@ -98,14 +105,30 @@ export async function GET(request: Request) {
 
   const withEmail = ((clients ?? []) as ClientReminderRow[]).filter((c) => c.email?.trim());
   let totalSent = 0;
+  let skippedDuplicates = 0;
   const errors: string[] = [];
 
   for (const client of withEmail) {
+    // Deduplication: skip if we already sent a monthly email for this client today
+    const { count: alreadySent } = await supabase
+      .from("document_requests")
+      .select("*", { count: "exact", head: true })
+      .eq("client_id", client.id)
+      .eq("month", currentMonth)
+      .eq("year", currentYear)
+      .eq("channel", "email")
+      .gte("sent_at", todayStartIso);
+
+    if ((alreadySent ?? 0) > 0) {
+      skippedDuplicates++;
+      continue;
+    }
+
     const accName =
       client.accountants?.name ??
       "Contabilul tău";
 
-    // preluăm lista curentă de documente setate pentru acest client,
+    // Preluăm lista curentă de documente setate pentru acest client,
     // astfel încât fiecare email lunar să reflecte modificările recente
     const { data: docTypes, error: docErr } = await supabase
       .from("document_types")
@@ -142,6 +165,19 @@ export async function GET(request: Request) {
       errors.push(`${client.email}: ${sendError.message}`);
     } else {
       totalSent++;
+      // Record the send so future duplicate runs are skipped
+      await (supabase as any)
+        .from("document_requests")
+        .insert({
+          client_id: client.id,
+          accountant_id: client.accountant_id,
+          month: currentMonth,
+          year: currentYear,
+          channel: "email",
+          doc_type_names: docs.map((d) => d.name),
+          sent_at: new Date().toISOString(),
+          reminder_after_3_days: false,
+        });
     }
   }
 
@@ -232,6 +268,7 @@ export async function GET(request: Request) {
     ok: true,
     sent: totalSent,
     clients: withEmail.length,
+    skippedDuplicates,
     requestRemindersSent,
     errors: errors.length > 0 ? errors : undefined,
   });
