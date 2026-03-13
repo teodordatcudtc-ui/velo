@@ -35,9 +35,6 @@ export const metadata: Metadata = {
     "aplicație cabinete de contabilitate",
     "saas contabili românia",
   ],
-  icons: {
-    icon: "/favicon.svg",
-  },
 };
 
 export default function RootLayout({
