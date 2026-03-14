@@ -24,34 +24,30 @@ export default async function BlogPostPage({ params }: Props) {
   const post = getPost(slug);
   if (!post) notFound();
 
+  const formattedDate = new Date(post.date + "T12:00:00").toLocaleDateString("ro-RO", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
   return (
-    <main className="min-h-screen bg-[var(--paper)]">
-      <header className="border-b border-[var(--paper-3)] bg-[var(--paper)]">
-        <div className="container py-8">
-          <Link
-            href="/blog"
-            className="inline-flex items-center gap-2 text-[var(--ink-muted)] hover:text-[var(--sage)] text-sm font-500 mb-6"
-          >
-            ← Înapoi la Blog
+    <main className="blog-main blog-article-page">
+      <header className="blog-article-hero">
+        <div className="container">
+          <Link href="/blog" className="blog-article-back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Înapoi la Blog
           </Link>
-          <time
-            dateTime={post.date}
-            className="overline"
-            style={{ display: "block", marginBottom: 8 }}
-          >
-            {new Date(post.date + "T12:00:00").toLocaleDateString("ro-RO", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
+          <time dateTime={post.date} className="blog-article-date">
+            {formattedDate}
           </time>
-          <h1 className="d2" style={{ marginBottom: 0 }}>
+          <h1 className="blog-article-title">
             {post.title}
           </h1>
         </div>
       </header>
 
-      <div className="container py-10">
+      <div className="container blog-article-wrap">
         <article className="blog-article">
           <BlogPostContent slug={slug} />
         </article>

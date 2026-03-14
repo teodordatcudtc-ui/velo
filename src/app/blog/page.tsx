@@ -11,33 +11,26 @@ export default function BlogPage() {
   const posts = getPosts();
 
   return (
-    <main className="min-h-screen bg-[var(--paper)]">
-      <header className="border-b border-[var(--paper-3)] bg-[var(--paper)]">
-        <div className="container py-8">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[var(--ink-muted)] hover:text-[var(--sage)] text-sm font-500 mb-4"
-          >
-            ← Înapoi la Vello
-          </Link>
-          <h1 className="d2" style={{ marginBottom: 8 }}>
+    <main className="blog-main">
+      <header className="blog-hero">
+        <div className="container">
+          <span className="blog-hero-overline">Povesti & actualizări</span>
+          <h1 className="blog-hero-title">
             Blog
           </h1>
-          <p className="lead" style={{ maxWidth: 560 }}>
-            Povesti despre construirea Vello, cifre reale și actualizări de progres.
+          <p className="blog-hero-lead">
+            Cum am construit Vello, cifre reale și lecții învățate pe parcurs.
           </p>
         </div>
       </header>
 
-      <div className="container py-12">
+      <div className="container blog-list-wrap">
         <div className="blog-list">
           {posts.map((post) => (
             <article key={post.slug} className="blog-card">
               <Link href={`/blog/${post.slug}`} className="blog-card-link">
-                <time
-                  dateTime={post.date}
-                  className="blog-card-date"
-                >
+                <span className="blog-card-accent" aria-hidden />
+                <time dateTime={post.date} className="blog-card-date">
                   {new Date(post.date + "T12:00:00").toLocaleDateString("ro-RO", {
                     day: "numeric",
                     month: "long",
@@ -46,7 +39,10 @@ export default function BlogPage() {
                 </time>
                 <h2 className="blog-card-title">{post.title}</h2>
                 <p className="blog-card-excerpt">{post.excerpt}</p>
-                <span className="blog-card-cta">Citește articolul →</span>
+                <span className="blog-card-cta">
+                  Citește articolul
+                  <svg className="blog-card-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </span>
               </Link>
             </article>
           ))}
