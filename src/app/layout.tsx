@@ -21,6 +21,8 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title:
     "Vello — Colectare documente contabili și upload documente clienți contabil",
+  // Favicon: pune icon.ico în src/app/ — Next.js îl afișează în tab („acolo sus”)
+  icons: { icon: "/icon.ico" },
   description:
     "Aplicație pentru contabili: colectare documente contabili, upload documente clienți contabil, cereri de documente, reminder automat, link securizat de upload și arhivare organizată pe client și lună.",
   keywords: [

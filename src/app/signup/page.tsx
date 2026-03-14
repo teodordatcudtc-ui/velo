@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [earlyCode, setEarlyCode] = useState("");
+  const [showEarlyCode, setShowEarlyCode] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   const toast = useToast();
@@ -31,7 +32,7 @@ export default function SignupPage() {
     const { error: err } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } },
+      options: { data: { name: name.trim() } },
     });
     setLoading(false);
     if (err) {
@@ -81,8 +82,8 @@ export default function SignupPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              autoComplete="off"
-              className="w-full px-4 py-2 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)]"
+              autoComplete="name"
+              className="w-full px-4 py-3 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)]"
               placeholder="Numele tău"
             />
           </div>
@@ -96,8 +97,8 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              autoComplete="off"
-              className="w-full px-4 py-2 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)]"
+              autoComplete="email"
+              className="w-full px-4 py-3 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)]"
               placeholder="contabil@email.ro"
             />
           </div>
@@ -113,7 +114,7 @@ export default function SignupPage() {
               required
               minLength={6}
               autoComplete="new-password"
-              className="w-full px-4 py-2 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)]"
+              className="w-full px-4 py-3 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)]"
               placeholder="Min. 6 caractere, litere, cifre, simbol"
             />
             <ul className="mt-1.5 text-xs text-[var(--ink-muted)] list-disc list-inside space-y-0.5">
@@ -122,27 +123,43 @@ export default function SignupPage() {
               ))}
             </ul>
           </div>
+
+          {/* Cod early access opțional (collapsed) */}
           <div>
-            <label htmlFor="early_code" className="block text-sm font-500 text-[var(--ink-soft)] mb-1">
-              Cod early access (opțional)
-            </label>
-            <input
-              id="early_code"
-              type="text"
-              value={earlyCode}
-              onChange={(e) => setEarlyCode(e.target.value)}
-              autoComplete="off"
-              className="w-full px-4 py-2 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)] uppercase"
-              placeholder="EX: EARLY-ABC123"
-            />
+            <button
+              type="button"
+              onClick={() => setShowEarlyCode(!showEarlyCode)}
+              className="text-sm text-[var(--ink-muted)] hover:text-[var(--sage)] transition flex items-center gap-1.5 min-h-[var(--touch-min)]"
+              style={{ minHeight: 44 }}
+            >
+              {showEarlyCode ? "−" : "+"} Am un cod early access
+            </button>
+            {showEarlyCode && (
+              <div className="mt-3">
+                <label htmlFor="early_code" className="block text-sm font-500 text-[var(--ink-soft)] mb-1">
+                  Cod early access
+                </label>
+                <input
+                  id="early_code"
+                  type="text"
+                  value={earlyCode}
+                  onChange={(e) => setEarlyCode(e.target.value)}
+                  autoComplete="off"
+                  className="w-full px-4 py-2 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] placeholder-[var(--ink-muted)] focus:outline-none focus:border-[var(--sage)] focus:ring-2 focus:ring-[var(--sage-light)] uppercase"
+                  placeholder="EX: EARLY-ABC123"
+                />
+              </div>
+            )}
           </div>
+
           {error && (
             <p className="text-sm text-[var(--terracotta)] font-500">{error}</p>
           )}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg bg-[var(--sage)] text-white font-medium hover:bg-[var(--sage-dark)] transition disabled:opacity-50"
+            className="w-full min-h-[var(--touch-min)] py-3 rounded-lg bg-[var(--sage)] text-white font-medium hover:bg-[var(--sage-dark)] transition disabled:opacity-50"
+            style={{ minHeight: 44 }}
           >
             {loading ? "Se încarcă..." : "Creează cont"}
           </button>
@@ -160,7 +177,8 @@ export default function SignupPage() {
             type="button"
             disabled={loading}
             onClick={handleGoogleSignUp}
-            className="w-full py-3 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] font-medium hover:border-[var(--paper-2)] hover:bg-[var(--paper)] transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full min-h-[var(--touch-min)] py-3 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] font-medium hover:border-[var(--paper-2)] hover:bg-[var(--paper)] transition disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ minHeight: 44 }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -173,7 +191,7 @@ export default function SignupPage() {
         </form>
         <p className="mt-4 text-center text-[var(--ink-soft)] text-sm">
           Ai deja cont?{" "}
-          <Link href="/login" className="text-[var(--sage)] font-600 hover:underline">
+          <Link href="/login" className="text-[var(--sage)] font-600 hover:underline inline-flex align-middle min-h-[44px] items-center">
             Autentificare
           </Link>
         </p>

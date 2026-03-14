@@ -11,8 +11,7 @@ export function HeroActions() {
       <div className="hero-actions">
         <Link
           href="/signup"
-          className="btn btn-primary btn-primary-lg"
-          style={{ minWidth: 230 }}
+          className="btn btn-primary hero-btn"
         >
           <svg
             width="17"
@@ -31,30 +30,10 @@ export function HeroActions() {
         </Link>
         <button
           type="button"
-          className="btn btn-secondary"
-          style={{
-            minWidth: 230,
-            padding: "18px 36px",      // la fel ca .btn-primary-lg
-            fontSize: 16,              // la fel ca .btn-primary-lg
-            fontWeight: 600,           // la fel ca .btn-primary-lg
-            borderRadius: "var(--r-lg)", // la fel ca .btn-primary-lg
-          }}
           onClick={() => setOpen(true)}
+          className="btn btn-secondary hero-btn"
         >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
-          </svg>
-          Vezi demo
+          Cum funcționează
         </button>
       </div>
 
@@ -94,14 +73,16 @@ export function HeroActions() {
                 border: "none",
                 background: "rgba(0,0,0,0.45)",
                 color: "#fff",
-                width: 28,
-                height: 28,
+                minWidth: 44,
+                minHeight: 44,
+                width: 44,
+                height: 44,
                 borderRadius: 999,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 18,
+                fontSize: 22,
                 lineHeight: 1,
               }}
             >

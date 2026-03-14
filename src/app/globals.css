@@ -34,6 +34,9 @@
   --r-xl: 24px;
   --r-2xl: 32px;
 
+  /* Mobile-first: minimum touch target (WCAG / 2026 UX) */
+  --touch-min: 44px;
+
   --shadow-xs: 0 1px 3px rgba(26, 26, 46, 0.06), 0 1px 2px rgba(26, 26, 46, 0.04);
   --shadow-sm: 0 2px 8px rgba(26, 26, 46, 0.08);
   --shadow-md: 0 4px 24px rgba(26, 26, 46, 0.1);
@@ -177,12 +180,14 @@ section {
   padding: 96px 0;
 }
 
-/* Buttons */
+/* Buttons — minimum 44×44px touch target (mobile-first UX) */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
   font-family: var(--f-body);
   font-weight: 500;
   border: none;
@@ -313,7 +318,10 @@ nav.scrolled {
 }
 
 .nav-link {
-  padding: 7px 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding: 0 16px;
   font-size: 14px;
   font-weight: 500;
   color: var(--ink-soft);
@@ -374,9 +382,22 @@ nav.scrolled {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 48px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+}
+
+/* Ambele butoane hero: aceeași dimensiune pe PC, centrate */
+@media (min-width: 769px) {
+  .hero-actions .hero-btn {
+    padding: 18px 36px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: var(--r-lg);
+    min-width: 220px;
+    width: 220px;
+    box-sizing: border-box;
+  }
 }
 
 .hero-trust {
@@ -1301,6 +1322,123 @@ nav.scrolled {
   padding-bottom: 16px;
 }
 
+/* Explicator section — video + CTA demo interactiv */
+.explicator-section {
+  padding: 96px 0;
+  background: var(--paper-2);
+}
+.explicator-inner {
+  text-align: center;
+}
+.explicator-trigger-wrap {
+  margin-bottom: 24px;
+}
+.explicator-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: var(--touch-min);
+  padding: 16px 32px;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-lg);
+  font-family: var(--f-body);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s;
+  box-shadow: var(--shadow-md);
+}
+.explicator-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+.explicator-play {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.explicator-play svg {
+  margin-left: 3px;
+}
+.explicator-label {
+  color: #fff;
+}
+.explicator-cta-note {
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+.explicator-link {
+  color: var(--sage);
+  font-weight: 600;
+  text-decoration: none;
+}
+.explicator-link:hover {
+  text-decoration: underline;
+}
+.explicator-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 15, 30, 0.65);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.explicator-modal {
+  max-width: 1120px;
+  width: 100%;
+  background: var(--paper);
+  border-radius: var(--r-xl);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  position: relative;
+}
+.explicator-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: var(--touch-min);
+  height: var(--touch-min);
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border-radius: 999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  line-height: 1;
+  z-index: 1;
+}
+.explicator-close:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+.explicator-video-wrap {
+  position: relative;
+  padding-top: 56.25%;
+  background: #000;
+}
+.explicator-video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* CTA */
 #cta {
   background: var(--ink);
@@ -1438,11 +1576,14 @@ footer {
   margin-bottom: 16px;
 }
 .footer-link {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding: 4px 0;
   font-size: 14px;
   color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   transition: color 0.12s;
 }
 .footer-link:hover {
@@ -1476,7 +1617,8 @@ footer {
   }
   .hero-actions a,
   .hero-actions button {
-    min-width: 140px !important;
+    min-height: var(--touch-min) !important;
+    min-width: max(140px, var(--touch-min)) !important;
     padding: 12px 20px !important;
     font-size: 14px !important;
   }

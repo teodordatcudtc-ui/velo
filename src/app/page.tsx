@@ -4,6 +4,7 @@ import FaqSection from "./components/FaqSection";
 import ScrollEffects from "./components/ScrollEffects";
 import { HeroActions } from "./components/HeroActions";
 import { LandingNavCta } from "./components/LandingNavCta";
+import { ExplicatorSection } from "./components/ExplicatorSection";
 
 function Logo() {
   return (
@@ -191,6 +192,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Explicator video + CTA demo interactiv (growth: explainer + interactive demo) */}
+      <ExplicatorSection />
 
       {/* Features — fără WhatsApp în titluri */}
       <section id="features">

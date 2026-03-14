@@ -105,7 +105,8 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg bg-[var(--sage)] text-white font-medium hover:bg-[var(--sage-dark)] transition disabled:opacity-50"
+            className="w-full min-h-[var(--touch-min)] py-3 rounded-lg bg-[var(--sage)] text-white font-medium hover:bg-[var(--sage-dark)] transition disabled:opacity-50"
+            style={{ minHeight: 44 }}
           >
             {loading ? "Se încarcă..." : "Intră în cont"}
           </button>
@@ -123,7 +124,8 @@ export default function LoginPage() {
             type="button"
             disabled={loading}
             onClick={handleGoogleSignIn}
-            className="w-full py-3 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] font-medium hover:border-[var(--paper-2)] hover:bg-[var(--paper)] transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full min-h-[var(--touch-min)] py-3 rounded-lg bg-white border-2 border-[var(--paper-3)] text-[var(--ink)] font-medium hover:border-[var(--paper-2)] hover:bg-[var(--paper)] transition disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ minHeight: 44 }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -136,7 +138,7 @@ export default function LoginPage() {
         </form>
         <p className="mt-4 text-center text-[var(--ink-soft)] text-sm">
           Nu ai cont?{" "}
-          <Link href="/signup" className="text-[var(--sage)] font-600 hover:underline">
+          <Link href="/signup" className="text-[var(--sage)] font-600 hover:underline inline-flex align-middle min-h-[44px] items-center">
             Înregistrare
           </Link>
         </p>
