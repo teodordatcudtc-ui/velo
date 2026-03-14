@@ -31,9 +31,9 @@ export default function HomePage() {
         </div>
         <div className="nav-links">
           <Link href="#how" className="nav-link">Cum funcționează</Link>
-          <Link href="#features" className="nav-link">Funcționalități</Link>
           <Link href="#pricing" className="nav-link">Prețuri</Link>
           <Link href="#faq" className="nav-link">FAQ</Link>
+          <Link href="/blog" className="nav-link">Blog</Link>
         </div>
         <LandingNavCta />
       </nav>
