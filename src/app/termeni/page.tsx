@@ -12,83 +12,88 @@ export default function TermeniPage() {
           Înapoi acasă
         </Link>
         <h1 className="mt-3 text-3xl font-bold text-[var(--ink)]">Termeni și condiții</h1>
-        <p className="mt-3 text-[var(--ink-soft)]">
-          Termenii de mai jos reglementează utilizarea aplicației Vello.
+        <p className="mt-2 text-[var(--ink-soft)]">
+          Termenii de mai jos reglementează utilizarea serviciului Vello.
         </p>
 
-        <div className="mt-6 space-y-4 text-[var(--ink-soft)]">
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-[var(--ink)]">1. Definiții</h2>
+        <div className="mt-4 space-y-3 text-[var(--ink-soft)]">
+          <section className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--ink)]">Operator</h2>
             <p>
-              „Vello” = aplicația și serviciile asociate. „Utilizator” = persoana/entitatea care își creează cont. „Client”
-              = clientul utilizatorului, ale cărui date sunt introduse în aplicație.
+              Serviciul Vello este furnizat de <strong>Datcu Teodor Andrei</strong>, București. Pentru identificare și contact:{" "}
+              <Link href="/contact" className="text-[var(--sage)] font-600 hover:underline">
+                pagina Contact
+              </Link>.
             </p>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-[var(--ink)]">2. Cont și acces</h2>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Trebuie să furnizezi date corecte și să păstrezi confidențialitatea credențialelor.</li>
-              <li>Ești responsabil pentru activitatea desfășurată în contul tău.</li>
-              <li>Poți solicita ștergerea contului conform politicilor aplicabile și legislației.</li>
-            </ul>
-          </section>
-
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-[var(--ink)]">3. Planuri, prețuri și trial</h2>
+          <section className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--ink)]">1. Definiții</h2>
             <p>
-              Vello poate oferi trial și planuri plătite. Detaliile despre prețuri și limite sunt afișate în paginile
-              produsului și pot fi actualizate periodic.
+              „Vello” = aplicația și serviciile asociate. „Utilizator” = persoana sau entitatea care își creează cont. „Client” = clientul utilizatorului, ale cărui date sunt introduse în aplicație.
             </p>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-[var(--ink)]">4. Utilizare acceptabilă</h2>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Nu folosi serviciul pentru activități ilegale, fraudă, spam sau încălcarea drepturilor altora.</li>
-              <li>Nu încerca să compromiți securitatea aplicației sau să ocolești limitările tehnice.</li>
-              <li>Nu încărca conținut malițios (viruși, executabile, scripturi) sau materiale care încalcă legea.</li>
+          <section className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--ink)]">2. Cont și acces</h2>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>Utilizatorul furnizează date corecte și păstrează confidențialitatea credențialelor.</li>
+              <li>Utilizatorul răspunde pentru activitatea desfășurată în contul său.</li>
+              <li>Ștergerea contului se poate solicita conform legislației; detalii în Politica de confidențialitate.</li>
             </ul>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-[var(--ink)]">5. Date și confidențialitate</h2>
+          <section className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--ink)]">3. Planuri, prețuri și trial</h2>
             <p>
-              Detalii despre prelucrarea datelor sunt descrise în{" "}
+              Serviciul oferă perioade de trial și planuri plătite. Prețurile și limitele sunt afișate pe site și pot fi modificate; versiunea aplicabilă este cea afișată la momentul încheierii contractului.
+            </p>
+          </section>
+
+          <section className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--ink)]">4. Utilizare acceptabilă</h2>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>Utilizarea serviciului pentru activități ilegale, fraudă, spam sau încălcarea drepturilor altora este interzisă.</li>
+              <li>Compromiterea securității sau ocolirea limitărilor tehnice este interzisă.</li>
+              <li>Încărcarea de conținut malițios sau a materialelor care încalcă legea este interzisă.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--ink)]">5. Date și confidențialitate</h2>
+            <p>
+              Prelucrarea datelor este descrisă în{" "}
               <Link href="/privacy" className="text-[var(--sage)] font-600 hover:underline">
                 Politica de confidențialitate
               </Link>{" "}
               și în{" "}
               <Link href="/gdpr" className="text-[var(--sage)] font-600 hover:underline">
                 pagina GDPR
-              </Link>
-              .
+              </Link>.
             </p>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-[var(--ink)]">6. Răspundere și limitări</h2>
+          <section className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--ink)]">6. Răspundere și limitări</h2>
             <p>
-              Serviciul este oferit „ca atare”. În măsura permisă de lege, Vello nu răspunde pentru pierderi indirecte
-              (ex. profit nerealizat) sau pentru erori cauzate de terți/furnizori.
+              Serviciul este oferit „ca atare”. În măsura permisă de lege, operatorul nu răspunde pentru pierderi indirecte (ex. profit nerealizat) sau pentru erori cauzate de terți sau furnizori.
             </p>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-[var(--ink)]">7. Modificări</h2>
+          <section className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--ink)]">7. Modificări</h2>
             <p>
-              Putem actualiza acești termeni. Versiunea curentă este cea publicată pe această pagină.
+              Termenii pot fi actualizați; versiunea curentă este cea publicată pe această pagină. Continuarea utilizării după publicare constituie acceptarea modificărilor.
             </p>
           </section>
 
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-[var(--ink)]">8. Contact</h2>
+          <section className="space-y-1">
+            <h2 className="text-lg font-semibold text-[var(--ink)]">8. Contact</h2>
             <p>
-              Pentru întrebări, vizitează{" "}
+              Întrebări și solicitări:{" "}
               <Link href="/contact" className="text-[var(--sage)] font-600 hover:underline">
                 Contact
-              </Link>
-              .
+              </Link>.
             </p>
           </section>
         </div>
