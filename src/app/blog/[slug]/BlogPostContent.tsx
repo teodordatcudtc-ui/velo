@@ -1,8 +1,62 @@
 export function BlogPostContent({ slug }: { slug: string }) {
+  if (slug === "de-ce-contabilii-pierd-ore-intregi-in-fiecare-luna") {
+    return <ContabiliiPierdOre />;
+  }
   if (slug === "lansare-saas-contabili-2-saptamani-ziua-1") {
     return <LansareZiua1 />;
   }
   return null;
+}
+
+function ContabiliiPierdOre() {
+  return (
+    <>
+      <h2 className="blog-h2">O problemă pe care orice contabil român o cunoaște</h2>
+      <p className="blog-p">
+        Sfârșitul de lună. Termenul pentru declarații se apropie. Și încă aștepți facturile de la 7 clienți.
+      </p>
+      <p className="blog-p">
+        Unul trimite pe WhatsApp poze neclare, altul pe email personal, al treilea promite &quot;mâine&quot; pentru a treia zi consecutiv. Tu trimiți același mesaj, la aceiași oameni, în fiecare lună.
+      </p>
+      <p className="blog-p">
+        Am vorbit cu peste 50 de contabili români înainte să construiesc Vello. Aproape toți spuneau același lucru: pierd 3-5 ore lunar doar urmărind documente — nu făcând contabilitate.
+      </p>
+
+      <h2 className="blog-h2">Calculul real</h2>
+      <p className="blog-p">
+        Dacă ai 40 de clienți și pierzi în medie 5 minute per client lunar cu mesaje, reminder-uri și urmărit cine a trimis și cine nu:
+      </p>
+      <ul className="blog-ul">
+        <li><strong>3+ ore</strong> lunar pierdute pe urmărit acte</li>
+        <li><strong>36+ ore</strong> anual — aproape o săptămână de muncă</li>
+        <li>Fără să numărăm stresul termenelor ANAF când un client întârzie</li>
+      </ul>
+
+      <h2 className="blog-h2">Soluția simplă</h2>
+      <p className="blog-p">
+        Fiecare client primește un link personal. Intră pe link, uploadează documentele direct — fără cont, fără aplicație instalată, fără complicații. Tu primești notificare instant și vezi într-un dashboard cine a trimis, ce anume și cine nu a trimis nimic.
+      </p>
+      <p className="blog-p">
+        Fără WhatsApp. Fără email împrăștiat. Fără urmărit manual.
+      </p>
+
+      <h2 className="blog-h2">De ce funcționează pentru clienții tăi</h2>
+      <p className="blog-p">
+        Clientul tău nu uită să trimită actele pentru că e nepăsător. Uită pentru că nu are un sistem clar. Un link personal, trimis în prima zi a lunii, elimină scuza &quot;am uitat&quot; și pune responsabilitatea acolo unde trebuie.
+      </p>
+
+      <h2 className="blog-h2">Concluzie</h2>
+      <p className="blog-p">
+        Colectarea documentelor nu ar trebui să fie cea mai stresantă parte a lunii tale.
+      </p>
+      <p className="blog-p">
+        Vello rezolvă exact asta — simplu, fără complicații tehnice, fără onboarding lung. Poți fi configurat în 15 minute.
+      </p>
+      <p className="blog-p">
+        Încearcă gratuit la vello.ro — primele 45 de zile fără niciun cost.
+      </p>
+    </>
+  );
 }
 
 function LansareZiua1() {

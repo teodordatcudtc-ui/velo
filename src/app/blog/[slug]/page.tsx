@@ -38,9 +38,15 @@ export default async function BlogPostPage({ params }: Props) {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Înapoi la Blog
           </Link>
-          <time dateTime={post.date} className="blog-article-date">
-            {formattedDate}
-          </time>
+          <div className="blog-article-meta">
+            {post.author && <span className="blog-article-author">{post.author}</span>}
+            {post.author && (post.readTime || post.date) && <span className="blog-article-meta-sep"> · </span>}
+            {post.readTime && <span className="blog-article-read-time">{post.readTime}</span>}
+            {post.readTime && post.date && <span className="blog-article-meta-sep"> · </span>}
+            <time dateTime={post.date} className="blog-article-date">
+              {formattedDate}
+            </time>
+          </div>
           <h1 className="blog-article-title">
             {post.title}
           </h1>

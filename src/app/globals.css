@@ -1596,6 +1596,30 @@ nav.scrolled {
 .blog-article-back:hover {
   color: var(--sage);
 }
+.blog-article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.25rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sage);
+  margin-bottom: 12px;
+}
+.blog-article-meta .blog-article-author {
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.blog-article-meta .blog-article-read-time {
+  color: var(--ink-soft);
+}
+.blog-article-meta .blog-article-meta-sep {
+  color: var(--ink-muted);
+  font-weight: 400;
+}
 .blog-article-date {
   display: block;
   font-size: 11px;
@@ -1603,7 +1627,7 @@ nav.scrolled {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--sage);
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 .blog-article-title {
   font-family: var(--f-display);
