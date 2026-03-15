@@ -17,7 +17,7 @@ export default function TermeniPage() {
         </p>
 
         <div className="mt-4 space-y-3 text-[var(--ink-soft)]">
-          <section className="space-y-1">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--ink)]">Operator</h2>
             <p>
               Serviciul Vello este furnizat de <strong>Datcu Teodor Andrei</strong>, București. Pentru identificare și contact:{" "}
@@ -25,41 +25,41 @@ export default function TermeniPage() {
                 pagina Contact
               </Link>.
             </p>
-          </section>
+          </div>
 
-          <section className="space-y-1">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--ink)]">1. Definiții</h2>
             <p>
-              „Vello” = aplicația și serviciile asociate. „Utilizator” = persoana sau entitatea care își creează cont. „Client” = clientul utilizatorului, ale cărui date sunt introduse în aplicație.
+              „Vello" = aplicația și serviciile asociate. „Utilizator" = persoana sau entitatea care își creează cont. „Client" = clientul utilizatorului, ale cărui date sunt introduse în aplicație.
             </p>
-          </section>
+          </div>
 
-          <section className="space-y-1">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--ink)]">2. Cont și acces</h2>
             <ul className="list-disc list-inside space-y-0.5">
               <li>Utilizatorul furnizează date corecte și păstrează confidențialitatea credențialelor.</li>
               <li>Utilizatorul răspunde pentru activitatea desfășurată în contul său.</li>
               <li>Ștergerea contului se poate solicita conform legislației; detalii în Politica de confidențialitate.</li>
             </ul>
-          </section>
+          </div>
 
-          <section className="space-y-1">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--ink)]">3. Planuri, prețuri și trial</h2>
             <p>
               Serviciul oferă perioade de trial și planuri plătite. Prețurile și limitele sunt afișate pe site și pot fi modificate; versiunea aplicabilă este cea afișată la momentul încheierii contractului.
             </p>
-          </section>
+          </div>
 
-          <section className="space-y-1">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--ink)]">4. Utilizare acceptabilă</h2>
             <ul className="list-disc list-inside space-y-0.5">
               <li>Utilizarea serviciului pentru activități ilegale, fraudă, spam sau încălcarea drepturilor altora este interzisă.</li>
               <li>Compromiterea securității sau ocolirea limitărilor tehnice este interzisă.</li>
               <li>Încărcarea de conținut malițios sau a materialelor care încalcă legea este interzisă.</li>
             </ul>
-          </section>
+          </div>
 
-          <section className="space-y-1">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--ink)]">5. Date și confidențialitate</h2>
             <p>
               Prelucrarea datelor este descrisă în{" "}
@@ -71,23 +71,23 @@ export default function TermeniPage() {
                 pagina GDPR
               </Link>.
             </p>
-          </section>
+          </div>
 
-          <section className="space-y-1">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--ink)]">6. Răspundere și limitări</h2>
             <p>
-              Serviciul este oferit „ca atare”. În măsura permisă de lege, operatorul nu răspunde pentru pierderi indirecte (ex. profit nerealizat) sau pentru erori cauzate de terți sau furnizori.
+              Serviciul este oferit „ca atare". În măsura permisă de lege, operatorul nu răspunde pentru pierderi indirecte (ex. profit nerealizat) sau pentru erori cauzate de terți sau furnizori.
             </p>
-          </section>
+          </div>
 
-          <section className="space-y-1">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--ink)]">7. Modificări</h2>
             <p>
               Termenii pot fi actualizați; versiunea curentă este cea publicată pe această pagină. Continuarea utilizării după publicare constituie acceptarea modificărilor.
             </p>
-          </section>
+          </div>
 
-          <section className="space-y-1">
+          <div className="space-y-1">
             <h2 className="text-lg font-semibold text-[var(--ink)]">8. Contact</h2>
             <p>
               Întrebări și solicitări:{" "}
@@ -95,10 +95,9 @@ export default function TermeniPage() {
                 Contact
               </Link>.
             </p>
-          </section>
+          </div>
         </div>
       </div>
     </main>
   );
 }
-
