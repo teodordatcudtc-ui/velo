@@ -48,7 +48,7 @@ export default function HomePage() {
             </div>
 
             <div className="hero-title d1">
-              Actele clienților tăi<br /><em>colectate automat.</em>
+              <span className="hero-title-line1">Actele clienților tăi</span><br /><em>colectate automat.</em>
             </div>
 
             <div className="hero-subtitle lead">

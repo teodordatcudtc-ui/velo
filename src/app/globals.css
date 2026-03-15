@@ -371,6 +371,9 @@ nav.scrolled {
 .hero-title {
   margin-bottom: 24px;
 }
+.hero-title-line1 {
+  white-space: nowrap;
+}
 
 .hero-subtitle {
   margin-bottom: 36px;
