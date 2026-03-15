@@ -48,11 +48,11 @@ export default function HomePage() {
             </div>
 
             <div className="hero-title d1">
-              Scapă de grija<br /><em>actelor întârziate.</em>
+              Actele clienților tăi<br /><em>colectate automat.</em>
             </div>
 
             <div className="hero-subtitle lead">
-              Trimite cereri de documente clienților tăi în 30 de secunde. Ei răspund cu un click, tu primești totul organizat.
+              Trimite cereri de documente în 30 de secunde. Ei răspund cu un click, tu primești totul organizat.
             </div>
 
             <HeroActions />
