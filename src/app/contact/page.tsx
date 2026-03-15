@@ -18,6 +18,14 @@ export default function ContactPage() {
 
         <div className="mt-8 space-y-3 text-[var(--ink-soft)]">
           <div className="dash-card" style={{ padding: 16 }}>
+            <div className="text-sm text-[var(--ink-muted)]">Persoană de contact</div>
+            <div className="text-[var(--ink)] font-semibold">Datcu Teodor Andrei</div>
+          </div>
+          <div className="dash-card" style={{ padding: 16 }}>
+            <div className="text-sm text-[var(--ink-muted)]">Locație</div>
+            <div className="text-[var(--ink)] font-semibold">București</div>
+          </div>
+          <div className="dash-card" style={{ padding: 16 }}>
             <div className="text-sm text-[var(--ink-muted)]">Email</div>
             <a
               href="mailto:teodordatcu29@gmail.com"

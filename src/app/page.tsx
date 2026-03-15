@@ -57,18 +57,6 @@ export default function HomePage() {
 
             <HeroActions />
 
-            <div className="hero-trust">
-              <div className="hero-trust-avatars">
-                <div className="trust-avatar ta1">AP</div>
-                <div className="trust-avatar ta2">MI</div>
-                <div className="trust-avatar ta3">CD</div>
-                <div className="trust-avatar ta4">RB</div>
-              </div>
-              <div className="hero-trust-text">
-                <strong>+120 contabili</strong> folosesc Vello zilnic
-              </div>
-            </div>
-
             <div className="scroll-hint">
               <div className="scroll-hint-line" />
               Scroll pentru mai mult

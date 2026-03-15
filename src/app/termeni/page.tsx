@@ -13,11 +13,10 @@ export default function TermeniPage() {
         </Link>
         <h1 className="mt-3 text-3xl font-bold text-[var(--ink)]">Termeni și condiții</h1>
         <p className="mt-3 text-[var(--ink-soft)]">
-          Termenii de mai jos reglementează utilizarea aplicației Vello. Textul este un model inițial și poate fi adaptat
-          în funcție de forma juridică, fluxurile produsului și politicile comerciale.
+          Termenii de mai jos reglementează utilizarea aplicației Vello.
         </p>
 
-        <div className="mt-10 space-y-6 text-[var(--ink-soft)]">
+        <div className="mt-6 space-y-4 text-[var(--ink-soft)]">
           <section className="space-y-2">
             <h2 className="text-xl font-semibold text-[var(--ink)]">1. Definiții</h2>
             <p>

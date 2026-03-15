@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Privacy · Vello",
+  title: "Politica de confidențialitate · Vello",
 };
 
 export default function PrivacyPage() {
@@ -13,11 +13,10 @@ export default function PrivacyPage() {
         </Link>
         <h1 className="mt-3 text-3xl font-bold text-[var(--ink)]">Politica de confidențialitate</h1>
         <p className="mt-3 text-[var(--ink-soft)]">
-          Politica de mai jos explică ce date prelucrăm, în ce scop și ce opțiuni ai. Textul este un model inițial și poate
-          fi completat cu informații specifice operatorului și fluxurilor finale.
+          Politica de mai jos explică ce date prelucrăm, în ce scop și ce opțiuni ai.
         </p>
 
-        <div className="mt-10 space-y-6 text-[var(--ink-soft)]">
+        <div className="mt-6 space-y-4 text-[var(--ink-soft)]">
           <section className="space-y-2">
             <h2 className="text-xl font-semibold text-[var(--ink)]">1. Categorii de date</h2>
             <ul className="list-disc list-inside space-y-1">
@@ -66,19 +65,12 @@ export default function PrivacyPage() {
           <section className="space-y-2">
             <h2 className="text-xl font-semibold text-[var(--ink)]">6. Drepturile tale</h2>
             <p>
-              Pentru o listă a drepturilor și modul de exercitare, vezi{" "}
-              <Link href="/gdpr" className="text-[var(--sage)] font-600 hover:underline">
-                GDPR
-              </Link>
-              .
-            </p>
-          </section>
-
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-[var(--ink)]">7. Placeholder</h2>
-            <p>
-              Textul este orientativ și poate fi completat cu detalii specifice operatorului (denumire, adresă, DPO) și cu
-              liste exacte de furnizori/subprocesatori.
+              Ai dreptul la acces, rectificare, ștergere, restricționare, portabilitate și opoziție. Pentru exercitarea
+              drepturilor sau pentru plângeri, ne poți contacta prin{" "}
+              <Link href="/contact" className="text-[var(--sage)] font-600 hover:underline">
+                pagina Contact
+              </Link>{" "}
+              sau poți depune plângere la ANSPDCP.
             </p>
           </section>
         </div>
