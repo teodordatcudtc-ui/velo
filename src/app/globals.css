@@ -1888,8 +1888,8 @@ footer {
    și text centrat mai bine în ecran */
 @media (max-width: 768px) {
   #hero .hero-title.d1 {
-    /* pe mobil vrem fix 2 rânduri, deci facem titlul puțin mai mic ca să încapă "Actele clienților tăi" pe un singur rând */
-    font-size: clamp(30px, 9vw, 40px);
+    /* puțin mai mare, dar tot cu 2 rânduri pe telefon */
+    font-size: clamp(32px, 9.5vw, 42px);
   }
   .hero-title-line1 {
     /* nu lăsăm să se rupă primul rând în două */
