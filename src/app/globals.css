@@ -1888,11 +1888,16 @@ footer {
    și text centrat mai bine în ecran */
 @media (max-width: 768px) {
   #hero .hero-title.d1 {
-    font-size: clamp(34px, 8vw, 46px);
+    /* puțin mai mare pe mobil, dar fără să iasă din ecran */
+    font-size: clamp(38px, 11vw, 52px);
   }
   .hero-title-line1 {
     white-space: normal;
     display: inline-block;
+  }
+  #hero .hero-subtitle.lead {
+    /* descrierea un pic mai mică pe telefon, ca să lase titlul să domine */
+    font-size: 14px;
   }
   .hero-inner {
     padding: 0 8px;
