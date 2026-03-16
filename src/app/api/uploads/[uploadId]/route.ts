@@ -3,7 +3,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 
 const BUCKET = "uploads";
-const SIGNED_URL_EXPIRY = 60;
 
 export async function GET(
   request: Request,
@@ -22,14 +21,30 @@ export async function GET(
     return NextResponse.json({ error: "Neautentificat." }, { status: 401 });
   }
 
+  // 1) Luăm upload-ul + clientul lui, respectând RLS
   const { data: upload, error: uploadError } = await supabase
     .from("uploads")
-    .select("file_path, file_name")
+    .select("file_path, file_name, client_id")
     .eq("id", uploadId)
     .single();
 
   if (uploadError || !upload) {
     return NextResponse.json({ error: "Document negăsit." }, { status: 404 });
+  }
+
+  // 2) Verificăm explicit că utilizatorul logat este contabilul acelui client
+  const { data: owningClient, error: clientError } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", upload.client_id)
+    .eq("accountant_id", user.id)
+    .single();
+
+  if (clientError || !owningClient) {
+    return NextResponse.json(
+      { error: "Nu ai acces la acest document." },
+      { status: 403 }
+    );
   }
 
   const download = new URL(request.url).searchParams.get("download") === "1";
