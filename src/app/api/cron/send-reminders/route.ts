@@ -284,7 +284,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ok: true,
       sent: totalSent,
-      clients: withEmail.length,
+      clients: dueScheduled.length,
       requestRemindersSent: 0,
       errors: [`document_requests: ${reqErr.message}`, ...errors],
     });
