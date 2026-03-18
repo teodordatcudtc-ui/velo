@@ -2,6 +2,29 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
+function todayStrInTimeZone(timeZone: string) {
+  // Returns YYYY-MM-DD in the given IANA timezone (e.g. Europe/Bucharest)
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((p) => p.type === type)?.value;
+  const y = get("year");
+  const m = get("month");
+  const d = get("day");
+  return y && m && d ? `${y}-${m}-${d}` : new Date().toISOString().slice(0, 10);
+}
+
+function addDaysYmd(ymd: string, days: number) {
+  // ymd is YYYY-MM-DD
+  const [y, m, d] = ymd.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
 type ClientReminderRow = {
   id: string;
   name: string;
@@ -9,6 +32,8 @@ type ClientReminderRow = {
   unique_token: string;
   accountant_id: string;
   accountants: { name: string } | null;
+  reminder_enabled?: boolean;
+  archived?: boolean;
 };
 
 type RequestReminderRow = {
@@ -19,12 +44,16 @@ type RequestReminderRow = {
   sent_at: string;
   message: string | null;
   doc_type_names: string[] | null;
+  reminder_after_3_days?: boolean;
   clients:
     | {
         id: string;
         name: string;
         email: string | null;
         unique_token: string;
+        accountant_id?: string;
+        reminder_enabled?: boolean;
+        archived?: boolean;
         accountants: { name: string } | null;
       }
     | {
@@ -32,6 +61,9 @@ type RequestReminderRow = {
         name: string;
         email: string | null;
         unique_token: string;
+        accountant_id?: string;
+        reminder_enabled?: boolean;
+        archived?: boolean;
         accountants: { name: string } | null;
       }[]
     | null;
@@ -76,66 +108,61 @@ export async function GET(request: Request) {
       ? `https://${request.headers.get("x-forwarded-host")}`
       : "http://localhost:3000");
 
-  const today = new Date();
-  const dayOfMonth = today.getDate();
-  const currentMonth = today.getMonth() + 1;
-  const currentYear = today.getFullYear();
-  // Start of today in UTC — used for deduplication check
-  const todayStartIso = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
-  ).toISOString();
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  const todayRo = todayStrInTimeZone("Europe/Bucharest");
 
   const supabase = createAdminClient();
 
-  const { data: clients, error: clientsError } = await supabase
-    .from("clients")
-    .select("id, name, email, unique_token, accountant_id, accountants(name)")
-    .eq("reminder_enabled", true)
-    .eq("reminder_day_of_month", dayOfMonth)
-    .eq("archived", false)          // skip archived clients
-    .not("email", "is", null);
+  // We look a bit ahead (next 14 days) and then filter by RO calendar day.
+  // This allows "send in the morning" even if the stored time is later in the day.
+  const horizonIso = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-  if (clientsError) {
+  const { data: scheduledReqs, error: scheduledErr } = await supabase
+    .from("document_requests")
+    .select(
+      "id, client_id, month, year, sent_at, message, reminder_after_3_days, doc_type_names, clients(id, name, email, unique_token, accountant_id, archived, reminder_enabled, accountants(name))"
+    )
+    .eq("channel", "email_scheduled")
+    .lte("sent_at", horizonIso);
+
+  if (scheduledErr) {
     return NextResponse.json({
       ok: true,
       sent: 0,
-      message: "Eroare la citire clienți",
+      requestRemindersSent: 0,
+      errors: [`scheduled_requests: ${scheduledErr.message}`],
     });
   }
 
-  const withEmail = ((clients ?? []) as ClientReminderRow[]).filter((c) => c.email?.trim());
+  const dueScheduled = ((scheduledReqs ?? []) as RequestReminderRow[])
+    .map((r) => {
+      const clientRaw = r.clients;
+      const client = Array.isArray(clientRaw) ? clientRaw[0] : clientRaw;
+      return { req: r, client };
+    })
+    .filter(({ req, client }) => {
+      if (!client?.email?.trim()) return false;
+      if (client.archived) return false;
+      if (client.reminder_enabled === false) return false;
+      // due by RO calendar day (never before the scheduled date in RO)
+      return req.sent_at.slice(0, 10) <= todayRo;
+    });
+
   let totalSent = 0;
-  let skippedDuplicates = 0;
   const errors: string[] = [];
 
-  for (const client of withEmail) {
-    // Deduplication: skip if we already sent a monthly email for this client today
-    const { count: alreadySent } = await supabase
-      .from("document_requests")
-      .select("*", { count: "exact", head: true })
-      .eq("client_id", client.id)
-      .eq("month", currentMonth)
-      .eq("year", currentYear)
-      .eq("channel", "email")
-      .gte("sent_at", todayStartIso);
+  for (const { req, client } of dueScheduled) {
+    const accName = client?.accountants?.name ?? "Contabilul tău";
 
-    if ((alreadySent ?? 0) > 0) {
-      skippedDuplicates++;
-      continue;
-    }
-
-    const accName =
-      client.accountants?.name ??
-      "Contabilul tău";
-
-    // Preluăm lista curentă de documente setate pentru acest client,
-    // astfel încât fiecare email lunar să reflecte modificările recente
+    // Always read current doc types at send time (reflect latest changes).
     const { data: docTypes, error: docErr } = await supabase
       .from("document_types")
       .select("name")
-      .eq("client_id", client.id);
+      .eq("client_id", req.client_id);
     if (docErr) {
-      errors.push(`doc_types ${client.id}: ${docErr.message}`);
+      errors.push(`doc_types ${req.client_id}: ${docErr.message}`);
     }
     const docs = (docTypes ?? []) as { name: string }[];
     const docsHtml =
@@ -143,12 +170,13 @@ export async function GET(request: Request) {
         ? `<ul>${docs.map((d) => `<li>${d.name}</li>`).join("")}</ul>`
         : "";
 
-    const uploadLink = `${baseUrl}/upload/${client.unique_token}`;
+    const uploadLink = `${baseUrl}/upload/${client!.unique_token}`;
     const subject = `Documente lunare – ${accName}`;
     const html = `
-      <p>Bună ziua, ${client.name},</p>
+      <p>Bună ziua, ${client!.name},</p>
       <p>Contabilul <strong>${accName}</strong> vă solicită documentele pentru luna curentă.</p>
       ${docsHtml}
+      ${req.message?.trim() ? `<p><strong>Mesaj:</strong> ${req.message.trim()}</p>` : ""}
       <p>Accesați linkul de mai jos pentru a încărca documentele (nu este nevoie de cont):</p>
       <p><a href="${uploadLink}" style="color: #4b7a6e; font-weight: 600;">${uploadLink}</a></p>
       <p>Mulțumim,<br/>Echipa Vello</p>
@@ -156,28 +184,87 @@ export async function GET(request: Request) {
 
     const { error: sendError } = await resend.emails.send({
       from: buildFromWithAccountantName(accName),
-      to: client.email!,
+      to: client!.email!,
       subject,
       html,
     });
 
     if (sendError) {
-      errors.push(`${client.email}: ${sendError.message}`);
-    } else {
-      totalSent++;
-      // Record the send so future duplicate runs are skipped
-      await (supabase as any)
+      errors.push(`${client!.email}: ${sendError.message}`);
+      continue;
+    }
+
+    totalSent++;
+
+    // Mark this scheduled request as sent (prevents re-sending).
+    await (supabase as any)
+      .from("document_requests")
+      .update({
+        channel: "email",
+        sent_at: new Date().toISOString(),
+        doc_type_names: docs.map((d) => d.name),
+      })
+      .eq("id", req.id);
+
+    // Auto-schedule the next request 30 days after the scheduled date (RO calendar date).
+    const scheduledDateRo = req.sent_at.slice(0, 10);
+    const nextDateRo = addDaysYmd(scheduledDateRo, 30);
+    const nextScheduledIso = `${nextDateRo}T12:00:00.000Z`;
+    const [ny, nm] = nextDateRo.split("-").map(Number);
+
+    // Upsert (manual): keep a single scheduled request for that future period.
+    const accountantId = (client as any).accountant_id;
+    const { data: existing, error: existingError } = await (supabase as any)
+      .from("document_requests")
+      .select("id")
+      .eq("client_id", req.client_id)
+      .eq("accountant_id", accountantId)
+      .eq("month", nm)
+      .eq("year", ny)
+      .order("sent_at", { ascending: false });
+    if (existingError) {
+      errors.push(`next upsert select ${req.client_id}: ${existingError.message}`);
+      continue;
+    }
+
+    if (!existing || existing.length === 0) {
+      const { error: insErr } = await (supabase as any)
         .from("document_requests")
         .insert({
-          client_id: client.id,
-          accountant_id: client.accountant_id,
-          month: currentMonth,
-          year: currentYear,
-          channel: "email",
-          doc_type_names: docs.map((d) => d.name),
-          sent_at: new Date().toISOString(),
-          reminder_after_3_days: false,
+          client_id: req.client_id,
+          accountant_id: accountantId,
+          month: nm,
+          year: ny,
+          channel: "email_scheduled",
+          doc_type_names: null,
+          message: req.message ?? null,
+          reminder_after_3_days: !!req.reminder_after_3_days,
+          sent_at: nextScheduledIso,
+          reminder_sent_at: null,
         });
+      if (insErr) {
+        errors.push(`next upsert insert ${req.client_id}: ${insErr.message}`);
+      }
+    } else {
+      const keepId = existing[0].id;
+      const { error: updErr } = await (supabase as any)
+        .from("document_requests")
+        .update({
+          channel: "email_scheduled",
+          doc_type_names: null,
+          message: req.message ?? null,
+          reminder_after_3_days: !!req.reminder_after_3_days,
+          sent_at: nextScheduledIso,
+          reminder_sent_at: null,
+        })
+        .eq("id", keepId);
+      if (updErr) {
+        errors.push(`next upsert update ${req.client_id}: ${updErr.message}`);
+      }
+      if (existing.length > 1) {
+        const dupIds = existing.slice(1).map((r: any) => r.id);
+        await (supabase as any).from("document_requests").delete().in("id", dupIds);
+      }
     }
   }
 
@@ -188,6 +275,7 @@ export async function GET(request: Request) {
     .select(
       "id, client_id, month, year, sent_at, message, doc_type_names, clients(id, name, email, unique_token, accountants(name))"
     )
+    .eq("channel", "email")
     .eq("reminder_after_3_days", true)
     .is("reminder_sent_at", null)
     .lte("sent_at", threeDaysAgoIso);
@@ -209,10 +297,22 @@ export async function GET(request: Request) {
     const client = Array.isArray(clientRaw) ? clientRaw[0] : clientRaw;
     if (!client?.email?.trim()) continue;
 
-    // send reminder only when there are zero uploads for that requested period
-    const { count: uploadCount, error: uploadsErr } = await supabase
+    // Send reminder only when NOT all required documents are uploaded for that requested period.
+    // We treat the client's current document_types list as the required set.
+    const { data: requiredTypes, error: typesErr } = await supabase
+      .from("document_types")
+      .select("id")
+      .eq("client_id", req.client_id);
+    if (typesErr) {
+      errors.push(`doc_types check ${req.id}: ${typesErr.message}`);
+      continue;
+    }
+    const requiredIds = new Set(((requiredTypes ?? []) as { id: string }[]).map((t) => t.id));
+    if (requiredIds.size === 0) continue;
+
+    const { data: uploadedRows, error: uploadsErr } = await supabase
       .from("uploads")
-      .select("*", { count: "exact", head: true })
+      .select("document_type_id")
       .eq("client_id", req.client_id)
       .eq("month", req.month)
       .eq("year", req.year);
@@ -220,7 +320,15 @@ export async function GET(request: Request) {
       errors.push(`uploads check ${req.id}: ${uploadsErr.message}`);
       continue;
     }
-    if ((uploadCount ?? 0) > 0) continue;
+    const uploadedIds = new Set(((uploadedRows ?? []) as { document_type_id: string }[]).map((u) => u.document_type_id));
+    let complete = true;
+    for (const id of requiredIds) {
+      if (!uploadedIds.has(id)) {
+        complete = false;
+        break;
+      }
+    }
+    if (complete) continue;
 
     const accName = client.accountants?.name ?? "Contabilul tău";
     const uploadLink = `${baseUrl}/upload/${client.unique_token}`;
@@ -267,8 +375,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     ok: true,
     sent: totalSent,
-    clients: withEmail.length,
-    skippedDuplicates,
+    clients: dueScheduled.length,
     requestRemindersSent,
     errors: errors.length > 0 ? errors : undefined,
   });
