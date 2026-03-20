@@ -33,7 +33,8 @@ export async function updateProfile(formData: FormData) {
 
   if (error) return { error: error.message };
   revalidatePath("/dashboard");
-  revalidatePath("/dashboard/settings");
+  // Pagina reală din app este `/dashboard/setari` (nu `/dashboard/settings`)
+  revalidatePath("/dashboard/setari");
   return { ok: true };
 }
 
