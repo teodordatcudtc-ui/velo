@@ -145,7 +145,8 @@ export async function GET(request: Request) {
     .filter(({ req, client }) => {
       if (!client?.email?.trim()) return false;
       if (client.archived) return false;
-      if (client.reminder_enabled === false) return false;
+      // Cererea programată (email_scheduled) nu depinde de clients.reminder_enabled —
+      // acel toggle e doar pentru reminder lunar recurent din UI; aici contabilul a ales explicit data.
       // due by RO calendar day (never before the scheduled date in RO)
       return req.sent_at.slice(0, 10) <= todayRo;
     });
