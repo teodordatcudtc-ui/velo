@@ -9,6 +9,16 @@ export type BlogPost = {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "de-ce-clientii-trimit-actele-tarziu-si-cum-ii-faci-sa-trimita-la-timp",
+    title:
+      "De ce clienții trimit actele târziu — și cum îi faci să trimită la timp",
+    date: "2026-03-21",
+    excerpt:
+      "De ce întârzie clienții cu documentele, ce funcționează în practică pentru a-i face punctuali și cum poți automatiza cererea + reminder-ele.",
+    author: "Teodor Datcu",
+    readTime: "4 min",
+  },
+  {
     slug: "de-ce-contabilii-pierd-ore-intregi-in-fiecare-luna",
     title: "De ce contabilii pierd ore întregi în fiecare lună — și cum se poate schimba asta",
     date: "2026-03-01",

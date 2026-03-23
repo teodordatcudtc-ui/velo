@@ -1,4 +1,7 @@
 export function BlogPostContent({ slug }: { slug: string }) {
+  if (slug === "de-ce-clientii-trimit-actele-tarziu-si-cum-ii-faci-sa-trimita-la-timp") {
+    return <ClientiiTrimitTarziu />;
+  }
   if (slug === "de-ce-contabilii-pierd-ore-intregi-in-fiecare-luna") {
     return <ContabiliiPierdOre />;
   }
@@ -6,6 +9,84 @@ export function BlogPostContent({ slug }: { slug: string }) {
     return <LansareZiua1 />;
   }
   return null;
+}
+
+function ClientiiTrimitTarziu() {
+  return (
+    <>
+      <h2 className="blog-h2">O scenă pe care orice contabil o cunoaște</h2>
+      <p className="blog-p">
+        E data de 20 a lunii. Ai nevoie de extrasul bancar de la un client până mâine. I-ai trimis mesaj pe 1, pe 10, pe 15.
+        Răspunsul e același: &quot;Trimit azi.&quot;
+      </p>
+      <p className="blog-p">
+        Ziua trece. Extrasul nu vine.
+      </p>
+      <p className="blog-p">
+        Nu e primul client care face asta. Nu va fi ultimul. Și de fiecare dată, termenul ANAF nu așteaptă.
+      </p>
+
+      <h2 className="blog-h2">De ce se întâmplă asta — cu adevărat</h2>
+      <p className="blog-p">
+        Primul instinct e să dai vina pe client. Dar realitatea e mai simplă: clientul tău nu are un sistem clar. Mesajul tău pe WhatsApp e unul dintre zecile pe care le primește zilnic.
+        Îl vede, îl marchează mental ca &quot;trebuie să fac asta&quot;, și uită.
+      </p>
+      <p className="blog-p">
+        Nu e rea-voință. E lipsa unui proces.
+      </p>
+      <p className="blog-p">Alte motive frecvente:</p>
+      <ul className="blog-ul">
+        <li>
+          Nu știe exact ce trebuie să trimită. &quot;Documentele lunii&quot; e vag. Extrasul de la ce bancă? Facturile de la furnizori sau și cele emise? Bonurile de benzină intră?
+        </li>
+        <li>
+          Nu are un loc clar unde să le trimită. WhatsApp azi, email mâine, poate și pe Drive dacă mai ții minte să îi dai acces. Haosul generează amânare.
+        </li>
+        <li>
+          Nu simte urgența. Pentru tine termenul e critic. Pentru el e o sarcină administrativă printre altele.
+        </li>
+      </ul>
+
+      <h2 className="blog-h2">Ce funcționează cu adevărat</h2>
+      <h2 className="blog-h2">1. Fii specific în cerere</h2>
+      <p className="blog-p">
+        În loc de &quot;trimite documentele lunii&quot;, trimite o listă clară: &quot;Am nevoie de: extrasul BCR pentru februarie, facturile de la furnizori, bonurile de combustibil.&quot; Clientul nu mai trebuie să ghicească.
+      </p>
+
+      <h2 className="blog-h2">2. Trimite cererea în prima zi a lunii, nu la mijloc</h2>
+      <p className="blog-p">
+        Cu cât trimiți mai târziu, cu atât ai mai puțin timp să urmărești. Prima zi a lunii e momentul în care clienții sunt cei mai receptivi — tocmai au închis luna anterioară.
+      </p>
+
+      <h2 className="blog-h2">3. Un singur canal, consistent</h2>
+      <p className="blog-p">
+        Dacă trimiți pe WhatsApp azi și pe email săptămâna viitoare, clientul se pierde. Alege un canal și rămâi la el în fiecare lună.
+      </p>
+
+      <h2 className="blog-h2">4. Reminder automat înainte de deadline</h2>
+      <p className="blog-p">
+        Nu aștepta să expire termenul ca să trimiți al doilea mesaj. Un reminder trimis pe 10 și pe 15 ale lunii, automat, elimină nevoia de a urmări manual.
+      </p>
+
+      <h2 className="blog-h2">5. Fă uploadul cât mai simplu posibil</h2>
+      <p className="blog-p">
+        Cu cât sunt mai mulți pași între intenție și acțiune, cu atât mai mare șansa de amânare. Dacă clientul trebuie să se logheze, să caute folderul, să redenumească fișierul — amână.
+        Dacă primește un link și apasă upload — face imediat.
+      </p>
+
+      <h2 className="blog-h2">Concluzie</h2>
+      <p className="blog-p">
+        Clienții nu trimit actele târziu pentru că nu le pasă. Trimit târziu pentru că nu au un sistem clar și simplu.
+      </p>
+      <p className="blog-p">
+        Responsabilitatea de a crea acel sistem e a ta — și când o faci, vei vedea că aceiași clienți care te chinuiau în fiecare lună devin brusc punctuali.
+      </p>
+      <p className="blog-p">
+        Vello automatizează întregul proces — cerere automată în prima zi a lunii, link personal per client, reminder automat dacă nu a trimis.
+        Testează gratuit la vello.ro.
+      </p>
+    </>
+  );
 }
 
 function ContabiliiPierdOre() {
