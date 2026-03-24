@@ -338,14 +338,19 @@ nav.scrolled {
 /* Hero — centered, no right column graphics */
 #hero {
   padding-top: 144px;
-  padding-bottom: 80px;
+  padding-bottom: 56px;
   position: relative;
 }
 
 .hero-inner {
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
   text-align: center;
+}
+
+.hero-copy {
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .hero-badge {
@@ -376,7 +381,7 @@ nav.scrolled {
 }
 
 .hero-subtitle {
-  margin-bottom: 36px;
+  margin-bottom: 24px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -386,8 +391,49 @@ nav.scrolled {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-bottom: 48px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
+}
+
+.hero-demo {
+  width: 100%;
+  max-width: 100%;
+  margin: 14px auto 0;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1px solid var(--paper-3);
+  box-shadow: var(--shadow-md);
+  background: #000;
+}
+
+.hero-demo-sep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.hero-demo-sep-line {
+  width: 66px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--paper-3), transparent);
+}
+
+.hero-demo-sep-text {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.hero-demo-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #000;
 }
 
 /* Ambele butoane hero: aceeași dimensiune pe PC, centrate */
@@ -1905,12 +1951,30 @@ footer {
   .hero-actions {
     flex-wrap: nowrap;
   }
+  #hero {
+    padding-top: 124px;
+    padding-bottom: 40px;
+  }
+  .hero-subtitle {
+    margin-bottom: 18px;
+  }
   .hero-actions a,
   .hero-actions button {
     min-height: var(--touch-min) !important;
     min-width: max(132px, var(--touch-min)) !important;
     padding: 11px 18px !important;
     font-size: 14px !important;
+  }
+  .hero-demo {
+    border-radius: 14px;
+    max-width: 100%;
+    margin-top: 16px;
+  }
+  .hero-demo-sep {
+    margin-top: 10px;
+  }
+  .hero-demo-sep-line {
+    width: 44px;
   }
 }
 

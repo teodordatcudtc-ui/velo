@@ -4,7 +4,6 @@ import FaqSection from "./components/FaqSection";
 import ScrollEffects from "./components/ScrollEffects";
 import { HeroActions } from "./components/HeroActions";
 import { LandingNavCta } from "./components/LandingNavCta";
-import { ExplicatorSection } from "./components/ExplicatorSection";
 
 function Logo() {
   return (
@@ -42,24 +41,34 @@ export default function HomePage() {
       <section id="hero">
         <div className="container">
           <div className="hero-inner">
-            <div className="hero-badge">
-              <div className="hero-badge-dot" />
-              Nou · Reminder automat
+            <div className="hero-copy">
+              <div className="hero-title d1">
+                <span className="hero-title-line1">Actele clienților tăi</span><br /><em>colectate automat.</em>
+              </div>
+
+              <div className="hero-subtitle lead">
+                Trimite cereri de documente în 30 de secunde. Ei răspund cu un click, tu primești totul organizat.
+              </div>
+
+              <HeroActions />
             </div>
-
-            <div className="hero-title d1">
-              <span className="hero-title-line1">Actele clienților tăi</span><br /><em>colectate automat.</em>
+            <div className="hero-demo-sep" aria-hidden="true">
+              <span className="hero-demo-sep-line" />
+              <span className="hero-demo-sep-text">Demo live</span>
+              <span className="hero-demo-sep-line" />
             </div>
-
-            <div className="hero-subtitle lead">
-              Trimite cereri de documente în 30 de secunde. Ei răspund cu un click, tu primești totul organizat.
-            </div>
-
-            <HeroActions />
-
-            <div className="scroll-hint">
-              <div className="scroll-hint-line" />
-              Scroll pentru mai mult
+            <div className="hero-demo">
+              <video
+                className="hero-demo-video"
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls
+                preload="metadata"
+              >
+                <source src="/demo2.mp4" type="video/mp4" />
+              </video>
             </div>
           </div>
         </div>
@@ -180,9 +189,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* Explicator video + CTA demo interactiv (growth: explainer + interactive demo) */}
-      <ExplicatorSection />
 
       {/* Features — fără WhatsApp în titluri */}
       <section id="features">
