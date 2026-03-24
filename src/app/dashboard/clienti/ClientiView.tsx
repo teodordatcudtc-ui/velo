@@ -1296,6 +1296,10 @@ export function ClientiView({
             currentMonth={currentMonth}
             currentYear={currentYear}
             isPremium={isPremium}
+            hasScheduledEmailRequest={
+              !!nextRequestByClient[drawerClient.id] ||
+              !!requestThisMonthByClient[drawerClient.id]
+            }
             onClose={closeDrawer}
             onEdit={() => {
               const found = initialClients.find((c) => c.id === drawerClient.id);
@@ -1686,6 +1690,7 @@ function ClientiDrawer({
   currentMonth,
   currentYear,
   isPremium,
+  hasScheduledEmailRequest,
   onClose,
   onEdit,
   onCerere,
@@ -1696,6 +1701,7 @@ function ClientiDrawer({
   currentMonth: number;
   currentYear: number;
   isPremium: boolean;
+  hasScheduledEmailRequest: boolean;
   onClose: () => void;
   onEdit: () => void;
   onCerere: () => void;
@@ -2032,12 +2038,14 @@ function ClientiDrawer({
                   </div>
                   <div>
                     <div className={styles.notifCardLabel}>Email</div>
-                    <div className={styles.notifCardMeta}>{client.email ?? "—"} · Fallback</div>
+                    <div className={styles.notifCardMeta}>
+                      {client.email ?? "—"} · {hasScheduledEmailRequest ? "Programat" : "Fallback"}
+                    </div>
                   </div>
                 </div>
                 <EmailToggle
                   clientId={client.id}
-                  initialOn={!!client.reminder_enabled}
+                  initialOn={!!client.reminder_enabled || hasScheduledEmailRequest}
                   isPremium={isPremium}
                 />
               </div>
