@@ -1967,7 +1967,10 @@ footer {
   }
   .hero-demo {
     border-radius: 14px;
-    max-width: 100%;
+    width: calc(100% + 16px);
+    max-width: calc(100% + 16px);
+    margin-left: -8px;
+    margin-right: -8px;
     margin-top: 16px;
   }
   .hero-demo-sep {
