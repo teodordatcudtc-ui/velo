@@ -354,11 +354,6 @@ export default function HomePage() {
 
             <div className="cta-stats">
               <div className="cta-stat">
-                <div className="cta-stat-value">+120</div>
-                <div className="cta-stat-label">contabili activi</div>
-              </div>
-              <div className="cta-stat-divider" />
-              <div className="cta-stat">
                 <div className="cta-stat-value">4.2 ore</div>
                 <div className="cta-stat-label">economie/lună medie</div>
               </div>
