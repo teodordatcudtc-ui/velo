@@ -1,5 +1,5 @@
 export const NO_SUBSCRIPTION_CLIENT_LIMIT = 5;
-export const STANDARD_CLIENT_LIMIT = 40;
+export const STANDARD_CLIENT_LIMIT = 50;
 
 export type AccountantSubscriptionRow = {
   subscription_plan?: string | null;
@@ -27,7 +27,7 @@ export function hasActiveSubscription(
   return new Date(accountant.premium_until).getTime() > now.getTime();
 }
 
-/** Limită clienți: null = nelimitat (Premium), 5 = fără abonament (gratuit), 40 = Standard. */
+/** Limită clienți: null = nelimitat (Premium), 5 = fără abonament (gratuit), 50 = Standard. */
 export function getClientLimit(
   accountant: AccountantSubscriptionRow | null | undefined
 ): number | null {

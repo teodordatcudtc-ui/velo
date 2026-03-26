@@ -225,7 +225,7 @@ export async function addClient(formData: FormData) {
       const msg =
         limit === 5
           ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
-          : "Ai atins limita de 40 clienți pentru planul Standard. Upgrade la Premium pentru clienți nelimitați.";
+          : "Ai atins limita de 50 clienți pentru planul Standard. Upgrade la Premium pentru clienți nelimitați.";
       return { error: msg };
     }
   }
@@ -299,7 +299,7 @@ export async function importClientsFromCsv(csvText: string) {
       const msg =
         limit === 5
           ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
-          : "Ai atins limita de 40 clienți pentru planul Standard. Upgrade la Premium pentru clienți nelimitați.";
+          : "Ai atins limita de 50 clienți pentru planul Standard. Upgrade la Premium pentru clienți nelimitați.";
       return { error: msg };
     }
   }
@@ -715,7 +715,7 @@ export async function restoreClient(clientId: string) {
       const msg =
         limit === 5
           ? "Nu poți restaura: planul gratuit permite maxim 5 clienți."
-          : "Nu poți restaura clientul: ai deja 40 clienți activi pe planul Standard.";
+          : "Nu poți restaura clientul: ai deja 50 clienți activi pe planul Standard.";
       return { error: msg };
     }
   }

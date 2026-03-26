@@ -68,7 +68,7 @@ export default function PricingSection() {
       monthly: 19,
       annual: 14,
       features: [
-        { text: "Până la 40 clienți", included: true },
+        { text: "Până la 50 clienți", included: true },
         { text: "Linkuri unice per client", included: true },
         { text: "Dashboard documente", included: true },
         { text: "Categorii documente", included: true },

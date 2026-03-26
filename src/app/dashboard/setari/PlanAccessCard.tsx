@@ -134,7 +134,7 @@ export function PlanAccessCard({
           ? "Ai clienți nelimitați și acces la funcțiile Premium."
           : subscriptionPlan === "none"
             ? "Plan gratuit: maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
-            : "Plan Standard: maxim 40 clienți activi. Upgrade la Premium pentru clienți nelimitați."}
+            : "Plan Standard: maxim 50 clienți activi. Upgrade la Premium pentru clienți nelimitați."}
       </div>
 
       {canGenerateCodes && (
@@ -151,7 +151,7 @@ export function PlanAccessCard({
               style={{ minWidth: 200 }}
             >
               <option value="none">Plan gratuit (5 clienți)</option>
-              <option value="standard">Standard (40 clienți)</option>
+              <option value="standard">Standard (50 clienți)</option>
               <option value="premium">Premium (nelimitat)</option>
             </select>
             <button type="submit" className="btn btn-secondary" disabled={switchingPlan}>

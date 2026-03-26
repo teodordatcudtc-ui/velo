@@ -418,9 +418,9 @@ export function ClientiView({
   function openAddClientModal() {
     if (isAtClientLimit) {
       toast.info(
-        (clientLimit ?? 40) === 5
+        (clientLimit ?? 50) === 5
           ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
-          : "Ai atins limita de 40 clienți pe Standard. Treci pe Premium pentru clienți nelimitați."
+          : "Ai atins limita de 50 clienți pe Standard. Treci pe Premium pentru clienți nelimitați."
       );
       return;
     }
@@ -818,9 +818,9 @@ export function ClientiView({
         <div style={{ marginLeft: 12, fontSize: 12, color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
           {isPremium
             ? "Plan Premium · clienți nelimitați"
-            : (clientLimit ?? 40) === 5
+            : (clientLimit ?? 50) === 5
               ? `Plan gratuit · ${initialClients.length}/5 clienți`
-              : `Plan Standard · ${initialClients.length}/${clientLimit ?? 40} clienți`}
+              : `Plan Standard · ${initialClients.length}/${clientLimit ?? 50} clienți`}
         </div>
         <div className={styles.topbarSpacer} />
         <div className={styles.topbarSearch}>
@@ -1351,9 +1351,9 @@ export function ClientiView({
             </div>
             {isAtClientLimit && (
               <p style={{ fontSize: 12, color: "var(--ink-muted)", marginTop: 8 }}>
-                {(clientLimit ?? 40) === 5
+                {(clientLimit ?? 50) === 5
                   ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
-                  : "Ai atins limita de 40 clienți pentru planul Standard."}
+                  : "Ai atins limita de 50 clienți pentru planul Standard."}
               </p>
             )}
           </form>
