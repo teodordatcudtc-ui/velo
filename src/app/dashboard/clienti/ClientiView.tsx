@@ -1809,7 +1809,15 @@ function ClientiDrawer({
             <span className={styles.drawerCui}>{client.email ?? "—"}</span>
             <span className={`${styles.badge} ${styles.badgeOk}`}>
               <span className={styles.badgeDot} />
-              {total === 0 ? "Neinițiat" : received.size === total ? "La zi" : received.size === 0 ? "Restant" : "Așteptare"}
+              {total === 0
+                ? "Neinițiat"
+                : requestClosedCurrentMonth
+                  ? "Închis"
+                  : received.size === total
+                    ? "La zi"
+                    : received.size === 0
+                      ? "Restant"
+                      : "Așteptare"}
             </span>
           </div>
         </div>
@@ -1930,6 +1938,34 @@ function ClientiDrawer({
                   </svg>
                   Programează cerere
                 </button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnSecondary}`}
+                  style={{ width: "100%", justifyContent: "center" }}
+                  disabled={closingRequest || requestClosedCurrentMonth}
+                  onClick={async () => {
+                    setClosingRequest(true);
+                    const result = await closeCurrentDocumentRequest(client.id);
+                    setClosingRequest(false);
+                    if (result?.error) {
+                      toast.error(result.error);
+                      return;
+                    }
+                    toast.success("Solicitarea curentă a fost închisă manual.");
+                    router.refresh();
+                  }}
+                >
+                  {requestClosedCurrentMonth
+                    ? "Solicitare închisă manual"
+                    : closingRequest
+                      ? "Se închide..."
+                      : "Închide solicitarea curentă"}
+                </button>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--ink-muted)" }}>
+                  Folosește asta când clientul nu mai are documente de trimis (ex: nu există bonuri fiscale luna asta).
+                </p>
               </div>
             </div>
           </>
