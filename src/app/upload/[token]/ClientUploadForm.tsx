@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useToast } from "@/app/components/ToastProvider";
 
 type DocType = { id: string; name: string };
+type UploadItem = { id: string; file_name: string };
 
 export function ClientUploadForm({
   clientId: _clientId,
@@ -14,61 +15,105 @@ export function ClientUploadForm({
   clientId: string;
   documentTypes: DocType[];
   token: string;
-  initialUploads?: { documentTypeId: string; file_name: string }[];
+  initialUploads?: { id: string; documentTypeId: string; file_name: string }[];
 }) {
   const [uploading, setUploading] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastSuccess, setLastSuccess] = useState<string | null>(null);
   const toast = useToast();
-  const [uploadedNames, setUploadedNames] = useState<Record<string, string>>(
+  const [uploadedByType, setUploadedByType] = useState<Record<string, UploadItem[]>>(
     () => {
-      const seen = new Set<string>();
-      return Object.fromEntries(
-        initialUploads
-          .filter((u) => {
-            if (seen.has(u.documentTypeId)) return false;
-            seen.add(u.documentTypeId);
-            return true;
-          })
-          .map((u) => [u.documentTypeId, u.file_name])
-      );
+      const grouped: Record<string, UploadItem[]> = {};
+      for (const u of initialUploads) {
+        if (!grouped[u.documentTypeId]) grouped[u.documentTypeId] = [];
+        grouped[u.documentTypeId].push({ id: u.id, file_name: u.file_name });
+      }
+      return grouped;
     }
   );
 
-  async function handleUpload(documentTypeId: string, file: File) {
+  async function handleUpload(documentTypeId: string, files: File[]) {
     setError(null);
     setLastSuccess(null);
     setUploading(documentTypeId);
+    let uploadedCount = 0;
+    const uploadedNames: string[] = [];
 
-    const formData = new FormData();
-    formData.set("token", token);
-    formData.set("documentTypeId", documentTypeId);
-    formData.set("file", file);
+    for (const file of files) {
+      const formData = new FormData();
+      formData.set("token", token);
+      formData.set("documentTypeId", documentTypeId);
+      formData.set("file", file);
 
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data.error ?? "Eroare la încărcare.";
+        setError(msg);
+        toast.error(msg);
+        continue;
+      }
+
+      uploadedCount++;
+      uploadedNames.push(file.name);
+      setUploadedByType((prev) => ({
+        ...prev,
+        [documentTypeId]: [
+          ...(prev[documentTypeId] ?? []),
+          {
+            id: String((data?.uploadId as string | undefined) ?? `${Date.now()}-${file.name}`),
+            file_name: file.name,
+          },
+        ],
+      }));
+    }
+
     setUploading(null);
+    if (uploadedCount > 0) {
+      const msg =
+        uploadedCount === 1
+          ? `„${uploadedNames[0]}" a fost încărcat.`
+          : `${uploadedCount} fișiere au fost încărcate.`;
+      toast.success(msg);
+      setLastSuccess(msg);
+    }
+  }
+
+  async function handleDelete(uploadId: string, documentTypeId: string) {
+    setError(null);
+    setDeletingId(uploadId);
+    const res = await fetch("/api/upload/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, uploadId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setDeletingId(null);
 
     if (!res.ok) {
-      const msg = data.error ?? "Eroare la încărcare.";
+      const msg = data.error ?? "Nu am putut șterge fișierul.";
       setError(msg);
       toast.error(msg);
       return;
     }
-    toast.success(`„${file.name}" a fost încărcat.`);
-    setLastSuccess(file.name);
-    setUploadedNames((prev) => ({ ...prev, [documentTypeId]: file.name }));
+
+    setUploadedByType((prev) => ({
+      ...prev,
+      [documentTypeId]: (prev[documentTypeId] ?? []).filter((u) => u.id !== uploadId),
+    }));
+    toast.success("Fișier șters.");
   }
 
   return (
     <div className="divide-y divide-[var(--paper-3)]">
       {documentTypes.map((dt) => {
         const isUploading = uploading === dt.id;
-        const uploadedName = uploadedNames[dt.id];
+        const uploadedList = uploadedByType[dt.id] ?? [];
         return (
           <div
             key={dt.id}
@@ -76,21 +121,22 @@ export function ClientUploadForm({
           >
             <div className="flex flex-wrap items-center gap-3 mb-3">
               <span className="font-semibold text-[var(--ink)]">{dt.name}</span>
-              {uploadedName && (
+              {uploadedList.length > 0 && (
                 <span className="text-sm text-[var(--sage)] font-medium">
-                  ✓ {uploadedName}
+                  ✓ {uploadedList.length} fișier{uploadedList.length === 1 ? "" : "e"}
                 </span>
               )}
             </div>
             <label className="flex items-center gap-3 flex-wrap cursor-pointer">
               <input
                 type="file"
+                multiple
                 accept="application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.xls,.xlsx,text/plain,.txt"
                 className="sr-only"
                 disabled={!!uploading}
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleUpload(dt.id, file);
+                  const files = e.target.files ? Array.from(e.target.files) : [];
+                  if (files.length > 0) handleUpload(dt.id, files);
                   e.target.value = "";
                 }}
               />
@@ -114,9 +160,29 @@ export function ClientUploadForm({
                 )}
               </span>
               <span className="text-sm text-[var(--ink-muted)]">
-                PDF, imagine sau document. Pe telefon: alege «Fișiere» sau «Browse» dacă nu vezi PDF.
+                Poți încărca mai multe fișiere (PDF, imagini, documente). Pe telefon: alege «Fișiere» sau «Browse» dacă nu vezi PDF.
               </span>
             </label>
+            {uploadedList.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {uploadedList.map((u) => (
+                  <li
+                    key={u.id}
+                    className="flex items-center justify-between gap-3 text-sm bg-[var(--paper)] border border-[var(--paper-3)] rounded-[var(--r-md)] px-3 py-2"
+                  >
+                    <span className="text-[var(--ink)] truncate">{u.file_name}</span>
+                    <button
+                      type="button"
+                      disabled={deletingId === u.id}
+                      onClick={() => handleDelete(u.id, dt.id)}
+                      className="text-[var(--terracotta)] hover:underline disabled:opacity-50 shrink-0"
+                    >
+                      {deletingId === u.id ? "Se șterge..." : "Șterge"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         );
       })}
@@ -131,7 +197,7 @@ export function ClientUploadForm({
       {lastSuccess && !error && (
         <div className="px-6 pb-6">
           <p className="text-sm text-[var(--sage)] font-medium">
-            „{lastSuccess}" a fost încărcat cu succes.
+            {lastSuccess}
           </p>
         </div>
       )}

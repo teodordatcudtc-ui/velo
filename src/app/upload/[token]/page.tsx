@@ -9,7 +9,7 @@ type ClientWithDocs = {
   document_types: { id: string; name: string }[] | null;
 };
 
-type UploadRow = { document_type_id: string; file_name: string };
+type UploadRow = { id: string; document_type_id: string; file_name: string };
 
 export default async function UploadPage({
   params,
@@ -62,13 +62,14 @@ export default async function UploadPage({
 
   const { data: uploads } = await supabase
     .from("uploads")
-    .select("document_type_id, file_name")
+    .select("id, document_type_id, file_name")
     .eq("client_id", client.id)
     .eq("month", currentMonth)
     .eq("year", currentYear)
     .order("created_at", { ascending: false });
 
   const initialUploads = ((uploads ?? []) as UploadRow[]).map((u) => ({
+    id: u.id,
     documentTypeId: u.document_type_id,
     file_name: u.file_name,
   }));
