@@ -442,6 +442,7 @@ async function upsertDocumentRequestForPeriod(
       reminder_after_3_days: payload.reminderAfter3Days,
       sent_at: payload.sentAt,
       reminder_sent_at: null,
+      request_closed: false,
     });
     if (error) return { error: error.message };
     return { ok: true as const };
@@ -457,6 +458,7 @@ async function upsertDocumentRequestForPeriod(
       reminder_after_3_days: payload.reminderAfter3Days,
       sent_at: payload.sentAt,
       reminder_sent_at: null,
+      request_closed: false,
     })
     .eq("id", keepId);
 
@@ -611,6 +613,51 @@ export async function sendDocumentRequestNow(
     if (sendError) return { error: sendError.message };
   }
 
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/clienti");
+  return { ok: true };
+}
+
+export async function closeCurrentDocumentRequest(clientId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Neautentificat" };
+
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .eq("accountant_id", user.id)
+    .single();
+
+  if (!client) return { error: "Client negăsit." };
+
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+
+  const { data: req, error: reqError } = await supabase
+    .from("document_requests")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("accountant_id", user.id)
+    .eq("month", month)
+    .eq("year", year)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (reqError) return { error: reqError.message };
+  if (!req) return { error: "Nu există solicitare curentă pentru acest client." };
+
+  const { error } = await supabase
+    .from("document_requests")
+    .update({ request_closed: true })
+    .eq("id", req.id);
+
+  if (error) return { error: error.message };
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/clienti");
   return { ok: true };
@@ -807,6 +854,7 @@ export async function markLinkCopied(clientId: string): Promise<{ ok?: true; err
     reminder_after_3_days: false,
     sent_at: now.toISOString(),
     reminder_sent_at: null,
+    request_closed: false,
   });
 
   if (error) return { error: error.message };

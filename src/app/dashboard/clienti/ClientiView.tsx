@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import JSZip from "jszip";
 import {
   addClient,
+  closeCurrentDocumentRequest,
   importClientsFromCsv,
   removeClient,
   restoreClient,
@@ -143,6 +144,7 @@ export function ClientiView({
   archivedClients = [],
   uploads,
   requestThisMonthByClient = {},
+  requestClosedByClient = {},
   nextRequestByClient = {},
   currentMonth,
   currentYear,
@@ -154,6 +156,7 @@ export function ClientiView({
   archivedClients?: Client[];
   uploads: Upload[];
   requestThisMonthByClient?: Record<string, string>;
+  requestClosedByClient?: Record<string, boolean>;
   nextRequestByClient?: Record<string, string>;
   currentMonth: number;
   currentYear: number;
@@ -292,6 +295,7 @@ export function ClientiView({
 
       // The sent_at of this client's request for the current month (if any)
       const thisMonthSentAt = requestThisMonthByClient[client.id] ?? null;
+      const thisMonthClosed = requestClosedByClient[client.id] === true;
       // Request date has passed (today >= sent_at date) → truly sent/overdue
       const requestDatePassed =
         thisMonthSentAt !== null && thisMonthSentAt.slice(0, 10) <= todayStr;
@@ -303,6 +307,8 @@ export function ClientiView({
       let status: Status;
       if (total === 0) {
         status = "none";
+      } else if (thisMonthClosed) {
+        status = "ok";
       } else if (count === total) {
         status = "ok";
       } else if (requestDatePassed) {
@@ -331,6 +337,7 @@ export function ClientiView({
       return {
         ...client,
         status,
+        thisMonthClosed,
         pct,
         docsLabel,
         totalTypes: total,
@@ -339,7 +346,7 @@ export function ClientiView({
         nextRequestAt,
       };
     });
-  }, [initialClients, uploads, currentMonth, currentYear, requestThisMonthByClient, nextRequestByClient]);
+  }, [initialClients, uploads, currentMonth, currentYear, requestThisMonthByClient, requestClosedByClient, nextRequestByClient]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -780,7 +787,7 @@ export function ClientiView({
     router.refresh();
   }
 
-  const statusBadge = (status: Status) => {
+  const statusBadge = (status: Status, closedManually?: boolean) => {
     const cls =
       status === "ok"
         ? styles.badgeOk
@@ -791,7 +798,9 @@ export function ClientiView({
             : styles.badgeNone;
     const label =
       status === "ok"
-        ? "La zi"
+        ? closedManually
+          ? "Închis"
+          : "La zi"
         : status === "wait"
           ? "Așteptare"
           : status === "late"
@@ -1214,7 +1223,7 @@ export function ClientiView({
                         </div>
                       </td>}
                       {visibleColumns.activity && <td style={{ color: "var(--ink-muted)", fontSize: 12.5 }}>{lastStr}</td>}
-                      {visibleColumns.status && <td>{statusBadge(client.status)}</td>}
+                      {visibleColumns.status && <td>{statusBadge(client.status, (client as { thisMonthClosed?: boolean }).thisMonthClosed)}</td>}
                       {visibleColumns.actions && <td>
                         <div className={styles.tdActions}>
                           <button
@@ -1300,6 +1309,7 @@ export function ClientiView({
               !!nextRequestByClient[drawerClient.id] ||
               !!requestThisMonthByClient[drawerClient.id]
             }
+            requestClosedCurrentMonth={requestClosedByClient[drawerClient.id] === true}
             onClose={closeDrawer}
             onEdit={() => {
               const found = initialClients.find((c) => c.id === drawerClient.id);
@@ -1691,6 +1701,7 @@ function ClientiDrawer({
   currentYear,
   isPremium,
   hasScheduledEmailRequest,
+  requestClosedCurrentMonth,
   onClose,
   onEdit,
   onCerere,
@@ -1702,6 +1713,7 @@ function ClientiDrawer({
   currentYear: number;
   isPremium: boolean;
   hasScheduledEmailRequest: boolean;
+  requestClosedCurrentMonth: boolean;
   onClose: () => void;
   onEdit: () => void;
   onCerere: () => void;
@@ -1710,7 +1722,7 @@ function ClientiDrawer({
   const [tab, setTab] = useState<"overview" | "docs" | "activity" | "settings">("overview");
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archivePending, setArchivePending] = useState(false);
-  const [emailTogglePending, setEmailTogglePending] = useState(false);
+  const [closingRequest, setClosingRequest] = useState(false);
   const [exportPending, setExportPending] = useState(false);
   const router = useRouter();
   const toast = useToast();
@@ -2057,6 +2069,29 @@ function ClientiDrawer({
             </div>
             <div className={styles.dsLabel}>ACȚIUNI</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnSecondary}`}
+                style={{ width: "100%", justifyContent: "center" }}
+                disabled={closingRequest || requestClosedCurrentMonth}
+                onClick={async () => {
+                  setClosingRequest(true);
+                  const result = await closeCurrentDocumentRequest(client.id);
+                  setClosingRequest(false);
+                  if (result?.error) {
+                    toast.error(result.error);
+                    return;
+                  }
+                  toast.success("Solicitarea curentă a fost închisă manual.");
+                  router.refresh();
+                }}
+              >
+                {requestClosedCurrentMonth
+                  ? "Solicitare închisă manual"
+                  : closingRequest
+                    ? "Se închide..."
+                    : "Închide solicitarea curentă"}
+              </button>
               <button
                 type="button"
                 className={`${styles.btn} ${styles.btnSecondary}`}

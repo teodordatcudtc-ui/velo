@@ -45,6 +45,7 @@ type RequestReminderRow = {
   message: string | null;
   doc_type_names: string[] | null;
   reminder_after_3_days?: boolean;
+  request_closed?: boolean;
   clients:
     | {
         id: string;
@@ -122,7 +123,7 @@ export async function GET(request: Request) {
   const { data: scheduledReqs, error: scheduledErr } = await supabase
     .from("document_requests")
     .select(
-      "id, client_id, month, year, sent_at, message, reminder_after_3_days, doc_type_names, clients(id, name, email, unique_token, accountant_id, archived, reminder_enabled, accountants(name))"
+      "id, client_id, month, year, sent_at, message, reminder_after_3_days, request_closed, doc_type_names, clients(id, name, email, unique_token, accountant_id, archived, reminder_enabled, accountants(name))"
     )
     .eq("channel", "email_scheduled")
     .lte("sent_at", horizonIso);
@@ -145,6 +146,7 @@ export async function GET(request: Request) {
     .filter(({ req, client }) => {
       if (!client?.email?.trim()) return false;
       if (client.archived) return false;
+      if (req.request_closed) return false;
       // Cererea programată (email_scheduled) nu depinde de clients.reminder_enabled —
       // acel toggle e doar pentru reminder lunar recurent din UI; aici contabilul a ales explicit data.
       // due by RO calendar day (never before the scheduled date in RO)
@@ -242,6 +244,7 @@ export async function GET(request: Request) {
           reminder_after_3_days: !!req.reminder_after_3_days,
           sent_at: nextScheduledIso,
           reminder_sent_at: null,
+          request_closed: false,
         });
       if (insErr) {
         errors.push(`next upsert insert ${req.client_id}: ${insErr.message}`);
@@ -257,6 +260,7 @@ export async function GET(request: Request) {
           reminder_after_3_days: !!req.reminder_after_3_days,
           sent_at: nextScheduledIso,
           reminder_sent_at: null,
+          request_closed: false,
         })
         .eq("id", keepId);
       if (updErr) {
@@ -274,10 +278,11 @@ export async function GET(request: Request) {
   const { data: pendingReqs, error: reqErr } = await supabase
     .from("document_requests")
     .select(
-      "id, client_id, month, year, sent_at, message, doc_type_names, clients(id, name, email, unique_token, accountants(name))"
+      "id, client_id, month, year, sent_at, message, doc_type_names, request_closed, clients(id, name, email, unique_token, accountants(name))"
     )
     .eq("channel", "email")
     .eq("reminder_after_3_days", true)
+    .or("request_closed.is.null,request_closed.eq.false")
     .is("reminder_sent_at", null)
     .lte("sent_at", threeDaysAgoIso);
 

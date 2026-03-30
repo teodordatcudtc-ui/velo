@@ -60,13 +60,14 @@ export default async function ClientiPage() {
     activeIds.length > 0
       ? await supabase
           .from("document_requests")
-          .select("client_id, sent_at")
+          .select("client_id, sent_at, request_closed")
           .in("client_id", activeIds)
           .eq("month", currentMonth)
           .eq("year", currentYear)
       : { data: [] };
   // Map clientId → sent_at for requests this month (to check if the date has passed)
   const requestThisMonthByClient: Record<string, string> = {};
+  const requestClosedByClient: Record<string, boolean> = {};
   for (const req of requestsThisMonth ?? []) {
     // Keep the latest (most recent sent_at) per client
     if (
@@ -74,6 +75,7 @@ export default async function ClientiPage() {
       req.sent_at > requestThisMonthByClient[req.client_id]
     ) {
       requestThisMonthByClient[req.client_id] = req.sent_at;
+      requestClosedByClient[req.client_id] = !!(req as { request_closed?: boolean }).request_closed;
     }
   }
 
@@ -100,6 +102,7 @@ export default async function ClientiPage() {
       archivedClients={archivedClients ?? []}
       uploads={uploads ?? []}
       requestThisMonthByClient={requestThisMonthByClient}
+      requestClosedByClient={requestClosedByClient}
       nextRequestByClient={nextRequestByClient}
       currentMonth={currentMonth}
       currentYear={currentYear}
