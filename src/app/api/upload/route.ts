@@ -78,8 +78,9 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: inserted, error: insertError } = await (supabase as any)
     .from("uploads")
+    .insert(insertPayload)
     .select("id")
-    .insert(insertPayload);
+    .single();
 
   if (insertError) {
     await supabase.storage.from(BUCKET).remove([filePath]);
@@ -89,6 +90,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const uploadId = Array.isArray(inserted) && inserted[0]?.id ? String(inserted[0].id) : null;
+  const uploadId = inserted?.id ? String(inserted.id) : null;
   return NextResponse.json({ ok: true, uploadId });
 }
