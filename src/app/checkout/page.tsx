@@ -11,8 +11,7 @@ function CheckoutContent() {
   const plan = searchParams.get("plan") ?? "";
   const interval = searchParams.get("interval") ?? "monthly";
 
-  const planId =
-    plan === "premium" || plan === "test" || plan === "invoice_test" ? plan : "standard";
+  const planId = plan === "premium" ? "premium" : "standard";
   const intervalVal = interval === "annual" ? "annual" : "monthly";
 
   useEffect(() => {
@@ -27,10 +26,6 @@ function CheckoutContent() {
 
   const planSummary = useMemo(() => {
     const intLabel = intervalVal === "annual" ? "anual" : "lunar";
-    if (planId === "invoice_test") {
-      return "Test factură — 2 RON, plată unică (nu modifică abonamentul)";
-    }
-    if (planId === "test") return `Vello Premium — test (1 EUR/lună, plată ${intLabel})`;
     if (planId === "premium") return `Vello Premium (${intLabel})`;
     return `Vello Standard (${intLabel})`;
   }, [planId, intervalVal]);

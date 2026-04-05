@@ -5,6 +5,8 @@ import { useState } from "react";
 type Props = {
   premiumUntil: string | null;
   hasStripeSubscription?: boolean;
+  /** Acces Premium limitat în timp fără Stripe (ex. cod early access) — nu există flux de anulare */
+  nonStripePremiumAccess?: boolean;
   onCanceled?: () => void;
 };
 
@@ -20,6 +22,7 @@ function formatDate(iso: string | null): string {
 export default function CancelSubscriptionButton({
   premiumUntil,
   hasStripeSubscription = false,
+  nonStripePremiumAccess = false,
   onCanceled,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -49,9 +52,27 @@ export default function CancelSubscriptionButton({
   }
 
   if (!hasStripeSubscription) {
+    if (nonStripePremiumAccess) {
+      return (
+        <span
+          style={{
+            fontSize: 12,
+            color: "var(--ink-muted)",
+            lineHeight: 1.5,
+            display: "block",
+            maxWidth: 340,
+          }}
+        >
+          Accesul nu vine dintr-un abonament Stripe (ex. cod early access). Nu există reînnoire de anulat.
+          {premiumUntil && (
+            <> Accesul expiră pe {formatDate(premiumUntil)}.</>
+          )}
+        </span>
+      );
+    }
     return (
       <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>
-        Reînnoire automată activă
+        Nu există un abonament Stripe activ de gestionat aici.
       </span>
     );
   }

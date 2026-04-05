@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 const CHECK = (
@@ -19,7 +18,8 @@ type Props = {
   canCancel?: boolean;
   isCanceling?: boolean;
   showSubscriptionSection?: boolean;
-  hasStripeSubscription?: boolean;
+  /** Premium / plan activ fără Stripe (early access etc.) — mesaj în loc de anulare */
+  nonStripePremiumAccess?: boolean;
   premiumUntil?: string | null;
 };
 
@@ -81,7 +81,7 @@ export default function AbonamentePricing({
   canCancel = false,
   isCanceling = false,
   showSubscriptionSection = false,
-  hasStripeSubscription = false,
+  nonStripePremiumAccess = false,
   premiumUntil = null,
 }: Props) {
   const [annual, setAnnual] = useState(false);
@@ -178,33 +178,6 @@ export default function AbonamentePricing({
         })}
       </div>
 
-      <div
-        style={{
-          maxWidth: 860,
-          margin: "24px auto 0",
-          padding: "14px 18px",
-          background: "var(--paper-2)",
-          border: "1px dashed var(--paper-3)",
-          borderRadius: "var(--r-lg)",
-          fontSize: 13,
-          color: "var(--ink-soft)",
-          lineHeight: 1.5,
-        }}
-      >
-        <strong style={{ color: "var(--ink)" }}>Test factură (2 RON)</strong>
-        {" — "}
-        plată unică doar ca să verifici integrarea Stripe + SmartBill. Nu îți schimbă planul de abonament.
-        {" "}
-        <Link
-          href="/checkout?plan=invoice_test&interval=monthly"
-          style={{ color: "var(--sage)", fontWeight: 600, textDecoration: "underline" }}
-        >
-          Deschide checkout test
-        </Link>
-        {" "}
-        (în Stripe Test Mode nu se iau bani reali).
-      </div>
-
       {/* Secțiunea de gestionare abonament – apare când ai orice plan activ */}
       {showSubscriptionSection && (
         <div
@@ -226,15 +199,30 @@ export default function AbonamentePricing({
             <p style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>
               {isCanceling
                 ? "Abonamentul se oprește la finalul perioadei"
-                : "Gestionează abonamentul"}
+                : nonStripePremiumAccess
+                  ? "Acces Premium (fără abonament Stripe)"
+                  : "Gestionează abonamentul"}
             </p>
             <p style={{ fontSize: 13, color: "var(--ink-soft)" }}>
               {isCanceling
                 ? "Reînnoirea automată a fost oprită. Accesul continuă până la finalul perioadei plătite."
-                : "Abonamentul se reînnoiește automat. Poți opri oricând — accesul rămâne activ până la finalul perioadei."}
-              {!isCanceling && premiumUntil && (
+                : nonStripePremiumAccess
+                  ? "Accesul nu se reînnoiește automat prin Stripe. După expirare poți alege un plan plătit mai jos."
+                  : "Abonamentul se reînnoiește automat. Poți opri oricând — accesul rămâne activ până la finalul perioadei."}
+              {!isCanceling && premiumUntil && !nonStripePremiumAccess && (
                 <span style={{ marginLeft: 4, color: "var(--ink-muted)" }}>
                   (perioadă curentă până pe {new Date(premiumUntil).toLocaleDateString("ro-RO", { day: "2-digit", month: "long", year: "numeric" })})
+                </span>
+              )}
+              {!isCanceling && premiumUntil && nonStripePremiumAccess && (
+                <span style={{ marginLeft: 4, color: "var(--ink-muted)" }}>
+                  Expiră pe{" "}
+                  {new Date(premiumUntil).toLocaleDateString("ro-RO", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                  .
                 </span>
               )}
             </p>
@@ -247,7 +235,8 @@ export default function AbonamentePricing({
           {!isCanceling && !localCanceled && (
             <CancelSubscriptionButton
               premiumUntil={premiumUntil}
-              hasStripeSubscription={hasStripeSubscription || canCancel}
+              hasStripeSubscription={!!canCancel}
+              nonStripePremiumAccess={nonStripePremiumAccess}
               onCanceled={() => setLocalCanceled(true)}
             />
           )}

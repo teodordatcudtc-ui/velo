@@ -1,11 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isBillingRowComplete } from "@/lib/billing-validation";
-import {
-  getDescription,
-  getInvoiceTestProductLabel,
-  type Interval,
-  type PlanId,
-} from "@/lib/stripe";
+import { getDescription, type Interval, type PlanId } from "@/lib/stripe";
 import {
   getSmartBillEnvForInvoice,
   isSmartBillConfigured,
@@ -158,7 +153,7 @@ export async function issueSmartBillAfterStripePayment(
     params.checkoutProduct === "test"
       ? "Vello Premium — test (1 EUR/lună)"
       : params.checkoutProduct === "invoice_test"
-        ? getInvoiceTestProductLabel()
+        ? "Vello — plată unică (facturare)"
         : getDescription(params.checkoutProduct, params.interval);
 
   const issueDate = new Date().toISOString().slice(0, 10);

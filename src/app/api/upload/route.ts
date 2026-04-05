@@ -1,10 +1,19 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  buildPdfFromImageBuffer,
+  guessIsImageMime,
+  guessIsPdf,
+  pdfDisplayName,
+} from "@/lib/image-to-pdf";
 import type { Database } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
 
 type UploadInsert = Database["public"]["Tables"]["uploads"]["Insert"];
 
 const BUCKET = "uploads";
+
+/** Dimensiune maximă fișier încărcat (25 MB) */
+const MAX_BYTES = 25 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -15,6 +24,13 @@ export async function POST(request: Request) {
   if (!token || !documentTypeId || !file?.size) {
     return NextResponse.json(
       { error: "Lipsesc token, tip document sau fișier." },
+      { status: 400 }
+    );
+  }
+
+  if (file.size > MAX_BYTES) {
+    return NextResponse.json(
+      { error: "Fișierul este prea mare (maxim 25 MB)." },
       { status: 400 }
     );
   }
@@ -50,15 +66,47 @@ export async function POST(request: Request) {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
-  const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+
+  const mime = (file.type || "").toLowerCase();
+  const isPdf = guessIsPdf(mime, file.name);
+  const isImage = !isPdf && guessIsImageMime(mime, file.name);
+
+  let uploadBody: Buffer | Uint8Array;
+  let contentType: string;
+  let storedFileName: string;
+  let safeName: string;
+
+  if (isImage) {
+    try {
+      const raw = Buffer.from(await file.arrayBuffer());
+      const pdfBytes = await buildPdfFromImageBuffer(raw);
+      uploadBody = pdfBytes;
+      contentType = "application/pdf";
+      storedFileName = pdfDisplayName(file.name);
+      safeName = `${Date.now()}-${storedFileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    } catch (e) {
+      console.error("image-to-pdf:", e);
+      return NextResponse.json(
+        {
+          error:
+            "Nu am putut converti imaginea în PDF. Încearcă alt format (JPG, PNG) sau o fotografie mai mică.",
+        },
+        { status: 400 }
+      );
+    }
+  } else {
+    uploadBody = Buffer.from(await file.arrayBuffer());
+    contentType = file.type || "application/octet-stream";
+    storedFileName = file.name;
+    safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  }
+
   const filePath = `${clientId}/${year}/${month}/${documentTypeId}/${safeName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(filePath, file, {
-      contentType: file.type || "application/octet-stream",
-      upsert: false,
-    });
+  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(filePath, uploadBody, {
+    contentType,
+    upsert: false,
+  });
 
   if (uploadError) {
     return NextResponse.json(
@@ -71,7 +119,7 @@ export async function POST(request: Request) {
     client_id: clientId,
     document_type_id: documentTypeId,
     file_path: filePath,
-    file_name: file.name,
+    file_name: storedFileName,
     month,
     year,
   };
@@ -91,5 +139,5 @@ export async function POST(request: Request) {
   }
 
   const uploadId = inserted?.id ? String(inserted.id) : null;
-  return NextResponse.json({ ok: true, uploadId });
+  return NextResponse.json({ ok: true, uploadId, fileName: storedFileName });
 }

@@ -274,6 +274,59 @@ export async function issueInvoice(input: IssueInvoiceInput): Promise<IssueInvoi
   return { ok: false, error: lastError };
 }
 
+/**
+ * Descarcă PDF-ul facturii din SmartBill Cloud (vizualizare document emis).
+ * @see GET /invoice/pdf — cif, seriesname, number
+ */
+export async function fetchInvoicePdfBuffer(
+  seriesName: string,
+  number: string
+): Promise<{ ok: true; buffer: ArrayBuffer } | { ok: false; error: string }> {
+  if (!isSmartBillConfigured()) {
+    return { ok: false, error: "SmartBill nu este configurat pe server." };
+  }
+
+  const cif = process.env.SMARTBILL_COMPANY_VAT_CODE!.trim();
+  const url = new URL(`${BASE}/invoice/pdf`);
+  url.searchParams.set("cif", cif);
+  url.searchParams.set("seriesname", seriesName.trim());
+  url.searchParams.set("number", number.trim());
+
+  try {
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: authHeader(),
+        Accept: "application/octet-stream",
+      },
+    });
+
+    const buf = await res.arrayBuffer();
+
+    if (!res.ok) {
+      const text = new TextDecoder().decode(buf.slice(0, 600));
+      return {
+        ok: false,
+        error: text.trim() || `SmartBill HTTP ${res.status}`,
+      };
+    }
+
+    if (buf.byteLength < 100) {
+      const text = new TextDecoder().decode(buf);
+      if (text.includes("<") || text.includes("Fault")) {
+        return { ok: false, error: text.slice(0, 400) };
+      }
+    }
+
+    return { ok: true, buffer: buf };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Eroare rețea la SmartBill",
+    };
+  }
+}
+
 export function getSmartBillEnvForInvoice(): {
   companyChargesVat: boolean;
   taxName: string;

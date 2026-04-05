@@ -34,6 +34,8 @@ export default async function AbonamentePage() {
   const isCanceling = stripeSubStatus === "canceling";
   // Poate anula dacă are abonament recurent Stripe activ (nu deja în anulare)
   const canCancel = hasActiveSub && !!stripeSubId && !isCanceling && stripeSubStatus !== "canceled";
+  // Early access / alte cazuri: acces în timp fără subscription Stripe → nu există „anulare” în Stripe
+  const nonStripePremiumAccess = !stripeSubId && (isPremium || hasActiveSub);
   // Arătăm secțiunea de gestionare ori de câte ori are plan activ
   const showSubscriptionSection = hasActiveSub || planLabel !== "Gratuit";
 
@@ -63,7 +65,7 @@ export default async function AbonamentePage() {
         canCancel={canCancel}
         isCanceling={isCanceling}
         showSubscriptionSection={showSubscriptionSection}
-        hasStripeSubscription={!!stripeSubId}
+        nonStripePremiumAccess={nonStripePremiumAccess}
         premiumUntil={accountant?.premium_until ?? null}
       />
     </div>

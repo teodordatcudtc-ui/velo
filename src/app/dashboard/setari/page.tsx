@@ -5,7 +5,7 @@ import { PasswordForm } from "./PasswordForm";
 import { PlanAccessCard } from "./PlanAccessCard";
 import { TestEmailButton } from "./TestEmailButton";
 import { BillingDetailsForm } from "@/app/components/BillingDetailsForm";
-import { SmartBillSyncStatus } from "./SmartBillSyncStatus";
+import { IssuedInvoicesCard } from "./IssuedInvoicesCard";
 import { hasPremiumAccess } from "@/lib/subscription";
 
 export default async function SetariPage() {
@@ -39,30 +39,64 @@ export default async function SetariPage() {
     !isCanceling &&
     stripeSubStatus !== "canceled" &&
     subscriptionPlan !== "none";
+  const nonStripePremiumAccess = !stripeSubId && isPremium && !!premiumUntil;
+  const showSubscriptionBlock = subscriptionPlan !== "none" || nonStripePremiumAccess;
   const canGenerateCodes =
     !!user.email &&
     (process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase() ===
       user.email.toLowerCase());
 
+  const { data: issuedInvoices } = await supabase
+    .from("smartbill_invoices")
+    .select(
+      "id, smartbill_series, smartbill_number, amount_cents, currency, plan, billing_interval, created_at"
+    )
+    .eq("accountant_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
   return (
-    <div className="space-y-8">
+    <div className="max-w-5xl mx-auto w-full space-y-10">
       <header>
         <h1 className="dash-page-title">Setări și profil</h1>
-        <p className="dash-page-sub">
+        <p className="dash-page-sub mb-0">
           Gestionează datele contului tău și preferințele.
         </p>
       </header>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-          gap: 16,
-          alignItems: "start",
-          maxWidth: 980,
-        }}
-      >
-        <div className="dash-card md:col-span-2 max-w-2xl">
+      {/* Cont: două carduri egale pe desktop */}
+      <section className="space-y-3" aria-label="Cont și securitate">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+          Cont
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div className="dash-card flex flex-col h-full">
+            <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">
+              Profil
+            </h2>
+            <ProfileForm
+              initialName={accountant?.name ?? ""}
+              email={user.email ?? ""}
+            />
+          </div>
+          <div className="dash-card flex flex-col h-full">
+            <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">
+              Schimbă parola
+            </h2>
+            <PasswordForm />
+            <p className="text-sm text-[var(--ink-muted)] mt-4">
+              Parola este gestionată prin Supabase Auth. Schimbarea ei va fi efectivă imediat.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Facturare */}
+      <section className="space-y-3" aria-label="Facturare">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+          Facturare
+        </p>
+        <div className="dash-card">
           <h2 className="text-lg font-semibold text-[var(--ink)] mb-2">
             Date pentru factură (abonament)
           </h2>
@@ -71,53 +105,43 @@ export default async function SetariPage() {
             de o nouă plată.
           </p>
           <BillingDetailsForm variant="settings" />
-          <div className="mt-6 pt-6 border-t border-[var(--border)]">
-            <SmartBillSyncStatus />
-          </div>
+          <IssuedInvoicesCard invoices={issuedInvoices ?? []} />
         </div>
+      </section>
 
-        <div className="dash-card">
-          <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">
-            Profil
-          </h2>
-          <ProfileForm
-            initialName={accountant?.name ?? ""}
-            email={user.email ?? ""}
-          />
-        </div>
-
-        <div className="dash-card">
-          <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">
-            Schimbă parola
-          </h2>
-          <PasswordForm />
-          <p className="text-sm text-[var(--ink-muted)] mt-3">
-            Parola este gestionată prin Supabase Auth. Schimbarea ei va fi efectivă imediat.
-          </p>
-        </div>
-      </div>
-
-      <PlanAccessCard
-        isPremium={isPremium}
-        subscriptionPlan={subscriptionPlan}
-        premiumUntil={premiumUntil}
-        canGenerateCodes={canGenerateCodes}
-        canCancel={canCancel}
-        isCanceling={isCanceling}
-      />
+      {/* Abonament & early access */}
+      <section className="space-y-3" aria-label="Abonament">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+          Abonament
+        </p>
+        <PlanAccessCard
+          isPremium={isPremium}
+          subscriptionPlan={subscriptionPlan}
+          premiumUntil={premiumUntil}
+          canGenerateCodes={canGenerateCodes}
+          canCancel={canCancel}
+          isCanceling={isCanceling}
+          nonStripePremiumAccess={nonStripePremiumAccess}
+          showSubscriptionBlock={showSubscriptionBlock}
+        />
+      </section>
 
       {canGenerateCodes && (
-        <div className="dash-card max-w-xl">
-          <h2 className="text-lg font-semibold text-[var(--ink)] mb-2">
-            Testează trimiterea emailurilor
-          </h2>
-          <p className="text-sm text-[var(--ink-muted)] mb-3">
-            Trimite un email de test către adresa ta, folosind domeniul vello.ro și configurarea actuală Resend.
+        <section className="space-y-3" aria-label="Instrumente admin">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+            Admin
           </p>
-          <TestEmailButton />
-        </div>
+          <div className="dash-card w-full">
+            <h2 className="text-lg font-semibold text-[var(--ink)] mb-2">
+              Testează trimiterea emailurilor
+            </h2>
+            <p className="text-sm text-[var(--ink-muted)] mb-3">
+              Trimite un email de test către adresa ta, folosind domeniul vello.ro și configurarea actuală Resend.
+            </p>
+            <TestEmailButton />
+          </div>
+        </section>
       )}
-
     </div>
   );
 }

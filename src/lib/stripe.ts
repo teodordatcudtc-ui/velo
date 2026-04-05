@@ -45,10 +45,3 @@ export function getDescription(plan: PlanId, interval: Interval): string {
 export function getStripeInterval(interval: Interval): "month" | "year" {
   return interval === "annual" ? "year" : "month";
 }
-
-/** Plată unică în RON — doar pentru test integrare factură (Stripe + SmartBill), fără schimbare abonament. */
-export const INVOICE_TEST_RON_AMOUNT_BANI = 200; // 2,00 RON
-
-export function getInvoiceTestProductLabel(): string {
-  return "Vello — test facturare (2 RON, plată unică)";
-}

@@ -59,15 +59,20 @@ export function ClientUploadForm({
         continue;
       }
 
+      const savedName =
+        typeof data?.fileName === "string" && data.fileName.length > 0
+          ? data.fileName
+          : file.name;
+
       uploadedCount++;
-      uploadedNames.push(file.name);
+      uploadedNames.push(savedName);
       setUploadedByType((prev) => ({
         ...prev,
         [documentTypeId]: [
           ...(prev[documentTypeId] ?? []),
           {
             id: String((data?.uploadId as string | undefined) ?? `${Date.now()}-${file.name}`),
-            file_name: file.name,
+            file_name: savedName,
           },
         ],
       }));
@@ -160,7 +165,7 @@ export function ClientUploadForm({
                 )}
               </span>
               <span className="text-sm text-[var(--ink-muted)]">
-                Poți încărca mai multe fișiere (PDF, imagini, documente). Pe telefon: alege «Fișiere» sau «Browse» dacă nu vezi PDF.
+                PDF, documente Office sau imagini — pozele sunt convertite automat la PDF (A4), ușor de folosit în contabilitate. Pe telefon: «Fișiere» / «Browse» dacă nu vezi lista.
               </span>
             </label>
             {uploadedList.length > 0 && (

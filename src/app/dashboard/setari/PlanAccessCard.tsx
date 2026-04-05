@@ -17,6 +17,8 @@ type Props = {
   canGenerateCodes?: boolean;
   canCancel?: boolean;
   isCanceling?: boolean;
+  nonStripePremiumAccess?: boolean;
+  showSubscriptionBlock?: boolean;
 };
 
 function formatDate(dateIso: string | null): string {
@@ -35,6 +37,8 @@ export function PlanAccessCard({
   canGenerateCodes = false,
   canCancel = false,
   isCanceling = false,
+  nonStripePremiumAccess = false,
+  showSubscriptionBlock = false,
 }: Props) {
   const toast = useToast();
   const router = useRouter();
@@ -126,7 +130,7 @@ export function PlanAccessCard({
   }
 
   return (
-    <div className="dash-card max-w-xl">
+    <div className="dash-card w-full">
       <h2 className="text-lg font-semibold text-[var(--ink)] mb-2">Plan abonament</h2>
       <p className="text-sm text-[var(--ink-soft)] mb-3">{statusText}</p>
       <div className="text-sm text-[var(--ink-muted)] mb-4">
@@ -161,8 +165,8 @@ export function PlanAccessCard({
         </div>
       )}
 
-      {/* Gestionare abonament – apare ori de câte ori ai un plan activ */}
-      {subscriptionPlan !== "none" && (
+      {/* Gestionare abonament: plan plătit Stripe sau acces early access (fără Stripe) */}
+      {showSubscriptionBlock && (
         <div className="pt-4 mb-0 border-t border-[var(--paper-3)]">
           <h3 className="text-sm font-semibold text-[var(--ink)] mb-1">Abonament</h3>
           {(isCanceling || cancelDone) ? (
@@ -173,12 +177,24 @@ export function PlanAccessCard({
           ) : (
             <div>
               <p className="text-sm text-[var(--ink-soft)] mb-2">
-                Abonamentul se reînnoiește automat.
-                {premiumUntil && ` Perioada curentă expiră pe ${formatDate(premiumUntil)}.`}
+                {nonStripePremiumAccess ? (
+                  <>
+                    Accesul nu se reînnoiește prin Stripe (ex. cod early access).
+                    {premiumUntil && (
+                      <> Expiră pe {formatDate(premiumUntil)}. După aceea poți alege un plan plătit.</>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    Abonamentul se reînnoiește automat.
+                    {premiumUntil && ` Perioada curentă expiră pe ${formatDate(premiumUntil)}.`}
+                  </>
+                )}
               </p>
               <CancelSubscriptionButton
                 premiumUntil={premiumUntil}
-                hasStripeSubscription={canCancel}
+                hasStripeSubscription={!!canCancel}
+                nonStripePremiumAccess={nonStripePremiumAccess}
                 onCanceled={() => setCancelDone(true)}
               />
             </div>
