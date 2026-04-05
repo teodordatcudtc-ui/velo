@@ -56,16 +56,16 @@ export default async function SetariPage() {
     .limit(50);
 
   return (
-    <div className="max-w-5xl mx-auto w-full space-y-10">
-      <header>
-        <h1 className="dash-page-title">Setări și profil</h1>
-        <p className="dash-page-sub mb-0">
+    <div className="max-w-5xl mx-auto w-full space-y-5">
+      <header className="space-y-1">
+        <h1 className="dash-page-title !mb-1">Setări și profil</h1>
+        <p className="text-[15px] text-[var(--ink-soft)] mb-0">
           Gestionează datele contului tău și preferințele.
         </p>
       </header>
 
       {/* Cont: două carduri egale pe desktop */}
-      <section className="space-y-3" aria-label="Cont și securitate">
+      <section className="space-y-2" aria-label="Cont și securitate">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
           Cont
         </p>
@@ -92,7 +92,7 @@ export default async function SetariPage() {
       </section>
 
       {/* Facturare */}
-      <section className="space-y-3" aria-label="Facturare">
+      <section className="space-y-2" aria-label="Facturare">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
           Facturare
         </p>
@@ -110,7 +110,7 @@ export default async function SetariPage() {
       </section>
 
       {/* Abonament & early access */}
-      <section className="space-y-3" aria-label="Abonament">
+      <section className="space-y-2" aria-label="Abonament">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
           Abonament
         </p>
@@ -127,7 +127,7 @@ export default async function SetariPage() {
       </section>
 
       {canGenerateCodes && (
-        <section className="space-y-3" aria-label="Instrumente admin">
+        <section className="space-y-2" aria-label="Instrumente admin">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
             Admin
           </p>

@@ -25,7 +25,7 @@ function formatMoney(cents: number, currency: string): string {
 export function IssuedInvoicesCard({ invoices }: { invoices: Row[] }) {
   if (invoices.length === 0) {
     return (
-      <div className="mt-6 pt-6 border-t border-[var(--border)]">
+      <div className="mt-4 pt-4 border-t border-[var(--border)]">
         <h3 className="text-sm font-semibold text-[var(--ink)] mb-2">Facturi emise</h3>
         <p className="text-sm text-[var(--ink-muted)]">
           După o plată reușită, factura fiscală apare aici — o poți deschide în PDF (emisă în SmartBill).
@@ -35,7 +35,7 @@ export function IssuedInvoicesCard({ invoices }: { invoices: Row[] }) {
   }
 
   return (
-    <div className="mt-6 pt-6 border-t border-[var(--border)]">
+    <div className="mt-4 pt-4 border-t border-[var(--border)]">
       <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Facturi emise</h3>
       <p className="text-sm text-[var(--ink-muted)] mb-3">
         Facturi fiscale emise automat la plăți. PDF-ul este preluat din SmartBill.
