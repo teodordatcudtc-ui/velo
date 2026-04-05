@@ -56,16 +56,16 @@ export default async function SetariPage() {
     .limit(50);
 
   return (
-    <div className="max-w-5xl mx-auto w-full space-y-5">
-      <header className="space-y-1">
-        <h1 className="dash-page-title !mb-1">Setări și profil</h1>
-        <p className="text-[15px] text-[var(--ink-soft)] mb-0">
+    <div className="max-w-5xl mx-auto w-full space-y-3">
+      <header>
+        <h1 className="dash-page-title !mb-0">Setări și profil</h1>
+        <p className="text-[14px] text-[var(--ink-soft)]">
           Gestionează datele contului tău și preferințele.
         </p>
       </header>
 
       {/* Cont: două carduri egale pe desktop */}
-      <section className="space-y-2" aria-label="Cont și securitate">
+      <div className="space-y-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
           Cont
         </p>
@@ -89,10 +89,10 @@ export default async function SetariPage() {
             </p>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Facturare */}
-      <section className="space-y-2" aria-label="Facturare">
+      <div className="space-y-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
           Facturare
         </p>
@@ -107,10 +107,10 @@ export default async function SetariPage() {
           <BillingDetailsForm variant="settings" />
           <IssuedInvoicesCard invoices={issuedInvoices ?? []} />
         </div>
-      </section>
+      </div>
 
       {/* Abonament & early access */}
-      <section className="space-y-2" aria-label="Abonament">
+      <div className="space-y-2">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
           Abonament
         </p>
@@ -124,10 +124,10 @@ export default async function SetariPage() {
           nonStripePremiumAccess={nonStripePremiumAccess}
           showSubscriptionBlock={showSubscriptionBlock}
         />
-      </section>
+      </div>
 
       {canGenerateCodes && (
-        <section className="space-y-2" aria-label="Instrumente admin">
+        <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
             Admin
           </p>
@@ -140,7 +140,7 @@ export default async function SetariPage() {
             </p>
             <TestEmailButton />
           </div>
-        </section>
+        </div>
       )}
     </div>
   );
