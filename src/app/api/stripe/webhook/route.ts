@@ -59,7 +59,7 @@ export async function POST(request: Request) {
           const totalOnce = session.amount_total ?? 0;
           const curOnce = (session.currency ?? "ron").toLowerCase();
           if (totalOnce > 0 && session.id) {
-            void issueSmartBillAfterStripePayment(supabase, {
+            await issueSmartBillAfterStripePayment(supabase, {
               accountantId,
               stripeCheckoutSessionId: session.id,
               stripeInvoiceId: null,
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
               checkoutProduct: "invoice_test",
               interval: "monthly",
               mentionExtra: `Test factură 2 RON — sesiune ${session.id}`,
-            }).catch((e) => console.error("SmartBill checkout.session (invoice_test):", e));
+            });
           }
           console.log(`checkout.session.completed: invoice_test plată doar factură pentru ${accountantId}`);
           break;
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
             (session.metadata?.plan as PlanId | undefined) ??
             "standard";
           const intv = (session.metadata?.interval as Interval | undefined) ?? "monthly";
-          void issueSmartBillAfterStripePayment(supabase, {
+          await issueSmartBillAfterStripePayment(supabase, {
             accountantId,
             stripeCheckoutSessionId: session.id,
             stripeInvoiceId: null,
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
             checkoutProduct,
             interval: intv,
             mentionExtra: `Plată unică Stripe: ${session.id}`,
-          }).catch((e) => console.error("SmartBill checkout.session (payment):", e));
+          });
         }
       } else if (session.mode === "subscription") {
         // Subscription – salvăm customer_id și subscription_id
@@ -166,7 +166,7 @@ export async function POST(request: Request) {
             (session.metadata?.plan as PlanId | undefined) ??
             "standard";
           const intv = (session.metadata?.interval as Interval | undefined) ?? "monthly";
-          void issueSmartBillAfterStripePayment(supabase, {
+          await issueSmartBillAfterStripePayment(supabase, {
             accountantId,
             stripeCheckoutSessionId: session.id,
             stripeInvoiceId: null,
@@ -175,7 +175,7 @@ export async function POST(request: Request) {
             checkoutProduct,
             interval: intv,
             mentionExtra: `Sesiune checkout Stripe: ${session.id}`,
-          }).catch((e) => console.error("SmartBill checkout.session:", e));
+          });
         }
       }
       break;

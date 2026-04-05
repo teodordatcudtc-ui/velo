@@ -104,6 +104,45 @@ export interface Database {
         };
         Relationships: [];
       };
+      smartbill_sync_log: {
+        Row: {
+          id: string;
+          accountant_id: string;
+          stripe_checkout_session_id: string | null;
+          stripe_invoice_id: string | null;
+          status: "skipped" | "success" | "error";
+          error_message: string | null;
+          smartbill_series: string | null;
+          smartbill_number: string | null;
+          detail: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          accountant_id: string;
+          stripe_checkout_session_id?: string | null;
+          stripe_invoice_id?: string | null;
+          status: "skipped" | "success" | "error";
+          error_message?: string | null;
+          smartbill_series?: string | null;
+          smartbill_number?: string | null;
+          detail?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          accountant_id?: string;
+          stripe_checkout_session_id?: string | null;
+          stripe_invoice_id?: string | null;
+          status?: "skipped" | "success" | "error";
+          error_message?: string | null;
+          smartbill_series?: string | null;
+          smartbill_number?: string | null;
+          detail?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       clients: {
         Row: {
           id: string;

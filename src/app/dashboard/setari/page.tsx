@@ -5,6 +5,7 @@ import { PasswordForm } from "./PasswordForm";
 import { PlanAccessCard } from "./PlanAccessCard";
 import { TestEmailButton } from "./TestEmailButton";
 import { BillingDetailsForm } from "@/app/components/BillingDetailsForm";
+import { SmartBillSyncStatus } from "./SmartBillSyncStatus";
 import { hasPremiumAccess } from "@/lib/subscription";
 
 export default async function SetariPage() {
@@ -70,6 +71,9 @@ export default async function SetariPage() {
             de o nouă plată.
           </p>
           <BillingDetailsForm variant="settings" />
+          <div className="mt-6 pt-6 border-t border-[var(--border)]">
+            <SmartBillSyncStatus />
+          </div>
         </div>
 
         <div className="dash-card">

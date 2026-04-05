@@ -26,7 +26,7 @@ export type IssueInvoiceInput = {
   clientIsCompany: boolean;
   /** Linie unică — ex. „Vello Premium — 1 lună” */
   productName: string;
-  /** Total document (EUR), cu TVA inclus dacă firma e plătitoare de TVA */
+  /** Total document (sumă majoră), cu TVA inclus dacă firma e plătitoare de TVA */
   totalAmountEur: number;
   currency: string;
   issueDate: string;
@@ -50,6 +50,7 @@ type SmartBillApiResponse = {
     series?: string;
     url?: string;
   };
+  Fault?: { errorText?: string; message?: string };
   errorText?: string;
 };
 
@@ -68,53 +69,96 @@ function sanitizeClientName(name: string): string {
     .slice(0, 200);
 }
 
-/**
- * Emite o factură și opțional înregistrează încasarea cu cardul (plată online).
- */
-export async function issueInvoice(
-  input: IssueInvoiceInput
-): Promise<{ ok: true; series: string; number: string } | { ok: false; error: string }> {
-  if (!isSmartBillConfigured()) {
-    return { ok: false, error: "SmartBill nu este configurat (lipsește env)." };
+/** Extrage serie/număr sau mesaj de eroare din răspuns JSON SmartBill (inclusiv `Fault`). */
+function parseSmartBillResponse(
+  text: string,
+  httpStatus: number
+): { ok: true; series: string; number: string } | { ok: false; error: string } {
+  let json: SmartBillApiResponse;
+  try {
+    json = JSON.parse(text) as SmartBillApiResponse;
+  } catch {
+    return { ok: false, error: `Răspuns invalid (${httpStatus}): ${text.slice(0, 280)}` };
   }
 
-  const companyVatCode = process.env.SMARTBILL_COMPANY_VAT_CODE!.trim();
-  const vatPayer = input.companyChargesVat;
+  const faultErr = json.Fault?.errorText?.trim();
+  if (faultErr) {
+    return { ok: false, error: faultErr };
+  }
 
+  const inner = (json.sbcResponse ?? json) as {
+    errorText?: string;
+    series?: string;
+    number?: string;
+  };
+  const errMsg = inner.errorText?.trim();
+  if (errMsg) {
+    return { ok: false, error: errMsg };
+  }
+
+  const series = inner.series?.trim();
+  const number = inner.number?.trim();
+
+  if (series && number) {
+    return { ok: true, series, number };
+  }
+
+  if (httpStatus >= 400) {
+    return { ok: false, error: `HTTP ${httpStatus}: ${text.slice(0, 280)}` };
+  }
+
+  return {
+    ok: false,
+    error: `SmartBill nu a returnat serie/număr (HTTP ${httpStatus}). Răspuns: ${text.slice(0, 400)}`,
+  };
+}
+
+function buildProducts(input: IssueInvoiceInput): SmartBillProduct[] {
+  const vatPayer = input.companyChargesVat;
+  const price = Math.round(input.totalAmountEur * 100) / 100;
+  if (vatPayer) {
+    return [
+      {
+        name: input.productName.slice(0, 255),
+        isDiscount: false,
+        measuringUnitName: input.measuringUnit,
+        currency: input.currency,
+        quantity: 1,
+        price,
+        isTaxIncluded: true,
+        taxName: input.taxName,
+        taxPercentage: input.taxPercentage,
+        isService: true,
+        saveToDb: false,
+      },
+    ];
+  }
+  return [
+    {
+      name: input.productName.slice(0, 255),
+      isDiscount: false,
+      measuringUnitName: input.measuringUnit,
+      currency: input.currency,
+      quantity: 1,
+      price,
+      isService: true,
+      saveToDb: false,
+    },
+  ];
+}
+
+function buildInvoiceBody(
+  input: IssueInvoiceInput,
+  options: { includePayment: boolean; sendEmail: boolean }
+): Record<string, unknown> {
+  const companyVatCode = process.env.SMARTBILL_COMPANY_VAT_CODE!.trim();
   const clientEmail = input.clientEmail?.trim() || undefined;
   const sendMail =
-    input.sendInvoiceEmail === true &&
+    options.sendEmail &&
     !!clientEmail &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail);
 
-  const products: SmartBillProduct[] = [];
-
-  if (vatPayer) {
-    products.push({
-      name: input.productName.slice(0, 255),
-      isDiscount: false,
-      measuringUnitName: input.measuringUnit,
-      currency: input.currency,
-      quantity: 1,
-      price: Math.round(input.totalAmountEur * 100) / 100,
-      isTaxIncluded: true,
-      taxName: input.taxName,
-      taxPercentage: input.taxPercentage,
-      isService: true,
-      saveToDb: false,
-    });
-  } else {
-    products.push({
-      name: input.productName.slice(0, 255),
-      isDiscount: false,
-      measuringUnitName: input.measuringUnit,
-      currency: input.currency,
-      quantity: 1,
-      price: Math.round(input.totalAmountEur * 100) / 100,
-      isService: true,
-      saveToDb: false,
-    });
-  }
+  const price = Math.round(input.totalAmountEur * 100) / 100;
 
   const body: Record<string, unknown> = {
     companyVatCode,
@@ -136,59 +180,98 @@ export async function issueInvoice(
     precision: 2,
     isDraft: false,
     mentions: input.mentions.slice(0, 2000),
-    products,
-    payment: {
-      value: Math.round(input.totalAmountEur * 100) / 100,
-      type: "Card",
-      isCash: false,
-    },
+    products: buildProducts(input),
   };
 
-  if (sendMail) {
+  if (options.includePayment) {
+    body.payment = {
+      value: price,
+      type: "Card",
+      isCash: false,
+    };
+  }
+
+  if (sendMail && clientEmail) {
     body.sendEmail = true;
     body.email = { to: clientEmail };
   }
 
-  try {
-    const res = await fetch(`${BASE}/invoice`, {
-      method: "POST",
-      headers: {
-        Authorization: authHeader(),
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+  return body;
+}
+
+async function postInvoice(
+  body: Record<string, unknown>
+): Promise<{ httpStatus: number; text: string }> {
+  const res = await fetch(`${BASE}/invoice`, {
+    method: "POST",
+    headers: {
+      Authorization: authHeader(),
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  return { httpStatus: res.status, text };
+}
+
+export type IssueInvoiceResult =
+  | { ok: true; series: string; number: string; note?: string }
+  | { ok: false; error: string };
+
+/**
+ * Emite factura SmartBill. Reîncearcă fără încasare la emitere și/sau fără email dacă primul apel eșuează
+ * (tipic: nepotrivire TVA/total la încasare, SMTP neconfigurat).
+ */
+export async function issueInvoice(input: IssueInvoiceInput): Promise<IssueInvoiceResult> {
+  if (!isSmartBillConfigured()) {
+    return { ok: false, error: "SmartBill nu este configurat (lipsește env)." };
+  }
+
+  const wantEmail = input.sendInvoiceEmail === true;
+
+  const attempts: Array<{ includePayment: boolean; sendEmail: boolean; label: string }> = wantEmail
+    ? [
+        { includePayment: true, sendEmail: true, label: "încasare automată + email" },
+        { includePayment: false, sendEmail: true, label: "fără încasare automată (factură + email)" },
+        { includePayment: false, sendEmail: false, label: "fără încasare, fără email" },
+      ]
+    : [
+        { includePayment: true, sendEmail: false, label: "încasare automată" },
+        { includePayment: false, sendEmail: false, label: "fără încasare automată" },
+      ];
+
+  let lastError = "Eroare necunoscută";
+
+  for (const att of attempts) {
+    const body = buildInvoiceBody(input, {
+      includePayment: att.includePayment,
+      sendEmail: att.sendEmail,
     });
 
-    const text = await res.text();
-    let json: SmartBillApiResponse = {};
     try {
-      json = JSON.parse(text) as SmartBillApiResponse;
-    } catch {
-      return { ok: false, error: `Răspuns SmartBill invalid (${res.status}): ${text.slice(0, 200)}` };
-    }
+      const { httpStatus, text } = await postInvoice(body);
+      const parsed = parseSmartBillResponse(text, httpStatus);
 
-    const resp = (json.sbcResponse ?? json) as {
-      errorText?: string;
-      series?: string;
-      number?: string;
-    };
-    const err = resp.errorText?.trim();
-    if (!res.ok || err) {
-      return { ok: false, error: err || `HTTP ${res.status}` };
-    }
+      if (parsed.ok) {
+        const note =
+          att.label !== attempts[0]?.label
+            ? `Emitere reușită (${att.label}). Adaugă încasarea manual în SmartBill dacă e nevoie.`
+            : undefined;
+        return { ok: true, series: parsed.series, number: parsed.number, note };
+      }
 
-    const series = resp.series?.trim();
-    const number = resp.number?.trim();
-    if (!series || !number) {
-      return { ok: false, error: "SmartBill nu a returnat serie/număr factură." };
-    }
+      lastError = parsed.error;
 
-    return { ok: true, series, number };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Eroare rețea SmartBill";
-    return { ok: false, error: msg };
+      if (httpStatus === 401) {
+        return { ok: false, error: lastError };
+      }
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : "Eroare rețea SmartBill";
+    }
   }
+
+  return { ok: false, error: lastError };
 }
 
 export function getSmartBillEnvForInvoice(): {
