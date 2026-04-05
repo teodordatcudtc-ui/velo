@@ -1,10 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  buildPdfFromImageBuffer,
-  guessIsImageMime,
-  guessIsPdf,
-  pdfDisplayName,
-} from "@/lib/image-to-pdf";
+import { buildPdfFromImageBuffer, guessIsImageMime, guessIsPdf } from "@/lib/image-to-pdf";
+import { buildUploadFileName, fileExtension } from "@/lib/upload-naming";
 import type { Database } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
 
@@ -37,9 +33,10 @@ export async function POST(request: Request) {
 
   const supabase = createAdminClient();
 
+  /* ── 1. Validare token → client (cu nume) ─────────────────────────────── */
   const { data: client, error: clientError } = await supabase
     .from("clients")
-    .select("id")
+    .select("id, name")
     .eq("unique_token", token)
     .single();
 
@@ -47,11 +44,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Link invalid." }, { status: 404 });
   }
 
-  const clientId = (client as { id: string }).id;
+  const clientId   = (client as { id: string; name: string }).id;
+  const clientName = (client as { id: string; name: string }).name;
 
+  /* ── 2. Validare tip document (cu nume) ───────────────────────────────── */
   const { data: docType } = await supabase
     .from("document_types")
-    .select("id")
+    .select("id, name")
     .eq("id", documentTypeId)
     .eq("client_id", clientId)
     .single();
@@ -63,27 +62,38 @@ export async function POST(request: Request) {
     );
   }
 
-  const now = new Date();
-  const year = now.getFullYear();
+  const docTypeName = (docType as { id: string; name: string }).name;
+
+  /* ── 3. Dată curentă ──────────────────────────────────────────────────── */
+  const now   = new Date();
+  const year  = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const mime = (file.type || "").toLowerCase();
-  const isPdf = guessIsPdf(mime, file.name);
+  /* ── 4. Numără documente existente (pentru sufix anti-duplicat) ────────── */
+  const { count: existingCount } = await supabase
+    .from("uploads")
+    .select("id", { count: "exact", head: true })
+    .eq("client_id", clientId)
+    .eq("document_type_id", documentTypeId)
+    .eq("month", month)
+    .eq("year", year);
+
+  /* ── 5. Conversie imagine → PDF dacă e cazul ─────────────────────────── */
+  const mime    = (file.type || "").toLowerCase();
+  const isPdf   = guessIsPdf(mime, file.name);
   const isImage = !isPdf && guessIsImageMime(mime, file.name);
 
   let uploadBody: Buffer | Uint8Array;
   let contentType: string;
-  let storedFileName: string;
-  let safeName: string;
+  let ext: string;
 
   if (isImage) {
     try {
-      const raw = Buffer.from(await file.arrayBuffer());
+      const raw      = Buffer.from(await file.arrayBuffer());
       const pdfBytes = await buildPdfFromImageBuffer(raw);
-      uploadBody = pdfBytes;
+      uploadBody  = pdfBytes;
       contentType = "application/pdf";
-      storedFileName = pdfDisplayName(file.name);
-      safeName = `${Date.now()}-${storedFileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      ext         = ".pdf";
     } catch (e) {
       console.error("image-to-pdf:", e);
       return NextResponse.json(
@@ -95,13 +105,24 @@ export async function POST(request: Request) {
       );
     }
   } else {
-    uploadBody = Buffer.from(await file.arrayBuffer());
+    uploadBody  = Buffer.from(await file.arrayBuffer());
     contentType = file.type || "application/octet-stream";
-    storedFileName = file.name;
-    safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    ext         = isPdf ? ".pdf" : fileExtension(file.name);
   }
 
-  const filePath = `${clientId}/${year}/${month}/${documentTypeId}/${safeName}`;
+  /* ── 6. Construiește numele semantic ──────────────────────────────────── */
+  const displayName = buildUploadFileName({
+    clientName,
+    docTypeName,
+    month,
+    year,
+    ext,
+    existingCount: existingCount ?? 0,
+  });
+
+  /* ── 7. Calea în storage (unică prin timestamp prefix) ────────────────── */
+  const safeDisplayName = displayName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const filePath = `${clientId}/${year}/${month}/${documentTypeId}/${Date.now()}-${safeDisplayName}`;
 
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(filePath, uploadBody, {
     contentType,
@@ -115,14 +136,16 @@ export async function POST(request: Request) {
     );
   }
 
+  /* ── 8. Inserează în DB ───────────────────────────────────────────────── */
   const insertPayload: UploadInsert = {
-    client_id: clientId,
+    client_id:        clientId,
     document_type_id: documentTypeId,
-    file_path: filePath,
-    file_name: storedFileName,
+    file_path:        filePath,
+    file_name:        displayName,
     month,
     year,
   };
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: inserted, error: insertError } = await (supabase as any)
     .from("uploads")
@@ -139,5 +162,5 @@ export async function POST(request: Request) {
   }
 
   const uploadId = inserted?.id ? String(inserted.id) : null;
-  return NextResponse.json({ ok: true, uploadId, fileName: storedFileName });
+  return NextResponse.json({ ok: true, uploadId, fileName: displayName });
 }
