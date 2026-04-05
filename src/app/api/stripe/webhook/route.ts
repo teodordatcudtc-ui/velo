@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getStripe } from "@/lib/stripe";
+import { getStripe, type Interval, type PlanId } from "@/lib/stripe";
+import { issueSmartBillAfterStripePayment } from "@/lib/smartbill-issue";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -41,16 +42,39 @@ export async function POST(request: Request) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       const accountantId = session.metadata?.accountant_id;
-      const plan = session.metadata?.plan as "standard" | "premium" | undefined;
+      const plan = session.metadata?.plan as "standard" | "premium" | "none" | undefined;
       const interval = session.metadata?.interval as "monthly" | "annual" | undefined;
 
-      if (!accountantId || !plan) {
+      // „none” e valid pentru plata unică invoice_test (metadata explicită)
+      if (!accountantId || (plan !== "none" && plan !== "standard" && plan !== "premium")) {
         console.error("checkout.session.completed: missing metadata", session.metadata);
         break;
       }
 
       if (session.mode === "payment") {
-        // Plată one-time (e.g. test 1 EUR) – activăm manual 30 zile
+        const checkoutProductMeta = session.metadata?.checkout_product;
+
+        // 2 RON plată unică — doar factură SmartBill, fără schimbare abonament
+        if (checkoutProductMeta === "invoice_test") {
+          const totalOnce = session.amount_total ?? 0;
+          const curOnce = (session.currency ?? "ron").toLowerCase();
+          if (totalOnce > 0 && session.id) {
+            void issueSmartBillAfterStripePayment(supabase, {
+              accountantId,
+              stripeCheckoutSessionId: session.id,
+              stripeInvoiceId: null,
+              amountCents: totalOnce,
+              currency: curOnce,
+              checkoutProduct: "invoice_test",
+              interval: "monthly",
+              mentionExtra: `Test factură 2 RON — sesiune ${session.id}`,
+            }).catch((e) => console.error("SmartBill checkout.session (invoice_test):", e));
+          }
+          console.log(`checkout.session.completed: invoice_test plată doar factură pentru ${accountantId}`);
+          break;
+        }
+
+        // Plată one-time (legacy) — activăm manual 30 zile
         const premiumUntil = new Date();
         premiumUntil.setDate(premiumUntil.getDate() + 30);
 
@@ -58,7 +82,7 @@ export async function POST(request: Request) {
           .from("accountants")
           // @ts-expect-error - Supabase inferred type
           .update({
-            subscription_plan: plan,
+            subscription_plan: plan as "standard" | "premium",
             premium_until: premiumUntil.toISOString(),
           })
           .eq("id", accountantId);
@@ -68,6 +92,26 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "Update failed." }, { status: 500 });
         }
         console.log(`checkout.session.completed: activated ${plan} for ${accountantId} until ${premiumUntil.toISOString().slice(0, 10)}`);
+
+        const totalOnce = session.amount_total ?? 0;
+        const curOnce = (session.currency ?? "eur").toLowerCase();
+        if (totalOnce > 0 && session.id) {
+          const checkoutProduct =
+            (session.metadata?.checkout_product as "test" | PlanId | undefined) ??
+            (session.metadata?.plan as PlanId | undefined) ??
+            "standard";
+          const intv = (session.metadata?.interval as Interval | undefined) ?? "monthly";
+          void issueSmartBillAfterStripePayment(supabase, {
+            accountantId,
+            stripeCheckoutSessionId: session.id,
+            stripeInvoiceId: null,
+            amountCents: totalOnce,
+            currency: curOnce,
+            checkoutProduct,
+            interval: intv,
+            mentionExtra: `Plată unică Stripe: ${session.id}`,
+          }).catch((e) => console.error("SmartBill checkout.session (payment):", e));
+        }
       } else if (session.mode === "subscription") {
         // Subscription – salvăm customer_id și subscription_id
         const customerId = typeof session.customer === "string"
@@ -113,6 +157,26 @@ export async function POST(request: Request) {
         } else {
           console.log(`checkout.session.completed: activated subscription ${plan} for ${accountantId}`);
         }
+
+        const total = session.amount_total ?? 0;
+        const cur = (session.currency ?? "eur").toLowerCase();
+        if (total > 0 && session.id) {
+          const checkoutProduct =
+            (session.metadata?.checkout_product as "test" | PlanId | undefined) ??
+            (session.metadata?.plan as PlanId | undefined) ??
+            "standard";
+          const intv = (session.metadata?.interval as Interval | undefined) ?? "monthly";
+          void issueSmartBillAfterStripePayment(supabase, {
+            accountantId,
+            stripeCheckoutSessionId: session.id,
+            stripeInvoiceId: null,
+            amountCents: total,
+            currency: cur,
+            checkoutProduct,
+            interval: intv,
+            mentionExtra: `Sesiune checkout Stripe: ${session.id}`,
+          }).catch((e) => console.error("SmartBill checkout.session:", e));
+        }
       }
       break;
     }
@@ -122,7 +186,9 @@ export async function POST(request: Request) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invoice = event.data.object as any;
 
-      // Ignorăm prima factură – e deja gestionată de checkout.session.completed
+      // Prima factură a abonamentului: factura SmartBill e deja emisă la checkout.session.completed
+      // (datele clientului vin din coloanele billing_* din `accountants`, persistente).
+      // Reînnoirile (subscription_cycle etc.): emitere SmartBill mai jos cu aceleași date salvate.
       if (invoice.billing_reason === "subscription_create") break;
 
       const subscriptionId: string | null =
@@ -164,6 +230,31 @@ export async function POST(request: Request) {
           stripe_subscription_status: "active",
         })
         .eq("id", accountant.id);
+
+      const paid = invoice.amount_paid ?? 0;
+      if (paid > 0 && invoice.id) {
+        try {
+          const stripe = getStripe();
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          const checkoutProduct =
+            (sub.metadata?.checkout_product as "test" | PlanId | undefined) ??
+            (sub.metadata?.plan as PlanId | undefined) ??
+            "standard";
+          const intv = (sub.metadata?.interval as Interval | undefined) ?? "monthly";
+          await issueSmartBillAfterStripePayment(supabase, {
+            accountantId: accountant.id,
+            stripeCheckoutSessionId: null,
+            stripeInvoiceId: invoice.id,
+            amountCents: paid,
+            currency: (invoice.currency ?? "eur").toLowerCase(),
+            checkoutProduct,
+            interval: intv,
+            mentionExtra: `Reînnoire abonament — factură Stripe ${invoice.id}`,
+          });
+        } catch (e) {
+          console.error("invoice.payment_succeeded SmartBill:", e);
+        }
+      }
 
       break;
     }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PricingSection from "./components/PricingSection";
+import { FooterLegalBadges } from "./components/FooterLegalBadges";
 import FaqSection from "./components/FaqSection";
 import ScrollEffects from "./components/ScrollEffects";
 import { HeroActions } from "./components/HeroActions";
@@ -389,7 +390,7 @@ export default function HomePage() {
               <p>Aplicație SaaS pentru contabili români — colectare documente de la clienți, simplificată.</p>
             </div>
 
-            <div>
+            <div className="footer-col-links">
               <div className="footer-col-title">Produs</div>
               <Link href="#how" className="footer-link">Cum funcționează</Link>
               <Link href="#features" className="footer-link">Funcționalități</Link>
@@ -398,23 +399,24 @@ export default function HomePage() {
               <Link href="#" className="footer-link">Roadmap</Link>
             </div>
 
-            <div>
+            <div className="footer-col-links">
               <div className="footer-col-title">Resurse</div>
               <Link href="#" className="footer-link">Documentație</Link>
-              <Link href="#" className="footer-link">Blog</Link>
+              <Link href="/blog" className="footer-link">Blog</Link>
               <Link href="#faq" className="footer-link">FAQ</Link>
               <Link href="#" className="footer-link">Integrări</Link>
               <Link href="#" className="footer-link">Status</Link>
             </div>
 
-            <div>
+            <div className="footer-col-links">
               <div className="footer-col-title">Legal</div>
               <Link href="/termeni" className="footer-link">Termeni și condiții</Link>
-              <Link href="/privacy" className="footer-link">Politica de confidențialitate</Link>
-              <Link href="/gdpr" className="footer-link">GDPR</Link>
-              <Link href="/cookie-uri" className="footer-link">Cookie-uri</Link>
+              <Link href="/privacy" className="footer-link">Politica de confidențialitate (GDPR)</Link>
+              <Link href="/cookie-uri" className="footer-link">Politica de cookies</Link>
             </div>
           </div>
+
+          <FooterLegalBadges />
 
           <div className="footer-bottom">
           <div className="footer-bottom-text">© {new Date().getFullYear()} Vello · Creat în România</div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { COMPANY_LEGAL } from "@/lib/company-legal";
 
 export const metadata = {
   title: "Contact · Vello",
@@ -18,29 +19,34 @@ export default function ContactPage() {
 
         <div className="mt-8 space-y-3 text-[var(--ink-soft)]">
           <div className="dash-card" style={{ padding: 16 }}>
-            <div className="text-sm text-[var(--ink-muted)]">Persoană de contact</div>
-            <div className="text-[var(--ink)] font-semibold">Datcu Teodor Andrei</div>
+            <div className="text-sm text-[var(--ink-muted)]">Operator</div>
+            <div className="text-[var(--ink)] font-semibold">{COMPANY_LEGAL.shortName}</div>
           </div>
           <div className="dash-card" style={{ padding: 16 }}>
-            <div className="text-sm text-[var(--ink-muted)]">Locație</div>
-            <div className="text-[var(--ink)] font-semibold">București</div>
+            <div className="text-sm text-[var(--ink-muted)]">Sediu profesional</div>
+            <div className="whitespace-pre-line text-[var(--ink)] font-semibold">
+              {COMPANY_LEGAL.addressLines.join("\n")}
+            </div>
+            <div className="mt-1 text-sm text-[var(--ink-soft)]">
+              CUI {COMPANY_LEGAL.cui} · CAEN {COMPANY_LEGAL.caen}
+            </div>
           </div>
           <div className="dash-card" style={{ padding: 16 }}>
             <div className="text-sm text-[var(--ink-muted)]">Email</div>
             <a
-              href="mailto:teodordatcu29@gmail.com"
+              href={`mailto:${COMPANY_LEGAL.email}`}
               className="text-[var(--ink)] font-semibold hover:underline"
             >
-              teodordatcu29@gmail.com
+              {COMPANY_LEGAL.email}
             </a>
           </div>
           <div className="dash-card" style={{ padding: 16 }}>
             <div className="text-sm text-[var(--ink-muted)]">Telefon</div>
             <a
-              href="tel:0762444577"
+              href={`tel:${COMPANY_LEGAL.phoneE164}`}
               className="text-[var(--ink)] font-semibold hover:underline"
             >
-              0762 444 577
+              {COMPANY_LEGAL.phoneDisplay}
             </a>
           </div>
         </div>

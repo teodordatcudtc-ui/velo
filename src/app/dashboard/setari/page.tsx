@@ -4,6 +4,7 @@ import { ProfileForm } from "./ProfileForm";
 import { PasswordForm } from "./PasswordForm";
 import { PlanAccessCard } from "./PlanAccessCard";
 import { TestEmailButton } from "./TestEmailButton";
+import { BillingDetailsForm } from "@/app/components/BillingDetailsForm";
 import { hasPremiumAccess } from "@/lib/subscription";
 
 export default async function SetariPage() {
@@ -60,6 +61,17 @@ export default async function SetariPage() {
           maxWidth: 980,
         }}
       >
+        <div className="dash-card md:col-span-2 max-w-2xl">
+          <h2 className="text-lg font-semibold text-[var(--ink)] mb-2">
+            Date pentru factură (abonament)
+          </h2>
+          <p className="text-sm text-[var(--ink-muted)] mb-4">
+            Folosite la emiterea facturilor pentru plățile Stripe (SmartBill). Le poți actualiza oricând înainte
+            de o nouă plată.
+          </p>
+          <BillingDetailsForm variant="settings" />
+        </div>
+
         <div className="dash-card">
           <h2 className="text-lg font-semibold text-[var(--ink)] mb-4">
             Profil

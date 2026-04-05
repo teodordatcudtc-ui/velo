@@ -1890,6 +1890,11 @@ footer {
   margin-top: 12px;
   max-width: 280px;
 }
+.footer-col-links {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
 .footer-col-title {
   font-size: 12px;
   font-weight: 700;
@@ -1898,9 +1903,12 @@ footer {
   color: rgba(255, 255, 255, 0.35);
   margin-bottom: 16px;
 }
+/* Bloc, nu inline — altfel linkurile din coloană curg pe același rând ca text „lipit”. */
 .footer-link {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  width: 100%;
+  max-width: max-content;
   min-height: var(--touch-min);
   padding: 4px 0;
   font-size: 14px;
@@ -1927,7 +1935,107 @@ footer {
 }
 .footer-legal {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+/* Bannere / linkuri instituții (ANPC, SAL, UE, ANSPDCP) */
+.footer-badges {
+  margin-bottom: 40px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.footer-badges-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.32);
+  margin-bottom: 14px;
+}
+.footer-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.footer-badges-row .footer-badge {
+  flex: 1 1 200px;
+  min-width: min(100%, 200px);
+  max-width: 100%;
+}
+.footer-badge-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: -0.01em;
+}
+.footer-badge-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Bandă informativă cookie-uri (site-wide) */
+.cookie-info-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  padding: 14px 16px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  background: rgba(26, 26, 46, 0.97);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2);
+}
+.cookie-info-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+}
+.cookie-info-text {
+  flex: 1 1 280px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.72);
+}
+.cookie-info-link {
+  color: var(--sage-light);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cookie-info-link:hover {
+  color: #fff;
+}
+.cookie-info-actions {
+  flex-shrink: 0;
+}
+.cookie-info-btn {
+  min-height: var(--touch-min);
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--f-body);
+  color: var(--ink);
+  background: var(--sage-light);
+  border: none;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.cookie-info-btn:hover {
+  background: #fff;
+}
+.cookie-info-btn:active {
+  transform: scale(0.98);
 }
 
 /* Hero: doar pe telefon – titlu puțin mai mic decât desktop, butoane mai mici

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, DM_Sans } from "next/font/google";
 import "./globals.css";
+import { CookieInfoBar } from "./components/CookieInfoBar";
 import { ToastProvider } from "./components/ToastProvider";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body className="antialiased min-h-screen font-[family-name:var(--font-body)]">
         <ToastProvider>
           {children}
+          <CookieInfoBar />
         </ToastProvider>
         <Analytics />
         <SpeedInsights />

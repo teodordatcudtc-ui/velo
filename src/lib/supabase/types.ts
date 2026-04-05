@@ -18,6 +18,14 @@ export interface Database {
           reminder_day_of_month: number | null;
           subscription_plan: "none" | "standard" | "premium";
           premium_until: string | null;
+          billing_legal_name: string | null;
+          billing_vat_code: string | null;
+          billing_address: string | null;
+          billing_city: string | null;
+          billing_county: string | null;
+          billing_country: string | null;
+          billing_email: string | null;
+          billing_is_company: boolean | null;
         };
         Insert: {
           id: string;
@@ -27,6 +35,14 @@ export interface Database {
           reminder_day_of_month?: number | null;
           subscription_plan?: "none" | "standard" | "premium";
           premium_until?: string | null;
+          billing_legal_name?: string | null;
+          billing_vat_code?: string | null;
+          billing_address?: string | null;
+          billing_city?: string | null;
+          billing_county?: string | null;
+          billing_country?: string | null;
+          billing_email?: string | null;
+          billing_is_company?: boolean | null;
         };
         Update: {
           id?: string;
@@ -36,7 +52,57 @@ export interface Database {
           reminder_day_of_month?: number | null;
           subscription_plan?: "none" | "standard" | "premium";
           premium_until?: string | null;
+          billing_legal_name?: string | null;
+          billing_vat_code?: string | null;
+          billing_address?: string | null;
+          billing_city?: string | null;
+          billing_county?: string | null;
+          billing_country?: string | null;
+          billing_email?: string | null;
+          billing_is_company?: boolean | null;
         };
+      };
+      smartbill_invoices: {
+        Row: {
+          id: string;
+          accountant_id: string;
+          stripe_checkout_session_id: string | null;
+          stripe_invoice_id: string | null;
+          smartbill_series: string;
+          smartbill_number: string;
+          amount_cents: number;
+          currency: string;
+          plan: string | null;
+          billing_interval: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          accountant_id: string;
+          stripe_checkout_session_id?: string | null;
+          stripe_invoice_id?: string | null;
+          smartbill_series: string;
+          smartbill_number: string;
+          amount_cents: number;
+          currency?: string;
+          plan?: string | null;
+          billing_interval?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          accountant_id?: string;
+          stripe_checkout_session_id?: string | null;
+          stripe_invoice_id?: string | null;
+          smartbill_series?: string;
+          smartbill_number?: string;
+          amount_cents?: number;
+          currency?: string;
+          plan?: string | null;
+          billing_interval?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       clients: {
         Row: {

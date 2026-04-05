@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 const CHECK = (
@@ -84,45 +85,15 @@ export default function AbonamentePricing({
   premiumUntil = null,
 }: Props) {
   const [annual, setAnnual] = useState(false);
-  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Optimistic: ascundem butonul imediat după anulare reușită, fără să așteptăm refresh
   const [localCanceled, setLocalCanceled] = useState(false);
 
-  async function handleCheckout(planId: PlanKey) {
+  function handleCheckout(planId: PlanKey) {
     setError(null);
-    setLoadingPlan(planId);
-    try {
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan: planId,
-          interval: annual ? "annual" : "monthly",
-        }),
-        credentials: "include",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401) {
-        const interval = annual ? "annual" : "monthly";
-        const checkoutUrl = `/checkout?plan=${encodeURIComponent(planId)}&interval=${encodeURIComponent(interval)}`;
-        window.location.href = `/login?redirect=${encodeURIComponent(checkoutUrl)}`;
-        return;
-      }
-      if (!res.ok) {
-        setError(data.error ?? "Ceva a mers greșit.");
-        return;
-      }
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      setError("Nu am primit link de plată.");
-    } catch {
-      setError("Eroare de rețea.");
-    } finally {
-      setLoadingPlan(null);
-    }
+    const interval = annual ? "annual" : "monthly";
+    const checkoutUrl = `/checkout?plan=${encodeURIComponent(planId)}&interval=${encodeURIComponent(interval)}`;
+    window.location.href = checkoutUrl;
   }
 
   return (
@@ -197,15 +168,41 @@ export default function AbonamentePricing({
                   type="button"
                   className="pc-cta-primary"
                   onClick={() => handleCheckout(plan.planId)}
-                  disabled={!!loadingPlan}
                 >
-                  {loadingPlan === plan.planId ? "Se încarcă…" : plan.cta}
+                  {plan.cta}
                 </button>
               )}
               <div className="pc-note">{plan.note}</div>
             </div>
           );
         })}
+      </div>
+
+      <div
+        style={{
+          maxWidth: 860,
+          margin: "24px auto 0",
+          padding: "14px 18px",
+          background: "var(--paper-2)",
+          border: "1px dashed var(--paper-3)",
+          borderRadius: "var(--r-lg)",
+          fontSize: 13,
+          color: "var(--ink-soft)",
+          lineHeight: 1.5,
+        }}
+      >
+        <strong style={{ color: "var(--ink)" }}>Test factură (2 RON)</strong>
+        {" — "}
+        plată unică doar ca să verifici integrarea Stripe + SmartBill. Nu îți schimbă planul de abonament.
+        {" "}
+        <Link
+          href="/checkout?plan=invoice_test&interval=monthly"
+          style={{ color: "var(--sage)", fontWeight: 600, textDecoration: "underline" }}
+        >
+          Deschide checkout test
+        </Link>
+        {" "}
+        (în Stripe Test Mode nu se iau bani reali).
       </div>
 
       {/* Secțiunea de gestionare abonament – apare când ai orice plan activ */}

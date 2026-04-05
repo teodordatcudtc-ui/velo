@@ -14,7 +14,6 @@ type SubscriptionPlan = "none" | "standard" | "premium";
 
 export default function PricingSection() {
   const [annual, setAnnual] = useState(false);
-  const [loadingPlan, setLoadingPlan] = useState<PlanKey | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan>("none");
 
@@ -100,40 +99,11 @@ export default function PricingSection() {
     },
   ];
 
-  async function handleCheckout(planId: PlanKey) {
+  function handleCheckout(planId: PlanKey) {
     setError(null);
-    setLoadingPlan(planId);
-    try {
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan: planId,
-          interval: annual ? "annual" : "monthly",
-        }),
-        credentials: "include",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401) {
-        const interval = annual ? "annual" : "monthly";
-        const checkoutUrl = `/checkout?plan=${encodeURIComponent(planId)}&interval=${encodeURIComponent(interval)}`;
-        window.location.href = `/login?redirect=${encodeURIComponent(checkoutUrl)}`;
-        return;
-      }
-      if (!res.ok) {
-        setError(data.error ?? "Ceva a mers greșit.");
-        return;
-      }
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      setError("Nu am primit link de plată.");
-    } catch {
-      setError("Eroare de rețea.");
-    } finally {
-      setLoadingPlan(null);
-    }
+    const interval = annual ? "annual" : "monthly";
+    const checkoutUrl = `/checkout?plan=${encodeURIComponent(planId)}&interval=${encodeURIComponent(interval)}`;
+    window.location.href = checkoutUrl;
   }
 
   return (
@@ -221,10 +191,10 @@ export default function PricingSection() {
                     onClick={() => {
                       if (!isBlocked) handleCheckout(plan.planId);
                     }}
-                    disabled={!!loadingPlan || isBlocked}
+                    disabled={isBlocked}
                     style={isBlocked ? { opacity: 0.5, cursor: "default" } : undefined}
                   >
-                    {loadingPlan === plan.planId ? "Se încarcă…" : label}
+                    {label}
                   </button>
                 );
               })()}
