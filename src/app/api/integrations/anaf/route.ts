@@ -2,11 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { normalizeTaxCode } from "@/lib/anaf";
 import { NextResponse } from "next/server";
 
-function maskSecret(value: string | null): string | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (trimmed.length <= 8) return "********";
-  return `${trimmed.slice(0, 4)}...${trimmed.slice(-3)}`;
+function getServerAnafConfig() {
+  const apiBaseUrl = (process.env.ANAF_API_BASE_URL ?? "https://api.anaf.ro/prod/FCTEL/rest").trim();
+  const oauthTokenUrl = (process.env.ANAF_OAUTH_TOKEN_URL ?? "").trim();
+  const oauthClientId = (process.env.ANAF_OAUTH_CLIENT_ID ?? "").trim();
+  const oauthClientSecret = (process.env.ANAF_OAUTH_CLIENT_SECRET ?? "").trim();
+  const oauthRefreshToken = (process.env.ANAF_OAUTH_REFRESH_TOKEN ?? "").trim();
+  const configured = !!(oauthTokenUrl && oauthClientId && oauthClientSecret && oauthRefreshToken);
+  return { apiBaseUrl, oauthTokenUrl, oauthClientId, oauthClientSecret, oauthRefreshToken, configured };
 }
 
 export async function GET() {
@@ -16,10 +19,11 @@ export async function GET() {
 
   const { data: conn, error: connError } = await supabase
     .from("anaf_connections")
-    .select("enabled, company_cif, api_base_url, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_refresh_token, last_synced_at, last_error, last_error_at, circuit_open_until, consecutive_failures")
+    .select("enabled, company_cif, last_synced_at, last_error, last_error_at, circuit_open_until, consecutive_failures")
     .eq("accountant_id", user.id)
     .maybeSingle();
   if (connError) return NextResponse.json({ error: connError.message }, { status: 500 });
+  const serverCfg = getServerAnafConfig();
 
   const { data: mappings, error: mappingsError } = await supabase
     .from("anaf_client_tax_mappings")
@@ -42,11 +46,7 @@ export async function GET() {
       ? {
           enabled: conn.enabled,
           companyCif: conn.company_cif,
-          apiBaseUrl: conn.api_base_url,
-          oauthTokenUrl: conn.oauth_token_url,
-          oauthClientId: conn.oauth_client_id,
-          oauthClientSecretMasked: maskSecret(conn.oauth_client_secret),
-          oauthRefreshTokenMasked: maskSecret(conn.oauth_refresh_token),
+          apiBaseUrl: serverCfg.apiBaseUrl,
           lastSyncedAt: conn.last_synced_at,
           lastError: conn.last_error,
           lastErrorAt: conn.last_error_at,
@@ -61,6 +61,7 @@ export async function GET() {
       clientName: clientNameMap.get(m.client_id) ?? "Client",
     })),
     clients: clients ?? [],
+    serverConfigReady: serverCfg.configured,
   });
 }
 
@@ -77,26 +78,31 @@ export async function PUT(request: Request) {
   }
 
   const companyCif = normalizeTaxCode(String(body.companyCif ?? ""));
-  const oauthTokenUrl = String(body.oauthTokenUrl ?? "").trim();
-  const oauthClientId = String(body.oauthClientId ?? "").trim();
-  const oauthClientSecret = String(body.oauthClientSecret ?? "").trim();
-  const oauthRefreshToken = String(body.oauthRefreshToken ?? "").trim();
-  const apiBaseUrl = String(body.apiBaseUrl ?? "https://api.anaf.ro/prod/FCTEL/rest").trim();
   const enabled = body.enabled !== false;
+  const serverCfg = getServerAnafConfig();
 
-  if (!companyCif || !oauthTokenUrl || !oauthClientId || !oauthClientSecret || !oauthRefreshToken) {
-    return NextResponse.json({ error: "Completează toate câmpurile ANAF obligatorii." }, { status: 400 });
+  if (!companyCif) {
+    return NextResponse.json({ error: "Completează CUI-ul firmei." }, { status: 400 });
+  }
+  if (!serverCfg.configured) {
+    return NextResponse.json(
+      {
+        error:
+          "Integrarea ANAF nu este configurată la nivel de platformă. Administratorul trebuie să seteze variabilele de mediu ANAF.",
+      },
+      { status: 503 }
+    );
   }
 
   const { error } = await supabase.from("anaf_connections").upsert({
     accountant_id: user.id,
     enabled,
     company_cif: companyCif,
-    api_base_url: apiBaseUrl.replace(/\/+$/, ""),
-    oauth_token_url: oauthTokenUrl,
-    oauth_client_id: oauthClientId,
-    oauth_client_secret: oauthClientSecret,
-    oauth_refresh_token: oauthRefreshToken,
+    api_base_url: serverCfg.apiBaseUrl.replace(/\/+$/, ""),
+    oauth_token_url: serverCfg.oauthTokenUrl,
+    oauth_client_id: serverCfg.oauthClientId,
+    oauth_client_secret: serverCfg.oauthClientSecret,
+    oauth_refresh_token: serverCfg.oauthRefreshToken,
     updated_at: new Date().toISOString(),
   });
 

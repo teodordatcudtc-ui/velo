@@ -9,10 +9,6 @@ type Conn = {
   enabled: boolean;
   companyCif: string;
   apiBaseUrl: string;
-  oauthTokenUrl: string;
-  oauthClientId: string;
-  oauthClientSecretMasked: string | null;
-  oauthRefreshTokenMasked: string | null;
   lastSyncedAt: string | null;
   lastError: string | null;
   lastErrorAt: string | null;
@@ -28,14 +24,10 @@ export function AnafIntegrationCard() {
   const [connection, setConnection] = useState<Conn>(null);
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [mappings, setMappings] = useState<MappingItem[]>([]);
+  const [serverConfigReady, setServerConfigReady] = useState(false);
   const [form, setForm] = useState({
     enabled: true,
     companyCif: "",
-    apiBaseUrl: "https://api.anaf.ro/prod/FCTEL/rest",
-    oauthTokenUrl: "",
-    oauthClientId: "",
-    oauthClientSecret: "",
-    oauthRefreshToken: "",
   });
   const [mapForm, setMapForm] = useState({ clientId: "", taxCode: "" });
 
@@ -48,16 +40,12 @@ export function AnafIntegrationCard() {
       setConnection(data.connection ?? null);
       setClients(data.clients ?? []);
       setMappings(data.mappings ?? []);
+      setServerConfigReady(data.serverConfigReady === true);
       if (data.connection) {
         setForm((prev) => ({
           ...prev,
           enabled: data.connection.enabled !== false,
           companyCif: data.connection.companyCif ?? "",
-          apiBaseUrl: data.connection.apiBaseUrl ?? prev.apiBaseUrl,
-          oauthTokenUrl: data.connection.oauthTokenUrl ?? "",
-          oauthClientId: data.connection.oauthClientId ?? "",
-          oauthClientSecret: "",
-          oauthRefreshToken: "",
         }));
       }
     } catch (error) {
@@ -87,12 +75,8 @@ export function AnafIntegrationCard() {
   }, [connection]);
 
   async function handleSave() {
-    if (!form.companyCif.trim() || !form.oauthTokenUrl.trim() || !form.oauthClientId.trim()) {
-      toast.error("Completează CUI, Token URL și Client ID.");
-      return;
-    }
-    if (!form.oauthClientSecret.trim() || !form.oauthRefreshToken.trim()) {
-      toast.error("Introdu client secret și refresh token (obligatoriu la salvare).");
+    if (!form.companyCif.trim()) {
+      toast.error("Completează CUI-ul firmei.");
       return;
     }
 
@@ -182,14 +166,15 @@ export function AnafIntegrationCard() {
               {new Date(connection.lastErrorAt).toLocaleString("ro-RO")}
             </div>
           )}
+          {!serverConfigReady && (
+            <div className="rounded border border-[var(--terracotta)]/40 bg-[var(--terracotta)]/10 px-3 py-2 text-sm text-[var(--terracotta)]">
+              Integrarea ANAF nu este pregătită pe server. Administratorul trebuie să seteze variabilele ANAF în environment.
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <input className="dash-input" placeholder="CUI firmă ta (pentru SPV)" value={form.companyCif} onChange={(e) => setForm((f) => ({ ...f, companyCif: e.target.value }))} />
-            <input className="dash-input" placeholder="ANAF API base URL" value={form.apiBaseUrl} onChange={(e) => setForm((f) => ({ ...f, apiBaseUrl: e.target.value }))} />
-            <input className="dash-input" placeholder="OAuth token URL" value={form.oauthTokenUrl} onChange={(e) => setForm((f) => ({ ...f, oauthTokenUrl: e.target.value }))} />
-            <input className="dash-input" placeholder="OAuth client ID" value={form.oauthClientId} onChange={(e) => setForm((f) => ({ ...f, oauthClientId: e.target.value }))} />
-            <input className="dash-input" placeholder={`OAuth client secret${connection?.oauthClientSecretMasked ? ` (curent: ${connection.oauthClientSecretMasked})` : ""}`} value={form.oauthClientSecret} onChange={(e) => setForm((f) => ({ ...f, oauthClientSecret: e.target.value }))} />
-            <input className="dash-input" placeholder={`OAuth refresh token${connection?.oauthRefreshTokenMasked ? ` (curent: ${connection.oauthRefreshTokenMasked})` : ""}`} value={form.oauthRefreshToken} onChange={(e) => setForm((f) => ({ ...f, oauthRefreshToken: e.target.value }))} />
+            <input className="dash-input bg-[var(--paper)] cursor-not-allowed" value={connection?.apiBaseUrl ?? "https://api.anaf.ro/prod/FCTEL/rest"} readOnly />
           </div>
 
           <label className="inline-flex items-center gap-2 text-sm text-[var(--ink)]">
@@ -198,10 +183,10 @@ export function AnafIntegrationCard() {
           </label>
 
           <div className="flex gap-2">
-            <button type="button" className="btn btn-primary" disabled={saving} onClick={handleSave}>
+            <button type="button" className="btn btn-primary" disabled={saving || !serverConfigReady} onClick={handleSave}>
               {saving ? "Se salvează..." : "Salvează integrarea"}
             </button>
-            <button type="button" className="btn btn-secondary" disabled={syncing || !connection} onClick={handleSyncNow}>
+            <button type="button" className="btn btn-secondary" disabled={syncing || !connection || !serverConfigReady} onClick={handleSyncNow}>
               {syncing ? "Sincronizare..." : "Rulează sync acum"}
             </button>
           </div>

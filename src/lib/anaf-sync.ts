@@ -24,6 +24,19 @@ type AnafConnRow = {
 
 type MappingRow = { client_id: string; tax_code: string };
 
+function serverAuthFallback(conn: AnafConnRow): AnafConnRow {
+  return {
+    ...conn,
+    api_base_url: (process.env.ANAF_API_BASE_URL ?? conn.api_base_url).trim() || conn.api_base_url,
+    oauth_token_url: (process.env.ANAF_OAUTH_TOKEN_URL ?? conn.oauth_token_url).trim() || conn.oauth_token_url,
+    oauth_client_id: (process.env.ANAF_OAUTH_CLIENT_ID ?? conn.oauth_client_id).trim() || conn.oauth_client_id,
+    oauth_client_secret:
+      (process.env.ANAF_OAUTH_CLIENT_SECRET ?? conn.oauth_client_secret).trim() || conn.oauth_client_secret,
+    oauth_refresh_token:
+      (process.env.ANAF_OAUTH_REFRESH_TOKEN ?? conn.oauth_refresh_token).trim() || conn.oauth_refresh_token,
+  };
+}
+
 async function logSync(
   supabase: SupabaseClient,
   input: {
@@ -110,6 +123,7 @@ export async function syncAnafForAccountant(
   supabase: SupabaseClient,
   conn: AnafConnRow
 ): Promise<{ imported: number; skipped: number; errors: string[] }> {
+  conn = serverAuthFallback(conn);
   const errors: string[] = [];
   let imported = 0;
   let skipped = 0;
