@@ -143,6 +143,168 @@ export interface Database {
         };
         Relationships: [];
       };
+      anaf_connections: {
+        Row: {
+          accountant_id: string;
+          enabled: boolean;
+          company_cif: string;
+          api_base_url: string;
+          oauth_token_url: string;
+          oauth_client_id: string;
+          oauth_client_secret: string;
+          oauth_refresh_token: string;
+          access_token: string | null;
+          access_token_expires_at: string | null;
+          consecutive_failures: number;
+          circuit_open_until: string | null;
+          last_synced_at: string | null;
+          last_error: string | null;
+          last_error_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          accountant_id: string;
+          enabled?: boolean;
+          company_cif: string;
+          api_base_url?: string;
+          oauth_token_url: string;
+          oauth_client_id: string;
+          oauth_client_secret: string;
+          oauth_refresh_token: string;
+          access_token?: string | null;
+          access_token_expires_at?: string | null;
+          consecutive_failures?: number;
+          circuit_open_until?: string | null;
+          last_synced_at?: string | null;
+          last_error?: string | null;
+          last_error_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          accountant_id?: string;
+          enabled?: boolean;
+          company_cif?: string;
+          api_base_url?: string;
+          oauth_token_url?: string;
+          oauth_client_id?: string;
+          oauth_client_secret?: string;
+          oauth_refresh_token?: string;
+          access_token?: string | null;
+          access_token_expires_at?: string | null;
+          consecutive_failures?: number;
+          circuit_open_until?: string | null;
+          last_synced_at?: string | null;
+          last_error?: string | null;
+          last_error_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      anaf_client_tax_mappings: {
+        Row: {
+          id: string;
+          accountant_id: string;
+          client_id: string;
+          tax_code: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          accountant_id: string;
+          client_id: string;
+          tax_code: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          accountant_id?: string;
+          client_id?: string;
+          tax_code?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      anaf_sync_log: {
+        Row: {
+          id: string;
+          accountant_id: string;
+          status: "success" | "partial" | "skipped" | "error";
+          detail: string | null;
+          error_message: string | null;
+          imported_count: number;
+          skipped_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          accountant_id: string;
+          status: "success" | "partial" | "skipped" | "error";
+          detail?: string | null;
+          error_message?: string | null;
+          imported_count?: number;
+          skipped_count?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          accountant_id?: string;
+          status?: "success" | "partial" | "skipped" | "error";
+          detail?: string | null;
+          error_message?: string | null;
+          imported_count?: number;
+          skipped_count?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      anaf_message_receipts: {
+        Row: {
+          id: string;
+          accountant_id: string;
+          company_cif: string;
+          message_id: string;
+          partner_tax_code: string | null;
+          client_id: string | null;
+          upload_id: string | null;
+          file_path: string | null;
+          file_name: string | null;
+          status: "imported" | "unmapped" | "download_error" | "parse_error";
+          detail: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          accountant_id: string;
+          company_cif: string;
+          message_id: string;
+          partner_tax_code?: string | null;
+          client_id?: string | null;
+          upload_id?: string | null;
+          file_path?: string | null;
+          file_name?: string | null;
+          status: "imported" | "unmapped" | "download_error" | "parse_error";
+          detail?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          accountant_id?: string;
+          company_cif?: string;
+          message_id?: string;
+          partner_tax_code?: string | null;
+          client_id?: string | null;
+          upload_id?: string | null;
+          file_path?: string | null;
+          file_name?: string | null;
+          status?: "imported" | "unmapped" | "download_error" | "parse_error";
+          detail?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       clients: {
         Row: {
           id: string;

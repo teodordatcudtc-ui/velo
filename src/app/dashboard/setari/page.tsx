@@ -7,6 +7,7 @@ import { TestEmailButton } from "./TestEmailButton";
 import { BillingDetailsForm } from "@/app/components/BillingDetailsForm";
 import { IssuedInvoicesCard } from "./IssuedInvoicesCard";
 import { hasPremiumAccess } from "@/lib/subscription";
+import { AnafIntegrationCard } from "./AnafIntegrationCard";
 
 export default async function SetariPage() {
   const supabase = await createClient();
@@ -107,6 +108,13 @@ export default async function SetariPage() {
           <BillingDetailsForm variant="settings" />
           <IssuedInvoicesCard invoices={issuedInvoices ?? []} />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+          Integrări fiscale
+        </p>
+        <AnafIntegrationCard />
       </div>
 
       {/* Abonament & early access */}
