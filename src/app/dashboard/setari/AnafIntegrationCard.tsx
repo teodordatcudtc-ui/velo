@@ -223,8 +223,8 @@ export function AnafIntegrationCard() {
                 <div>
                   <p className="text-sm font-medium text-[var(--ink)] mb-1">Conectare e-Factura</p>
                   <p className="text-sm text-[var(--ink-muted)]">
-                    Vei fi redirecționat către ANAF pentru autentificare cu certificatul digital SPV. Nu este nevoie de
-                    unelte tehnice separate.
+                    Vei fi redirecționat către ANAF pentru autentificare cu certificatul digital SPV. Folosește{" "}
+                    <strong className="font-medium text-[var(--ink-soft)]">Chrome sau Edge</strong> — OAuth ANAF nu funcționează de obicei în Firefox.
                   </p>
                 </div>
                 <button

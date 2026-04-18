@@ -31,7 +31,16 @@ export async function GET(request: Request) {
         desc.length > 3;
       message = anafExplains
         ? desc!
-        : "ANAF a refuzat autorizarea. Folosește certificatul cu drepturi SPV pentru firma corectă și acceptă cererea în pagina ANAF; dacă ai anulat din greșeală, încearcă din nou.";
+        : [
+            "ANAF a respins autorizarea (access_denied). Încearcă Chrome sau Edge — Firefox este deseori incompatibil cu OAuth ANAF.",
+            "Folosește certificatul digital cu drepturi SPV pentru PJ-ul corect și acceptă solicitarea în pagina ANAF.",
+            "În portalul ANAF → Gestionare aplicații, verifică că această aplicație OAuth are bifat serviciul E-Factura și URL de callback corect.",
+          ].join(" ");
+    }
+    if (oauthErr === "invalid_scope") {
+      message =
+        oauthDesc?.trim() ||
+        "Scope OAuth respins de ANAF. În Vercel setează ANAF_OAUTH_SCOPE=EFACTURA sau ANAF_OAUTH_SCOPE=- și încearcă din nou.";
     }
     const res = redirectToSettings({
       anaf_error: message,
