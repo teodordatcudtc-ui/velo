@@ -10,12 +10,12 @@ const FAILURE_THRESHOLD = 3;
 type AnafConnRow = {
   accountant_id: string;
   enabled: boolean;
-  company_cif: string;
+  company_cif: string | null;
   api_base_url: string;
   oauth_token_url: string;
   oauth_client_id: string;
   oauth_client_secret: string;
-  oauth_refresh_token: string;
+  oauth_refresh_token: string | null;
   access_token: string | null;
   access_token_expires_at: string | null;
   consecutive_failures: number;
@@ -25,6 +25,8 @@ type AnafConnRow = {
 type MappingRow = { client_id: string; tax_code: string };
 
 function serverAuthFallback(conn: AnafConnRow): AnafConnRow {
+  const envRt = process.env.ANAF_OAUTH_REFRESH_TOKEN?.trim();
+  const dbRt = conn.oauth_refresh_token?.trim();
   return {
     ...conn,
     api_base_url: (process.env.ANAF_API_BASE_URL ?? conn.api_base_url).trim() || conn.api_base_url,
@@ -32,8 +34,7 @@ function serverAuthFallback(conn: AnafConnRow): AnafConnRow {
     oauth_client_id: (process.env.ANAF_OAUTH_CLIENT_ID ?? conn.oauth_client_id).trim() || conn.oauth_client_id,
     oauth_client_secret:
       (process.env.ANAF_OAUTH_CLIENT_SECRET ?? conn.oauth_client_secret).trim() || conn.oauth_client_secret,
-    oauth_refresh_token:
-      (process.env.ANAF_OAUTH_REFRESH_TOKEN ?? conn.oauth_refresh_token).trim() || conn.oauth_refresh_token,
+    oauth_refresh_token: envRt || dbRt || null,
   };
 }
 
@@ -148,6 +149,21 @@ export async function syncAnafForAccountant(
     return { imported, skipped: skipped + 1, errors };
   }
 
+  const companyCifNorm = normalizeTaxCode(conn.company_cif ?? "");
+  if (!companyCifNorm) {
+    await logSync(supabase, {
+      accountantId: conn.accountant_id,
+      status: "skipped",
+      detail: "Completează CUI-ul firmei în Setări și salvează.",
+      skippedCount: 1,
+    });
+    return {
+      imported,
+      skipped: skipped + 1,
+      errors: ["Lipsește CUI-ul firmei în Setări."],
+    };
+  }
+
   const tokenResult = await ensureAnafAccessToken(conn);
   if (!tokenResult.ok) {
     await setConnectionFailure(supabase, conn, tokenResult.error);
@@ -171,12 +187,11 @@ export async function syncAnafForAccountant(
       .eq("accountant_id", conn.accountant_id);
   }
 
-  const companyCif = normalizeTaxCode(conn.company_cif);
   const list = await anafApiGetJson<unknown>(
     conn.api_base_url,
     "listaMesajeFactura",
     tokenResult.accessToken,
-    { cif: companyCif, zile: parseListDays() }
+    { cif: companyCifNorm, zile: parseListDays() }
   );
   if (!list.ok) {
     await setConnectionFailure(supabase, conn, list.error);
@@ -214,7 +229,7 @@ export async function syncAnafForAccountant(
       .from("anaf_message_receipts")
       .select("id")
       .eq("accountant_id", conn.accountant_id)
-      .eq("company_cif", companyCif)
+      .eq("company_cif", companyCifNorm)
       .eq("message_id", msg.id)
       .maybeSingle();
     if (existing?.id) {
@@ -227,7 +242,7 @@ export async function syncAnafForAccountant(
     if (!clientId) {
       await supabase.from("anaf_message_receipts").insert({
         accountant_id: conn.accountant_id,
-        company_cif: companyCif,
+        company_cif: companyCifNorm,
         message_id: msg.id,
         partner_tax_code: partner || null,
         status: "unmapped",
@@ -241,7 +256,7 @@ export async function syncAnafForAccountant(
     if (!downloaded.ok) {
       await supabase.from("anaf_message_receipts").insert({
         accountant_id: conn.accountant_id,
-        company_cif: companyCif,
+        company_cif: companyCifNorm,
         message_id: msg.id,
         partner_tax_code: partner || null,
         client_id: clientId,
@@ -257,7 +272,7 @@ export async function syncAnafForAccountant(
     if (!docTypeId) {
       await supabase.from("anaf_message_receipts").insert({
         accountant_id: conn.accountant_id,
-        company_cif: companyCif,
+        company_cif: companyCifNorm,
         message_id: msg.id,
         partner_tax_code: partner || null,
         client_id: clientId,
@@ -281,7 +296,7 @@ export async function syncAnafForAccountant(
     if (uploadResult.error) {
       await supabase.from("anaf_message_receipts").insert({
         accountant_id: conn.accountant_id,
-        company_cif: companyCif,
+        company_cif: companyCifNorm,
         message_id: msg.id,
         partner_tax_code: partner || null,
         client_id: clientId,
@@ -310,7 +325,7 @@ export async function syncAnafForAccountant(
       await supabase.storage.from(BUCKET).remove([filePath]);
       await supabase.from("anaf_message_receipts").insert({
         accountant_id: conn.accountant_id,
-        company_cif: companyCif,
+        company_cif: companyCifNorm,
         message_id: msg.id,
         partner_tax_code: partner || null,
         client_id: clientId,
@@ -323,7 +338,7 @@ export async function syncAnafForAccountant(
 
     await supabase.from("anaf_message_receipts").insert({
       accountant_id: conn.accountant_id,
-      company_cif: companyCif,
+      company_cif: companyCifNorm,
       message_id: msg.id,
       partner_tax_code: partner || null,
       client_id: clientId,

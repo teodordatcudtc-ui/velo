@@ -1,29 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
 import { normalizeTaxCode } from "@/lib/anaf";
+import { getPlatformAnafOAuthConfig } from "@/lib/anaf-oauth-config";
 import { NextResponse } from "next/server";
-
-function getServerAnafConfig() {
-  const apiBaseUrl = (process.env.ANAF_API_BASE_URL ?? "https://api.anaf.ro/prod/FCTEL/rest").trim();
-  const oauthTokenUrl = (process.env.ANAF_OAUTH_TOKEN_URL ?? "").trim();
-  const oauthClientId = (process.env.ANAF_OAUTH_CLIENT_ID ?? "").trim();
-  const oauthClientSecret = (process.env.ANAF_OAUTH_CLIENT_SECRET ?? "").trim();
-  const oauthRefreshToken = (process.env.ANAF_OAUTH_REFRESH_TOKEN ?? "").trim();
-  const configured = !!(oauthTokenUrl && oauthClientId && oauthClientSecret && oauthRefreshToken);
-  return { apiBaseUrl, oauthTokenUrl, oauthClientId, oauthClientSecret, oauthRefreshToken, configured };
-}
 
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Neautorizat." }, { status: 401 });
+
+  const platform = getPlatformAnafOAuthConfig();
 
   const { data: conn, error: connError } = await supabase
     .from("anaf_connections")
-    .select("enabled, company_cif, last_synced_at, last_error, last_error_at, circuit_open_until, consecutive_failures")
+    .select(
+      "enabled, company_cif, last_synced_at, last_error, last_error_at, circuit_open_until, consecutive_failures, oauth_refresh_token"
+    )
     .eq("accountant_id", user.id)
     .maybeSingle();
   if (connError) return NextResponse.json({ error: connError.message }, { status: 500 });
-  const serverCfg = getServerAnafConfig();
 
   const { data: mappings, error: mappingsError } = await supabase
     .from("anaf_client_tax_mappings")
@@ -41,12 +37,14 @@ export async function GET() {
 
   const clientNameMap = new Map((clients ?? []).map((c) => [c.id, c.name]));
 
+  const oauthConnected = !!(conn as { oauth_refresh_token?: string | null } | null)?.oauth_refresh_token?.trim();
+
   return NextResponse.json({
     connection: conn
       ? {
           enabled: conn.enabled,
-          companyCif: conn.company_cif,
-          apiBaseUrl: serverCfg.apiBaseUrl,
+          companyCif: conn.company_cif ?? "",
+          oauthConnected,
           lastSyncedAt: conn.last_synced_at,
           lastError: conn.last_error,
           lastErrorAt: conn.last_error_at,
@@ -61,13 +59,15 @@ export async function GET() {
       clientName: clientNameMap.get(m.client_id) ?? "Client",
     })),
     clients: clients ?? [],
-    serverConfigReady: serverCfg.configured,
+    oauthPlatformReady: platform.configured,
   });
 }
 
 export async function PUT(request: Request) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Neautorizat." }, { status: 401 });
 
   let body: Record<string, unknown>;
@@ -77,34 +77,48 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Body invalid." }, { status: 400 });
   }
 
-  const companyCif = normalizeTaxCode(String(body.companyCif ?? ""));
+  const companyCifRaw = String(body.companyCif ?? "");
+  const companyCifNorm = normalizeTaxCode(companyCifRaw);
   const enabled = body.enabled !== false;
-  const serverCfg = getServerAnafConfig();
+  const platform = getPlatformAnafOAuthConfig();
 
-  if (!companyCif) {
+  if (!companyCifNorm) {
     return NextResponse.json({ error: "Completează CUI-ul firmei." }, { status: 400 });
   }
-  if (!serverCfg.configured) {
+  if (!platform.configured) {
     return NextResponse.json(
       {
         error:
-          "Integrarea ANAF nu este configurată la nivel de platformă. Administratorul trebuie să seteze variabilele de mediu ANAF.",
+          "Integrarea ANAF nu este configurată la nivel de platformă (ANAF_OAUTH_CLIENT_ID, ANAF_OAUTH_CLIENT_SECRET etc.).",
       },
       { status: 503 }
     );
   }
 
-  const { error } = await supabase.from("anaf_connections").upsert({
-    accountant_id: user.id,
-    enabled,
-    company_cif: companyCif,
-    api_base_url: serverCfg.apiBaseUrl.replace(/\/+$/, ""),
-    oauth_token_url: serverCfg.oauthTokenUrl,
-    oauth_client_id: serverCfg.oauthClientId,
-    oauth_client_secret: serverCfg.oauthClientSecret,
-    oauth_refresh_token: serverCfg.oauthRefreshToken,
-    updated_at: new Date().toISOString(),
-  });
+  const { data: existing } = await supabase
+    .from("anaf_connections")
+    .select("oauth_refresh_token")
+    .eq("accountant_id", user.id)
+    .maybeSingle();
+
+  const existingRefresh = (existing as { oauth_refresh_token?: string | null } | null)?.oauth_refresh_token?.trim();
+  const legacyEnvRefresh = process.env.ANAF_OAUTH_REFRESH_TOKEN?.trim();
+  const oauthRefreshToken = existingRefresh || legacyEnvRefresh || null;
+
+  const { error } = await supabase.from("anaf_connections").upsert(
+    {
+      accountant_id: user.id,
+      enabled,
+      company_cif: companyCifNorm,
+      api_base_url: platform.apiBaseUrl,
+      oauth_token_url: platform.tokenUrl,
+      oauth_client_id: platform.clientId,
+      oauth_client_secret: platform.clientSecret,
+      oauth_refresh_token: oauthRefreshToken,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "accountant_id" }
+  );
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

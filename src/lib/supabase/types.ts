@@ -147,12 +147,12 @@ export interface Database {
         Row: {
           accountant_id: string;
           enabled: boolean;
-          company_cif: string;
+          company_cif: string | null;
           api_base_url: string;
           oauth_token_url: string;
           oauth_client_id: string;
           oauth_client_secret: string;
-          oauth_refresh_token: string;
+          oauth_refresh_token: string | null;
           access_token: string | null;
           access_token_expires_at: string | null;
           consecutive_failures: number;
@@ -166,12 +166,12 @@ export interface Database {
         Insert: {
           accountant_id: string;
           enabled?: boolean;
-          company_cif: string;
+          company_cif?: string | null;
           api_base_url?: string;
           oauth_token_url: string;
           oauth_client_id: string;
           oauth_client_secret: string;
-          oauth_refresh_token: string;
+          oauth_refresh_token?: string | null;
           access_token?: string | null;
           access_token_expires_at?: string | null;
           consecutive_failures?: number;

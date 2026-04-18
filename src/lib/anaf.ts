@@ -3,7 +3,7 @@ type AnafConnection = {
   oauth_token_url: string;
   oauth_client_id: string;
   oauth_client_secret: string;
-  oauth_refresh_token: string;
+  oauth_refresh_token: string | null;
   access_token: string | null;
   access_token_expires_at: string | null;
 };
@@ -70,17 +70,31 @@ export async function refreshAnafAccessToken(
   | { ok: true; accessToken: string; expiresAtIso: string | null; refreshToken: string }
   | { ok: false; error: string }
 > {
+  const rt = conn.oauth_refresh_token?.trim();
+  if (!rt) {
+    return {
+      ok: false,
+      error: "Nu ești conectat la ANAF. Folosește „Conectează ANAF” în Setări.",
+    };
+  }
+
   const body = new URLSearchParams();
   body.set("grant_type", "refresh_token");
-  body.set("refresh_token", conn.oauth_refresh_token);
-  body.set("client_id", conn.oauth_client_id);
-  body.set("client_secret", conn.oauth_client_secret);
+  body.set("refresh_token", rt);
+  body.set("token_content_type", "jwt");
+
+  const basic = Buffer.from(`${conn.oauth_client_id}:${conn.oauth_client_secret}`, "utf8").toString(
+    "base64"
+  );
 
   let res: Response;
   try {
     res = await fetchWithRetry(conn.oauth_token_url, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        Authorization: `Basic ${basic}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
       body: body.toString(),
       retries: 1,
       timeoutMs: 15000,
@@ -107,7 +121,7 @@ export async function refreshAnafAccessToken(
   const accessToken = String(json.access_token ?? "").trim();
   if (!accessToken) return { ok: false, error: "OAuth ANAF: lipsește access_token" };
 
-  const refreshToken = String(json.refresh_token ?? conn.oauth_refresh_token).trim();
+  const refreshToken = String(json.refresh_token ?? rt).trim();
   const expiresInSec = Number(json.expires_in ?? 0);
   const expiresAtIso =
     expiresInSec > 0 ? new Date(Date.now() + Math.max(0, expiresInSec - 45) * 1000).toISOString() : null;

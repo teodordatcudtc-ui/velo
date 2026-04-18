@@ -8,7 +8,7 @@ type MappingItem = { id: string; clientId: string; taxCode: string; clientName: 
 type Conn = {
   enabled: boolean;
   companyCif: string;
-  apiBaseUrl: string;
+  oauthConnected: boolean;
   lastSyncedAt: string | null;
   lastError: string | null;
   lastErrorAt: string | null;
@@ -24,7 +24,7 @@ export function AnafIntegrationCard() {
   const [connection, setConnection] = useState<Conn>(null);
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [mappings, setMappings] = useState<MappingItem[]>([]);
-  const [serverConfigReady, setServerConfigReady] = useState(false);
+  const [oauthPlatformReady, setOauthPlatformReady] = useState(false);
   const [form, setForm] = useState({
     enabled: true,
     companyCif: "",
@@ -40,7 +40,7 @@ export function AnafIntegrationCard() {
       setConnection(data.connection ?? null);
       setClients(data.clients ?? []);
       setMappings(data.mappings ?? []);
-      setServerConfigReady(data.serverConfigReady === true);
+      setOauthPlatformReady(data.oauthPlatformReady === true);
       if (data.connection) {
         setForm((prev) => ({
           ...prev,
@@ -60,10 +60,31 @@ export function AnafIntegrationCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const statusText = useMemo(() => {
-    if (!connection) return "Neconfigurat";
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search);
+    const ok = p.get("anaf");
+    const err = p.get("anaf_error");
+    if (ok === "connected") {
+      toast.success("Te-ai conectat la e-Factura. Poți rula sincronizarea.");
+      p.delete("anaf");
+      const next = `${window.location.pathname}${p.toString() ? `?${p.toString()}` : ""}`;
+      window.history.replaceState({}, "", next);
+    }
+    if (err) {
+      toast.error(decodeURIComponent(err));
+      p.delete("anaf_error");
+      const next = `${window.location.pathname}${p.toString() ? `?${p.toString()}` : ""}`;
+      window.history.replaceState({}, "", next);
+    }
+  }, [toast]);
+
+  const connectionStatus = useMemo(() => {
+    if (!oauthPlatformReady) return null;
+    if (!connection) return "Introdu CUI-ul firmei și conectează-te cu e-Factura (autentificare SPV).";
+    if (!connection.oauthConnected) return "Finalizează conectarea cu e-Factura folosind butonul de mai jos.";
     if (connection.circuitOpenUntil) {
-      return `Circuit activ până la ${new Date(connection.circuitOpenUntil).toLocaleString("ro-RO")}`;
+      return `Sincronizarea e oprită temporar până la ${new Date(connection.circuitOpenUntil).toLocaleString("ro-RO")} (protecție la erori repetate).`;
     }
     if (connection.lastError) {
       return `Ultima eroare: ${connection.lastError}`;
@@ -71,8 +92,8 @@ export function AnafIntegrationCard() {
     if (connection.lastSyncedAt) {
       return `Ultimul sync: ${new Date(connection.lastSyncedAt).toLocaleString("ro-RO")}`;
     }
-    return "Configurat, fără rulări încă";
-  }, [connection]);
+    return "Conectat — poți activa sincronizarea și rula un import.";
+  }, [oauthPlatformReady, connection]);
 
   async function handleSave() {
     if (!form.companyCif.trim()) {
@@ -89,7 +110,7 @@ export function AnafIntegrationCard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Nu pot salva configurația ANAF.");
-      toast.success("Integrarea ANAF a fost salvată.");
+      toast.success("Setările pentru e-Factura au fost salvate.");
       await loadData();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Eroare la salvare.");
@@ -104,7 +125,7 @@ export function AnafIntegrationCard() {
       const res = await fetch("/api/integrations/anaf/sync", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Sync ANAF eșuat.");
-      const msg = `Sync ANAF: ${data.imported ?? 0} importate, ${data.skipped ?? 0} omise.`;
+      const msg = `Sync e-Factura: ${data.imported ?? 0} importate, ${data.skipped ?? 0} omise.`;
       toast.success(msg);
       await loadData();
     } catch (error) {
@@ -153,72 +174,148 @@ export function AnafIntegrationCard() {
     <div className="dash-card">
       <h2 className="text-lg font-semibold text-[var(--ink)] mb-2">Integrare ANAF e-Factura</h2>
       <p className="text-sm text-[var(--ink-muted)] mb-4">
-        Import automat documente din SPV, cu protecție la instabilitate ANAF (retry + circuit breaker).
+        Import automat din SPV, cu reluări automate și pauză temporară dacă serviciul ANAF răspunde cu erori repetate.
       </p>
 
       {loading ? (
         <p className="text-sm text-[var(--ink-muted)]">Se încarcă integrarea...</p>
       ) : (
         <div className="space-y-4">
-          <div className="text-sm text-[var(--ink-soft)]">{statusText}</div>
-          {connection?.lastErrorAt && (
-            <div className="text-xs text-[var(--terracotta)]">
-              {new Date(connection.lastErrorAt).toLocaleString("ro-RO")}
-            </div>
+          {!oauthPlatformReady ? (
+            <>
+              <p className="text-sm font-medium text-[var(--ink)]">Conectarea nu este disponibilă momentan</p>
+              <div className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-[var(--ink)]">
+                <p className="mb-0">
+                  Fluxul „Conectează-te cu e-Factura” nu poate fi pornit din Vello până când echipa care administrează
+                  aplicația finalizează activarea pe server. Dacă mesajul persistă, contactează suportul Vello.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              {connectionStatus && (
+                <p className="text-sm text-[var(--ink-soft)]">{connectionStatus}</p>
+              )}
+              {connection?.lastErrorAt && (
+                <div className="text-xs text-[var(--terracotta)]">
+                  {new Date(connection.lastErrorAt).toLocaleString("ro-RO")}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--ink)]">
+                  CUI-ul firmei (pentru citirea mesajelor din SPV)
+                </label>
+                <input
+                  className="dash-input w-full max-w-md"
+                  placeholder="ex. 12345678"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={form.companyCif}
+                  onChange={(e) => setForm((f) => ({ ...f, companyCif: e.target.value }))}
+                />
+                <p className="text-xs text-[var(--ink-muted)]">
+                  Acesta este CUI-ul pentru care vrei să imporți facturile primite prin e-Factura.
+                </p>
+              </div>
+
+              <div className="rounded border border-[var(--border)] bg-[var(--paper-2)] px-4 py-4 space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-[var(--ink)] mb-1">Conectare e-Factura</p>
+                  <p className="text-sm text-[var(--ink-muted)]">
+                    Vei fi redirecționat către ANAF pentru autentificare cu certificatul digital SPV. Nu este nevoie de
+                    unelte tehnice separate.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    window.location.href = "/api/integrations/anaf/oauth/start";
+                  }}
+                >
+                  Conectează-te cu e-Factura
+                </button>
+                {connection?.oauthConnected && (
+                  <p className="text-sm text-[var(--sage)] mb-0">Cont e-Factura conectat.</p>
+                )}
+              </div>
+
+              <label className="inline-flex items-center gap-2 text-sm text-[var(--ink)]">
+                <input
+                  type="checkbox"
+                  checked={form.enabled}
+                  onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))}
+                />
+                Activează sincronizarea automată din SPV
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn btn-secondary" disabled={saving} onClick={handleSave}>
+                  {saving ? "Se salvează..." : "Salvează setările"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={syncing || !connection || !connection.oauthConnected}
+                  onClick={handleSyncNow}
+                >
+                  {syncing ? "Sincronizare..." : "Rulează sync acum"}
+                </button>
+              </div>
+
+              <div className="pt-3 border-t border-[var(--border)] space-y-2">
+                <h3 className="text-sm font-semibold text-[var(--ink)]">Mapare CUI/CIF partener → Client Vello</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <select
+                    className="dash-input"
+                    value={mapForm.clientId}
+                    onChange={(e) => setMapForm((m) => ({ ...m, clientId: e.target.value }))}
+                  >
+                    <option value="">Alege client</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className="dash-input"
+                    placeholder="CUI/CIF partener ANAF"
+                    value={mapForm.taxCode}
+                    onChange={(e) => setMapForm((m) => ({ ...m, taxCode: e.target.value }))}
+                  />
+                  <button type="button" className="btn btn-secondary" onClick={handleAddMapping}>
+                    Adaugă mapare
+                  </button>
+                </div>
+
+                {mappings.length === 0 ? (
+                  <p className="text-sm text-[var(--ink-muted)]">Nu există mapări încă.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {mappings.map((m) => (
+                      <li
+                        key={m.id}
+                        className="text-sm flex items-center justify-between rounded border border-[var(--paper-3)] bg-[var(--paper-2)] px-3 py-2"
+                      >
+                        <span>
+                          {m.taxCode} → {m.clientName}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-[var(--terracotta)] underline"
+                          onClick={() => handleDeleteMapping(m.id)}
+                        >
+                          {"\u0218terge"}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
           )}
-          {!serverConfigReady && (
-            <div className="rounded border border-[var(--terracotta)]/40 bg-[var(--terracotta)]/10 px-3 py-2 text-sm text-[var(--terracotta)]">
-              Integrarea ANAF nu este pregătită pe server. Administratorul trebuie să seteze variabilele ANAF în environment.
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input className="dash-input" placeholder="CUI firmă ta (pentru SPV)" value={form.companyCif} onChange={(e) => setForm((f) => ({ ...f, companyCif: e.target.value }))} />
-            <input className="dash-input bg-[var(--paper)] cursor-not-allowed" value={connection?.apiBaseUrl ?? "https://api.anaf.ro/prod/FCTEL/rest"} readOnly />
-          </div>
-
-          <label className="inline-flex items-center gap-2 text-sm text-[var(--ink)]">
-            <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))} />
-            Activează sincronizarea ANAF
-          </label>
-
-          <div className="flex gap-2">
-            <button type="button" className="btn btn-primary" disabled={saving || !serverConfigReady} onClick={handleSave}>
-              {saving ? "Se salvează..." : "Salvează integrarea"}
-            </button>
-            <button type="button" className="btn btn-secondary" disabled={syncing || !connection || !serverConfigReady} onClick={handleSyncNow}>
-              {syncing ? "Sincronizare..." : "Rulează sync acum"}
-            </button>
-          </div>
-
-          <div className="pt-3 border-t border-[var(--border)] space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--ink)]">Mapare CUI/CIF partener → Client Vello</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <select className="dash-input" value={mapForm.clientId} onChange={(e) => setMapForm((m) => ({ ...m, clientId: e.target.value }))}>
-                <option value="">Alege client</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <input className="dash-input" placeholder="CUI/CIF partener ANAF" value={mapForm.taxCode} onChange={(e) => setMapForm((m) => ({ ...m, taxCode: e.target.value }))} />
-              <button type="button" className="btn btn-secondary" onClick={handleAddMapping}>Adaugă mapare</button>
-            </div>
-
-            {mappings.length === 0 ? (
-              <p className="text-sm text-[var(--ink-muted)]">Nu există mapări încă.</p>
-            ) : (
-              <ul className="space-y-2">
-                {mappings.map((m) => (
-                  <li key={m.id} className="text-sm flex items-center justify-between rounded border border-[var(--paper-3)] bg-[var(--paper-2)] px-3 py-2">
-                    <span>{m.taxCode} → {m.clientName}</span>
-                    <button type="button" className="text-[var(--terracotta)] underline" onClick={() => handleDeleteMapping(m.id)}>
-                      Șterge
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
         </div>
       )}
     </div>
