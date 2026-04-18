@@ -24,9 +24,14 @@ export async function GET(request: Request) {
   if (oauthErr) {
     let message = oauthDesc?.trim() || oauthErr;
     if (oauthErr === "access_denied") {
-      const hint =
-        "Verifică certificatul digital (calificat), drepturile SPV pentru firma corectă și că accepți cererea în pagina ANAF. Dacă apare fără să fi anulat tu, contactează ANAF sau încearcă alt browser/certificate store.";
-      message = message && message !== "access_denied" ? `${message} ${hint}` : hint;
+      const desc = oauthDesc?.trim();
+      const anafExplains =
+        !!desc &&
+        desc.toLowerCase() !== "access_denied" &&
+        desc.length > 3;
+      message = anafExplains
+        ? desc!
+        : "ANAF a refuzat autorizarea. Folosește certificatul cu drepturi SPV pentru firma corectă și acceptă cererea în pagina ANAF; dacă ai anulat din greșeală, încearcă din nou.";
     }
     const res = redirectToSettings({
       anaf_error: message,
