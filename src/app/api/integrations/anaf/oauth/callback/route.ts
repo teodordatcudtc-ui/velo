@@ -32,15 +32,16 @@ export async function GET(request: Request) {
       message = anafExplains
         ? desc!
         : [
-            "ANAF a respins autorizarea (access_denied). Încearcă Chrome sau Edge — Firefox este deseori incompatibil cu OAuth ANAF.",
-            "Folosește certificatul digital cu drepturi SPV pentru PJ-ul corect și acceptă solicitarea în pagina ANAF.",
-            "În portalul ANAF → Gestionare aplicații, verifică că această aplicație OAuth are bifat serviciul E-Factura și URL de callback corect.",
+            "ANAF a respins autorizarea (access_denied).",
+            "Dacă pe logincert.anaf.ro apare BIG-IP / sesiune invalidă: șterge cookie-urile pentru domeniul anaf, încearcă fereastră incognito sau dezactivează extensiile care blochează cookie-uri.",
+            "Callback în portalul ANAF trebuie să fie exact: …/api/integrations/anaf/oauth/callback (salvează formularul dacă vezi alt URL în câmp).",
+            "Certificat SPV pentru PJ corect; serviciul E-Factura bifat la aplicația OAuth.",
           ].join(" ");
     }
     if (oauthErr === "invalid_scope") {
       message =
         oauthDesc?.trim() ||
-        "Scope OAuth respins de ANAF. În Vercel setează ANAF_OAUTH_SCOPE=EFACTURA sau ANAF_OAUTH_SCOPE=- și încearcă din nou.";
+        "Scope OAuth respins de ANAF. Încearcă ANAF_OAUTH_SCOPE=EFACTURA, apoi ANAF_OAUTH_SCOPE=- (fără scope), în Vercel.";
     }
     const res = redirectToSettings({
       anaf_error: message,

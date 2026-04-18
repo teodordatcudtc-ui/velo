@@ -224,7 +224,8 @@ export function AnafIntegrationCard() {
                   <p className="text-sm font-medium text-[var(--ink)] mb-1">Conectare e-Factura</p>
                   <p className="text-sm text-[var(--ink-muted)]">
                     Vei fi redirecționat către ANAF pentru autentificare cu certificatul digital SPV. Folosește{" "}
-                    <strong className="font-medium text-[var(--ink-soft)]">Chrome sau Edge</strong> — OAuth ANAF nu funcționează de obicei în Firefox.
+                    <strong className="font-medium text-[var(--ink-soft)]">Chrome sau Edge</strong> — OAuth ANAF nu funcționează de obicei în Firefox. Dacă vezi pagină
+                    „BIG-IP” sau sesiune invalidă pe site-ul ANAF, șterge cookie-urile pentru <code className="text-xs">logincert.anaf.ro</code> sau încearcă incognito.
                   </p>
                 </div>
                 <button

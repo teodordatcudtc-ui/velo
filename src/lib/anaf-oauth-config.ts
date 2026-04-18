@@ -34,13 +34,12 @@ export function getAnafOAuthRedirectUri(): string {
 
 /**
  * Scope pentru cererea de autorizare la ANAF.
- * Implicit: `EFACTURA offline_access` (serviciul e-Factura + refresh token, conform fluxului OAuth uzual).
- * Setări: `ANAF_OAUTH_SCOPE=-` sau string gol → nu trimite `scope`; altfel suprascrie complet valoarea.
- * Dacă primești `invalid_scope`, încearcă `ANAF_OAUTH_SCOPE=EFACTURA`.
+ * Implicit: doar `EFACTURA` — unii utilizatori primesc `access_denied` dacă se trimite și `offline_access`
+ * (nu e documentat uniform de ANAF). Pentru teste: `ANAF_OAUTH_SCOPE=-` omite parametrul; pentru `offline_access` explicit: `ANAF_OAUTH_SCOPE=EFACTURA offline_access`.
  */
 export function getAnafOAuthAuthorizeScope(): string | null {
   const raw = process.env.ANAF_OAUTH_SCOPE;
-  if (raw === undefined) return "EFACTURA offline_access";
+  if (raw === undefined) return "EFACTURA";
   const s = trim(raw);
   if (s === "" || s === "-") return null;
   return s;
