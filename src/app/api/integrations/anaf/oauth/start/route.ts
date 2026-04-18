@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAppBaseUrl, getPlatformAnafOAuthConfig } from "@/lib/anaf-oauth-config";
+import {
+  getAnafOAuthAuthorizeScope,
+  getAppBaseUrl,
+  getPlatformAnafOAuthConfig,
+} from "@/lib/anaf-oauth-config";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
@@ -30,6 +34,8 @@ export async function GET() {
   authorize.searchParams.set("redirect_uri", cfg.redirectUri);
   authorize.searchParams.set("state", state);
   authorize.searchParams.set("token_content_type", "jwt");
+  const scope = getAnafOAuthAuthorizeScope();
+  if (scope) authorize.searchParams.set("scope", scope);
 
   const res = NextResponse.redirect(authorize.toString());
   const secure = process.env.NODE_ENV === "production";

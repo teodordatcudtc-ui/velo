@@ -32,6 +32,18 @@ export function getAnafOAuthRedirectUri(): string {
   return `${getAppBaseUrl()}/api/integrations/anaf/oauth/callback`;
 }
 
+/**
+ * Scope pentru cererea de autorizare la ANAF. Multe aplicații e-Factura necesită explicit `EFACTURA`.
+ * Setări: lipsă → `EFACTURA`; `ANAF_OAUTH_SCOPE=-` sau string gol → nu trimite parametrul `scope`.
+ */
+export function getAnafOAuthAuthorizeScope(): string | null {
+  const raw = process.env.ANAF_OAUTH_SCOPE;
+  if (raw === undefined) return "EFACTURA";
+  const s = trim(raw);
+  if (s === "" || s === "-") return null;
+  return s;
+}
+
 export function getPlatformAnafOAuthConfig(): PlatformAnafOAuthConfig {
   const apiBaseUrl = trim(process.env.ANAF_API_BASE_URL) || "https://api.anaf.ro/prod/FCTEL/rest";
   const authorizeUrl =

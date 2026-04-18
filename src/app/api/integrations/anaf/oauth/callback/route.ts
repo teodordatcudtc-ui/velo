@@ -22,8 +22,14 @@ export async function GET(request: Request) {
   const oauthDesc = url.searchParams.get("error_description");
 
   if (oauthErr) {
+    let message = oauthDesc?.trim() || oauthErr;
+    if (oauthErr === "access_denied") {
+      const hint =
+        "Verifică certificatul digital (calificat), drepturile SPV pentru firma corectă și că accepți cererea în pagina ANAF. Dacă apare fără să fi anulat tu, contactează ANAF sau încearcă alt browser/certificate store.";
+      message = message && message !== "access_denied" ? `${message} ${hint}` : hint;
+    }
     const res = redirectToSettings({
-      anaf_error: oauthDesc || oauthErr,
+      anaf_error: message,
     });
     res.cookies.delete("velo_anaf_oauth_state");
     return res;
