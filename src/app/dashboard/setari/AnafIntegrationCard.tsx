@@ -25,10 +25,7 @@ export function AnafIntegrationCard() {
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [mappings, setMappings] = useState<MappingItem[]>([]);
   const [oauthPlatformReady, setOauthPlatformReady] = useState(false);
-  const [form, setForm] = useState({
-    enabled: true,
-    companyCif: "",
-  });
+  const [form, setForm] = useState({ enabled: true, companyCif: "" });
   const [mapForm, setMapForm] = useState({ clientId: "", taxCode: "" });
 
   async function loadData() {
@@ -36,7 +33,7 @@ export function AnafIntegrationCard() {
     try {
       const res = await fetch("/api/integrations/anaf", { cache: "no-store" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Nu pot încărca integrarea ANAF.");
+      if (!res.ok) throw new Error(data?.error ?? "Nu pot incarca integrarea ANAF.");
       setConnection(data.connection ?? null);
       setClients(data.clients ?? []);
       setMappings(data.mappings ?? []);
@@ -49,7 +46,7 @@ export function AnafIntegrationCard() {
         }));
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Eroare la încărcare.");
+      toast.error(error instanceof Error ? error.message : "Eroare la incarcare.");
     } finally {
       setLoading(false);
     }
@@ -66,7 +63,7 @@ export function AnafIntegrationCard() {
     const ok = p.get("anaf");
     const err = p.get("anaf_error");
     if (ok === "connected") {
-      toast.success("Te-ai conectat la e-Factura. Poți rula sincronizarea.");
+      toast.success("Te-ai conectat la e-Factura. Poti rula sincronizarea.");
       p.delete("anaf");
       const next = `${window.location.pathname}${p.toString() ? `?${p.toString()}` : ""}`;
       window.history.replaceState({}, "", next);
@@ -81,26 +78,23 @@ export function AnafIntegrationCard() {
 
   const connectionStatus = useMemo(() => {
     if (!oauthPlatformReady) return null;
-    if (!connection) return "Introdu CUI-ul firmei și conectează-te cu e-Factura (autentificare SPV).";
-    if (!connection.oauthConnected) return "Finalizează conectarea cu e-Factura folosind butonul de mai jos.";
+    if (!connection) return "Introdu CUI-ul firmei si conecteaza-te cu e-Factura (autentificare SPV).";
+    if (!connection.oauthConnected) return "Finalizeaza conectarea cu e-Factura folosind butonul de mai jos.";
     if (connection.circuitOpenUntil) {
-      return `Sincronizarea e oprită temporar până la ${new Date(connection.circuitOpenUntil).toLocaleString("ro-RO")} (protecție la erori repetate).`;
+      return `Sincronizarea e oprita temporar pana la ${new Date(connection.circuitOpenUntil).toLocaleString("ro-RO")} (protectie la erori repetate).`;
     }
-    if (connection.lastError) {
-      return `Ultima eroare: ${connection.lastError}`;
-    }
+    if (connection.lastError) return `Ultima eroare: ${connection.lastError}`;
     if (connection.lastSyncedAt) {
       return `Ultimul sync: ${new Date(connection.lastSyncedAt).toLocaleString("ro-RO")}`;
     }
-    return "Conectat — poți activa sincronizarea și rula un import.";
+    return "Conectat — poti activa sincronizarea si rula un import.";
   }, [oauthPlatformReady, connection]);
 
   async function handleSave() {
     if (!form.companyCif.trim()) {
-      toast.error("Completează CUI-ul firmei.");
+      toast.error("Completeaza CUI-ul firmei.");
       return;
     }
-
     setSaving(true);
     try {
       const res = await fetch("/api/integrations/anaf", {
@@ -109,8 +103,8 @@ export function AnafIntegrationCard() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Nu pot salva configurația ANAF.");
-      toast.success("Setările pentru e-Factura au fost salvate.");
+      if (!res.ok) throw new Error(data?.error ?? "Nu pot salva configuratia ANAF.");
+      toast.success("Setarile pentru e-Factura au fost salvate.");
       await loadData();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Eroare la salvare.");
@@ -124,12 +118,12 @@ export function AnafIntegrationCard() {
     try {
       const res = await fetch("/api/integrations/anaf/sync", { method: "POST" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Sync ANAF eșuat.");
+      if (!res.ok) throw new Error(data?.error ?? "Sync ANAF esuat.");
       const msg = `Sync e-Factura: ${data.imported ?? 0} importate, ${data.skipped ?? 0} omise.`;
       toast.success(msg);
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Sync eșuat.");
+      toast.error(error instanceof Error ? error.message : "Sync esuat.");
     } finally {
       setSyncing(false);
     }
@@ -137,7 +131,7 @@ export function AnafIntegrationCard() {
 
   async function handleAddMapping() {
     if (!mapForm.clientId || !mapForm.taxCode.trim()) {
-      toast.error("Selectează clientul și introdu CUI/CIF.");
+      toast.error("Selecteaza clientul si introdu CUI/CIF.");
       return;
     }
     try {
@@ -148,7 +142,7 @@ export function AnafIntegrationCard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Nu pot salva maparea.");
-      toast.success("Mapare salvată.");
+      toast.success("Mapare salvata.");
       setMapForm({ clientId: "", taxCode: "" });
       await loadData();
     } catch (error) {
@@ -162,11 +156,11 @@ export function AnafIntegrationCard() {
         method: "DELETE",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Nu pot șterge maparea.");
-      toast.success("Mapare ștearsă.");
+      if (!res.ok) throw new Error(data?.error ?? "Nu pot sterge maparea.");
+      toast.success("Mapare stearsa.");
       await loadData();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Eroare la ștergere.");
+      toast.error(error instanceof Error ? error.message : "Eroare la stergere.");
     }
   }
 
@@ -174,21 +168,19 @@ export function AnafIntegrationCard() {
     <div className="dash-card">
       <h2 className="text-lg font-semibold text-[var(--ink)] mb-2">Integrare ANAF e-Factura</h2>
       <p className="text-sm text-[var(--ink-muted)] mb-4">
-        Import automat din SPV, cu reluări automate și pauză temporară dacă serviciul ANAF răspunde cu erori repetate.
+        Import automat din SPV, cu reluari automate si pauza temporara daca serviciul ANAF raspunde cu erori repetate.
       </p>
 
       {loading ? (
-        <p className="text-sm text-[var(--ink-muted)]">Se încarcă integrarea...</p>
+        <p className="text-sm text-[var(--ink-muted)]">Se incarca integrarea...</p>
       ) : (
         <div className="space-y-4">
           {!oauthPlatformReady ? (
             <>
-              <p className="text-sm font-medium text-[var(--ink)]">Conectarea nu este disponibilă momentan</p>
+              <p className="text-sm font-medium text-[var(--ink)]">Conectarea nu este disponibila momentan</p>
               <div className="rounded border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-[var(--ink)]">
-                <p className="mb-0">
-                  Fluxul „Conectează-te cu e-Factura” nu poate fi pornit din Vello până când echipa care administrează
-                  aplicația finalizează activarea pe server. Dacă mesajul persistă, contactează suportul Vello.
-                </p>
+                Fluxul de conectare cu e-Factura nu poate fi pornit din Vello pana cand echipa care administreaza
+                aplicatia finalizeaza activarea pe server. Daca mesajul persista, contacteaza suportul Vello.
               </div>
             </>
           ) : (
@@ -202,6 +194,7 @@ export function AnafIntegrationCard() {
                 </div>
               )}
 
+              {/* CUI input */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-[var(--ink)]">
                   CUI-ul firmei (pentru citirea mesajelor din SPV)
@@ -215,19 +208,51 @@ export function AnafIntegrationCard() {
                   onChange={(e) => setForm((f) => ({ ...f, companyCif: e.target.value }))}
                 />
                 <p className="text-xs text-[var(--ink-muted)]">
-                  Acesta este CUI-ul pentru care vrei să imporți facturile primite prin e-Factura.
+                  CUI-ul firmei pentru care se importa facturile primite prin e-Factura.
                 </p>
               </div>
 
-              <div className="rounded border border-[var(--border)] bg-[var(--paper-2)] px-4 py-4 space-y-3">
+              {/* OAuth connect box */}
+              <div className="rounded border border-[var(--border)] bg-[var(--paper-2)] px-4 py-4 space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-[var(--ink)] mb-1">Conectare e-Factura</p>
-                  <p className="text-sm text-[var(--ink-muted)]">
-                    Vei fi redirecționat către ANAF pentru autentificare cu certificatul digital SPV. Folosește{" "}
-                    <strong className="font-medium text-[var(--ink-soft)]">Chrome sau Edge</strong> — OAuth ANAF nu funcționează de obicei în Firefox. Dacă vezi pagină
-                    „BIG-IP” sau sesiune invalidă pe site-ul ANAF, șterge cookie-urile pentru <code className="text-xs">logincert.anaf.ro</code> sau încearcă incognito.
+                  <p className="text-sm font-medium text-[var(--ink)] mb-2">Conectare e-Factura (SPV)</p>
+                  <p className="text-sm text-[var(--ink-muted)] mb-3">
+                    Vei fi redirectionat la ANAF unde te autentifici cu{" "}
+                    <strong className="font-medium text-[var(--ink-soft)]">certificatul digital calificat</strong>.
+                    {" "}Chrome va afisa un dialog de selectare a certificatului.
                   </p>
+
+                  {/* Certificate checklist */}
+                  <div className="rounded border border-amber-400/40 bg-amber-50/60 px-3 py-3 text-xs text-[var(--ink)]">
+                    <p className="font-medium mb-2">Conditii necesare inainte sa apesi butonul:</p>
+                    <ul className="space-y-1 list-disc list-inside text-[var(--ink-soft)]">
+                      <li>
+                        Tokenul USB / smart card-ul cu certificat calificat este{" "}
+                        <strong className="font-medium text-[var(--ink)]">introdus in calculator</strong>
+                      </li>
+                      <li>
+                        Driver-ul / middleware-ul (SafeNet, DigiSign, certSIGN etc.) este{" "}
+                        <strong className="font-medium text-[var(--ink)]">instalat si pornit</strong>
+                      </li>
+                      <li>
+                        Certificatul apare in{" "}
+                        <strong className="font-medium text-[var(--ink)]">
+                          Windows &rarr; Gestionare certificate &rarr; Personal
+                        </strong>
+                      </li>
+                      <li>
+                        Folosesti{" "}
+                        <strong className="font-medium text-[var(--ink)]">Chrome sau Edge</strong>
+                        {" "}— nu Firefox
+                      </li>
+                    </ul>
+                    <p className="text-[var(--ink-muted)] mt-2">
+                      Daca ANAF returneaza imediat eroare fara sa ceara certificatul: tokenul nu e recunoscut de
+                      browser. Reinstaleaza driver-ul sau incearca alt calculator.
+                    </p>
+                  </div>
                 </div>
+
                 <button
                   type="button"
                   className="btn btn-primary"
@@ -235,8 +260,9 @@ export function AnafIntegrationCard() {
                     window.location.href = "/api/integrations/anaf/oauth/start";
                   }}
                 >
-                  Conectează-te cu e-Factura
+                  Conecteaza-te cu e-Factura
                 </button>
+
                 {connection?.oauthConnected && (
                   <p className="text-sm text-[var(--sage)] mb-0">Cont e-Factura conectat.</p>
                 )}
@@ -248,12 +274,12 @@ export function AnafIntegrationCard() {
                   checked={form.enabled}
                   onChange={(e) => setForm((f) => ({ ...f, enabled: e.target.checked }))}
                 />
-                Activează sincronizarea automată din SPV
+                Activeaza sincronizarea automata din SPV
               </label>
 
               <div className="flex flex-wrap gap-2">
                 <button type="button" className="btn btn-secondary" disabled={saving} onClick={handleSave}>
-                  {saving ? "Se salvează..." : "Salvează setările"}
+                  {saving ? "Se salveaza..." : "Salveaza setarile"}
                 </button>
                 <button
                   type="button"
@@ -261,12 +287,13 @@ export function AnafIntegrationCard() {
                   disabled={syncing || !connection || !connection.oauthConnected}
                   onClick={handleSyncNow}
                 >
-                  {syncing ? "Sincronizare..." : "Rulează sync acum"}
+                  {syncing ? "Sincronizare..." : "Ruleaza sync acum"}
                 </button>
               </div>
 
+              {/* Mappings */}
               <div className="pt-3 border-t border-[var(--border)] space-y-2">
-                <h3 className="text-sm font-semibold text-[var(--ink)]">Mapare CUI/CIF partener → Client Vello</h3>
+                <h3 className="text-sm font-semibold text-[var(--ink)]">Mapare CUI/CIF partener &rarr; Client Vello</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <select
                     className="dash-input"
@@ -287,12 +314,12 @@ export function AnafIntegrationCard() {
                     onChange={(e) => setMapForm((m) => ({ ...m, taxCode: e.target.value }))}
                   />
                   <button type="button" className="btn btn-secondary" onClick={handleAddMapping}>
-                    Adaugă mapare
+                    Adauga mapare
                   </button>
                 </div>
 
                 {mappings.length === 0 ? (
-                  <p className="text-sm text-[var(--ink-muted)]">Nu există mapări încă.</p>
+                  <p className="text-sm text-[var(--ink-muted)]">Nu exista mapari inca.</p>
                 ) : (
                   <ul className="space-y-2">
                     {mappings.map((m) => (
@@ -301,14 +328,14 @@ export function AnafIntegrationCard() {
                         className="text-sm flex items-center justify-between rounded border border-[var(--paper-3)] bg-[var(--paper-2)] px-3 py-2"
                       >
                         <span>
-                          {m.taxCode} → {m.clientName}
+                          {m.taxCode} &rarr; {m.clientName}
                         </span>
                         <button
                           type="button"
                           className="text-[var(--terracotta)] underline"
                           onClick={() => handleDeleteMapping(m.id)}
                         >
-                          {"\u0218terge"}
+                          Sterge
                         </button>
                       </li>
                     ))}
