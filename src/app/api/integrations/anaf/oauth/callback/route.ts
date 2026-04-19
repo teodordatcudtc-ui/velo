@@ -33,9 +33,8 @@ export async function GET(request: Request) {
         ? desc!
         : [
             "ANAF a respins autorizarea (access_denied).",
-            "Dacă pe logincert.anaf.ro apare BIG-IP / sesiune invalidă: șterge cookie-urile pentru domeniul anaf, încearcă fereastră incognito sau dezactivează extensiile care blochează cookie-uri.",
-            "Callback în portalul ANAF trebuie să fie exact: …/api/integrations/anaf/oauth/callback (salvează formularul dacă vezi alt URL în câmp).",
-            "Certificat SPV pentru PJ corect; serviciul E-Factura bifat la aplicația OAuth.",
+            "Dacă înainte apare BIG-IP (ex. hangup.php3) cu „Access was denied by the access policy”, problema nu e în Vello: infrastructura ANAF îți blochează sesiunea — certificat neales/neacceptat, VPN sau rețea firmă (firewall), cookie-uri. Încearcă altă rețea (hotspot mobil), Chrome/Edge cu certificat SPV instalat și token/cititor activ, fără VPN.",
+            "În portalul ANAF callback-ul trebuie să fie exact …/api/integrations/anaf/oauth/callback; serviciul E-Factura bifat. Dacă persistă: suport ANAF cu numărul de sesiune afișat pe pagina BIG-IP.",
           ].join(" ");
     }
     if (oauthErr === "invalid_scope") {
