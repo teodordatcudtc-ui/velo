@@ -224,32 +224,33 @@ export function AnafIntegrationCard() {
 
                   {/* Certificate checklist */}
                   <div className="rounded border border-amber-400/40 bg-amber-50/60 px-3 py-3 text-xs text-[var(--ink)]">
-                    <p className="font-medium mb-2">Conditii necesare inainte sa apesi butonul:</p>
-                    <ul className="space-y-1 list-disc list-inside text-[var(--ink-soft)]">
-                      <li>
-                        Tokenul USB / smart card-ul cu certificat calificat este{" "}
-                        <strong className="font-medium text-[var(--ink)]">introdus in calculator</strong>
-                      </li>
-                      <li>
-                        Driver-ul / middleware-ul (SafeNet, DigiSign, certSIGN etc.) este{" "}
-                        <strong className="font-medium text-[var(--ink)]">instalat si pornit</strong>
-                      </li>
-                      <li>
-                        Certificatul apare in{" "}
-                        <strong className="font-medium text-[var(--ink)]">
-                          Windows &rarr; Gestionare certificate &rarr; Personal
-                        </strong>
-                      </li>
-                      <li>
-                        Folosesti{" "}
-                        <strong className="font-medium text-[var(--ink)]">Chrome sau Edge</strong>
-                        {" "}— nu Firefox
-                      </li>
-                    </ul>
-                    <p className="text-[var(--ink-muted)] mt-2">
-                      Daca ANAF returneaza imediat eroare fara sa ceara certificatul: tokenul nu e recunoscut de
-                      browser. Reinstaleaza driver-ul sau incearca alt calculator.
+                    <p className="font-medium mb-2">Daca primesti eroare imediata fara sa fi cerut certificatul:</p>
+                    <p className="text-[var(--ink-soft)] mb-2">
+                      Cauza cea mai frecventa: o extensie de browser (uBlock, Privacy Badger, ad blocker) sau
+                      o setare Chrome <strong className="font-medium text-[var(--ink)]">blocheaza cookie-urile</strong> pentru
+                      {" "}<code>logincert.anaf.ro</code>. Serverul ANAF (BIG-IP) are nevoie de cookie-uri pentru
+                      a stabili sesiunea TLS — fara ele, respinge imediat cu &bdquo;access denied&rdquo;.
                     </p>
+                    <p className="font-medium mb-1">Rezolvare pas cu pas:</p>
+                    <ol className="space-y-1 list-decimal list-inside text-[var(--ink-soft)]">
+                      <li>
+                        Incearca <strong className="font-medium text-[var(--ink)]">modul incognito</strong> (Ctrl+Shift+N)
+                        — extensiile sunt dezactivate, cookie-urile sunt permise
+                      </li>
+                      <li>
+                        Daca in incognito functioneaza: dezactiveaza extensiile de blocare pentru{" "}
+                        <code>logincert.anaf.ro</code> in Chrome normal
+                      </li>
+                      <li>
+                        Verifica Chrome → Setari → Confidentialitate → Cookie-uri: <code>logincert.anaf.ro</code>{" "}
+                        nu trebuie sa fie in lista &bdquo;Blocate&rdquo;
+                      </li>
+                      <li>
+                        Tokenul USB / certificatul calificat trebuie sa fie{" "}
+                        <strong className="font-medium text-[var(--ink)]">introdus si recunoscut</strong>{" "}
+                        (apare in certmgr.msc → Personal)
+                      </li>
+                    </ol>
                   </div>
                 </div>
 

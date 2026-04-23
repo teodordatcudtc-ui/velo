@@ -211,27 +211,19 @@ export async function GET(
 
   const download = new URL(request.url).searchParams.get("download") === "1";
   const admin = createAdminClient();
-
-  const { data: blob, error: downloadError } = await admin.storage
+  const safeName = upload.file_name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const { data: signed, error: signedUrlError } = await admin.storage
     .from(BUCKET)
-    .download(upload.file_path);
+    .createSignedUrl(upload.file_path, 60, {
+      ...(download ? { download: safeName } : {}),
+    });
 
-  if (downloadError || !blob) {
+  if (signedUrlError || !signed?.signedUrl) {
     return htmlErrorPage(
       "Eroare la deschiderea documentului",
-      "A apărut o eroare la încărcarea fișierului din storage. Încearcă din nou sau contactează-ne dacă problema persistă."
+      "A apărut o eroare la generarea linkului securizat pentru fișier. Încearcă din nou sau contactează-ne dacă problema persistă."
     );
   }
 
-  const safeName = upload.file_name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const disposition = download
-    ? `attachment; filename="${safeName}"`
-    : "inline";
-
-  return new NextResponse(blob, {
-    headers: {
-      "Content-Type": blob.type || "application/octet-stream",
-      "Content-Disposition": disposition,
-    },
-  });
+  return NextResponse.redirect(signed.signedUrl);
 }
