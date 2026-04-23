@@ -24,6 +24,26 @@ type AnafConnRow = {
 
 type MappingRow = { client_id: string; tax_code: string };
 
+async function upsertMessageReceipt(
+  supabase: SupabaseClient,
+  payload: {
+    accountant_id: string;
+    company_cif: string;
+    message_id: string;
+    partner_tax_code?: string | null;
+    client_id?: string | null;
+    upload_id?: string | null;
+    file_path?: string | null;
+    file_name?: string | null;
+    status: "imported" | "unmapped" | "download_error" | "parse_error";
+    detail?: string | null;
+  }
+) {
+  await supabase.from("anaf_message_receipts").upsert(payload, {
+    onConflict: "accountant_id,company_cif,message_id",
+  });
+}
+
 function serverAuthFallback(conn: AnafConnRow): AnafConnRow {
   const envRt = process.env.ANAF_OAUTH_REFRESH_TOKEN?.trim();
   const dbRt = conn.oauth_refresh_token?.trim();
@@ -227,12 +247,12 @@ export async function syncAnafForAccountant(
   for (const msg of messages) {
     const { data: existing } = await supabase
       .from("anaf_message_receipts")
-      .select("id")
+      .select("id, status")
       .eq("accountant_id", conn.accountant_id)
       .eq("company_cif", companyCifNorm)
       .eq("message_id", msg.id)
       .maybeSingle();
-    if (existing?.id) {
+    if (existing?.id && existing.status === "imported") {
       skipped++;
       continue;
     }
@@ -240,7 +260,7 @@ export async function syncAnafForAccountant(
     const partner = msg.partnerTaxCode ? normalizeTaxCode(msg.partnerTaxCode) : "";
     const clientId = partner ? mappingMap.get(partner) ?? null : null;
     if (!clientId) {
-      await supabase.from("anaf_message_receipts").insert({
+      await upsertMessageReceipt(supabase, {
         accountant_id: conn.accountant_id,
         company_cif: companyCifNorm,
         message_id: msg.id,
@@ -254,12 +274,15 @@ export async function syncAnafForAccountant(
 
     const downloaded = await anafApiDownload(conn.api_base_url, msg.id, tokenResult.accessToken);
     if (!downloaded.ok) {
-      await supabase.from("anaf_message_receipts").insert({
+      await upsertMessageReceipt(supabase, {
         accountant_id: conn.accountant_id,
         company_cif: companyCifNorm,
         message_id: msg.id,
         partner_tax_code: partner || null,
         client_id: clientId,
+        upload_id: null,
+        file_path: null,
+        file_name: null,
         status: "download_error",
         detail: downloaded.error.slice(0, 500),
       });
@@ -270,12 +293,15 @@ export async function syncAnafForAccountant(
 
     const docTypeId = await ensureDocType(supabase, clientId);
     if (!docTypeId) {
-      await supabase.from("anaf_message_receipts").insert({
+      await upsertMessageReceipt(supabase, {
         accountant_id: conn.accountant_id,
         company_cif: companyCifNorm,
         message_id: msg.id,
         partner_tax_code: partner || null,
         client_id: clientId,
+        upload_id: null,
+        file_path: null,
+        file_name: null,
         status: "parse_error",
         detail: "Nu pot crea/folosi tipul de document e-Factura SPV.",
       });
@@ -294,12 +320,15 @@ export async function syncAnafForAccountant(
       upsert: false,
     });
     if (uploadResult.error) {
-      await supabase.from("anaf_message_receipts").insert({
+      await upsertMessageReceipt(supabase, {
         accountant_id: conn.accountant_id,
         company_cif: companyCifNorm,
         message_id: msg.id,
         partner_tax_code: partner || null,
         client_id: clientId,
+        upload_id: null,
+        file_path: null,
+        file_name: null,
         status: "download_error",
         detail: uploadResult.error.message.slice(0, 500),
       });
@@ -323,12 +352,15 @@ export async function syncAnafForAccountant(
 
     if (uploadInsertError || !insertedUpload?.id) {
       await supabase.storage.from(BUCKET).remove([filePath]);
-      await supabase.from("anaf_message_receipts").insert({
+      await upsertMessageReceipt(supabase, {
         accountant_id: conn.accountant_id,
         company_cif: companyCifNorm,
         message_id: msg.id,
         partner_tax_code: partner || null,
         client_id: clientId,
+        upload_id: null,
+        file_path: null,
+        file_name: null,
         status: "parse_error",
         detail: uploadInsertError?.message?.slice(0, 500) ?? "Nu pot salva upload-ul în DB.",
       });
@@ -336,7 +368,7 @@ export async function syncAnafForAccountant(
       continue;
     }
 
-    await supabase.from("anaf_message_receipts").insert({
+    await upsertMessageReceipt(supabase, {
       accountant_id: conn.accountant_id,
       company_cif: companyCifNorm,
       message_id: msg.id,
