@@ -3,12 +3,20 @@ import { normalizeTaxCode } from "@/lib/anaf";
 import { getPlatformAnafOAuthConfig } from "@/lib/anaf-oauth-config";
 import { NextResponse } from "next/server";
 
+function isAnafAdmin(email: string | null | undefined): boolean {
+  const admin = process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase();
+  return !!admin && !!email && email.toLowerCase() === admin;
+}
+
 export async function GET() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Neautorizat." }, { status: 401 });
+  if (!isAnafAdmin(user.email)) {
+    return NextResponse.json({ error: "Integrarea ANAF este disponibilă doar pentru admin." }, { status: 403 });
+  }
 
   const platform = getPlatformAnafOAuthConfig();
 
@@ -69,6 +77,9 @@ export async function PUT(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Neautorizat." }, { status: 401 });
+  if (!isAnafAdmin(user.email)) {
+    return NextResponse.json({ error: "Integrarea ANAF este disponibilă doar pentru admin." }, { status: 403 });
+  }
 
   let body: Record<string, unknown>;
   try {

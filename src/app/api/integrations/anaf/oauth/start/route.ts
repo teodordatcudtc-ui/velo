@@ -7,6 +7,11 @@ import {
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
+function isAnafAdmin(email: string | null | undefined): boolean {
+  const admin = process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase();
+  return !!admin && !!email && email.toLowerCase() === admin;
+}
+
 export async function GET() {
   const base = getAppBaseUrl();
   const supabase = await createClient();
@@ -17,6 +22,10 @@ export async function GET() {
   if (!user) {
     const nextUrl = encodeURIComponent("/dashboard/setari");
     return NextResponse.redirect(`${base}/login?redirect=${nextUrl}`);
+  }
+  if (!isAnafAdmin(user.email)) {
+    const msg = encodeURIComponent("Integrarea ANAF este momentan în standby pentru conturile non-admin.");
+    return NextResponse.redirect(`${base}/dashboard/setari?anaf_error=${msg}`);
   }
 
   const cfg = getPlatformAnafOAuthConfig();

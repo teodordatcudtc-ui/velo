@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+function isAnafAdmin(email: string | null | undefined): boolean {
+  const admin = process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase();
+  return !!admin && !!email && email.toLowerCase() === admin;
+}
+
 function redirectToSettings(search: Record<string, string>) {
   const base = getAppBaseUrl();
   const u = new URL(`${base}/dashboard/setari`);
@@ -69,6 +74,13 @@ export async function GET(request: Request) {
     const res = NextResponse.redirect(
       `${base}/login?redirect=${encodeURIComponent("/dashboard/setari")}`
     );
+    res.cookies.delete("velo_anaf_oauth_state");
+    return res;
+  }
+  if (!isAnafAdmin(user.email)) {
+    const res = redirectToSettings({
+      anaf_error: "Integrarea ANAF este momentan în standby pentru conturile non-admin.",
+    });
     res.cookies.delete("velo_anaf_oauth_state");
     return res;
   }

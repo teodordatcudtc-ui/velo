@@ -46,6 +46,7 @@ export default async function SetariPage() {
     !!user.email &&
     (process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase() ===
       user.email.toLowerCase());
+  const canManageAnafIntegration = canGenerateCodes;
 
   const { data: issuedInvoices } = await supabase
     .from("smartbill_invoices")
@@ -110,12 +111,14 @@ export default async function SetariPage() {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-          Integrări fiscale
-        </p>
-        <AnafIntegrationCard />
-      </div>
+      {canManageAnafIntegration && (
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+            Integrări fiscale
+          </p>
+          <AnafIntegrationCard />
+        </div>
+      )}
 
       {/* Abonament & early access */}
       <div className="space-y-2">
