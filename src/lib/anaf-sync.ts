@@ -267,34 +267,44 @@ async function buildReadablePdfFromZip(zipBuffer: Buffer): Promise<Buffer | null
     let y = 560;
     const left = 28;
     const lineH = 14;
+    const sanitizePdfText = (text: string): string =>
+      text
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\x20-\x7E]/g, "?");
     const draw = (text: string, x = left, size = 10, bold = false) => {
-      page.drawText(text, { x, y, size, font: bold ? fontBold : font });
+      page.drawText(sanitizePdfText(text), { x, y, size, font: bold ? fontBold : font });
       y -= lineH;
     };
+    const drawLabelValue = (label: string, value: string | null, x = left) => {
+      draw(`${label}: ${value ?? "-"}`, x, 10, false);
+    };
+    const money = parsed.payable ?? "-";
 
-    draw("RO eFactura", 360, 20, true);
+    draw("RO eFactura", 330, 20, true);
     y -= 6;
-    draw(`Numar factura: ${parsed.invoiceId ?? "-"}`, 360);
-    draw(`Data emitere: ${parsed.issueDate ?? "-"}`, 360);
-    draw(`Data scadenta: ${parsed.dueDate ?? "-"}`, 360);
-    draw(`Moneda: ${parsed.currency ?? "-"}`, 360);
+    drawLabelValue("Numar factura", parsed.invoiceId, 330);
+    drawLabelValue("Data emitere", parsed.issueDate, 330);
+    drawLabelValue("Data scadenta", parsed.dueDate, 330);
+    drawLabelValue("Moneda", parsed.currency, 330);
     y += lineH * 4; // restore left block vertical baseline
 
     draw("VANZATOR", left, 11, true);
-    draw(`Nume: ${parsed.supplierName ?? "-"}`);
-    draw(`CUI: ${parsed.supplierCui ?? "-"}`);
+    drawLabelValue("Nume", parsed.supplierName);
+    drawLabelValue("CUI", parsed.supplierCui);
     y -= 8;
     draw("CUMPARATOR", 560, 11, true);
     y += lineH;
-    draw(`Nume: ${parsed.customerName ?? "-"}`, 560);
-    draw(`CUI: ${parsed.customerCui ?? "-"}`, 560);
+    drawLabelValue("Nume", parsed.customerName, 560);
+    drawLabelValue("CUI", parsed.customerCui, 560);
     y -= 20;
-    draw(`TOTAL: ${parsed.payable ?? "-"} ${parsed.currency ?? ""}`, left, 12, true);
+    draw(`TOTAL: ${money} ${parsed.currency ?? ""}`, left, 12, true);
     y -= 8;
     draw("Linii factura:", left, 11, true);
 
     for (const [idx, line] of parsed.lines.slice(0, 20).entries()) {
-      const txt = `${idx + 1}. ${line.name} | Cantitate: ${line.qty} | Valoare neta: ${line.net}`;
+      const name = line.name.length > 58 ? `${line.name.slice(0, 58)}...` : line.name;
+      const txt = `${idx + 1}. ${name} | Cantitate: ${line.qty} | Net: ${line.net}`;
       draw(txt, left, 10, false);
       if (y < 40) break;
     }
