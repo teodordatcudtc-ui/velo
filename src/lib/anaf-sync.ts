@@ -241,9 +241,12 @@ export async function syncAnafForAccountant(
     .select("client_id, tax_code")
     .eq("accountant_id", conn.accountant_id);
   const mappingMap = new Map<string, string>();
+  const mappedClientIds = new Set<string>();
   for (const row of (mappings ?? []) as MappingRow[]) {
     mappingMap.set(normalizeTaxCode(row.tax_code), row.client_id);
+    mappedClientIds.add(row.client_id);
   }
+  const singleMappedClientId = mappedClientIds.size === 1 ? Array.from(mappedClientIds)[0] : null;
 
   for (const msg of messages) {
     const { data: existing } = await supabase
@@ -259,7 +262,11 @@ export async function syncAnafForAccountant(
     }
 
     const partner = msg.partnerTaxCode ? normalizeTaxCode(msg.partnerTaxCode) : "";
-    const clientId = partner ? mappingMap.get(partner) ?? null : null;
+    // Unele mesaje ANAF nu includ CUI/CIF partener in payload.
+    // Fallback: daca exista un singur client mapat in cont, folosim acel client.
+    const clientId = partner
+      ? mappingMap.get(partner) ?? null
+      : singleMappedClientId;
     if (!clientId) {
       unmappedPartners.add(partner || "(fara_cui_partener)");
       await upsertMessageReceipt(supabase, {
