@@ -135,17 +135,41 @@ async function ensureDocType(supabase: SupabaseClient, clientId: string): Promis
   return inserted.id as string;
 }
 
-type ParsedInvoiceLine = { name: string; qty: string; net: string };
+type ParsedInvoiceLine = {
+  name: string;
+  qty: string;
+  net: string;
+  unitCode: string | null;
+  taxPercent: string | null;
+};
+type ParsedParty = {
+  name: string | null;
+  companyId: string | null;
+  registrationId: string | null;
+  legalForm: string | null;
+  street: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  email: string | null;
+  endpoint: string | null;
+};
 type ParsedInvoice = {
   invoiceId: string | null;
+  invoiceTypeCode: string | null;
   issueDate: string | null;
   dueDate: string | null;
   currency: string | null;
   payable: string | null;
-  supplierName: string | null;
-  supplierCui: string | null;
-  customerName: string | null;
-  customerCui: string | null;
+  lineExtensionTotal: string | null;
+  taxExclusiveTotal: string | null;
+  taxInclusiveTotal: string | null;
+  allowanceTotal: string | null;
+  chargeTotal: string | null;
+  payableRounding: string | null;
+  taxAmount: string | null;
+  supplier: ParsedParty;
+  customer: ParsedParty;
   lines: ParsedInvoiceLine[];
 };
 
@@ -175,6 +199,30 @@ function pickFromSection(xml: string, sectionTag: string, valueTag: string): str
   return pickTag(sec[1], valueTag);
 }
 
+function parseParty(xml: string, sectionTag: string): ParsedParty {
+  const secRe = new RegExp(
+    `<(?:\\w+:)?${sectionTag}(?:\\s[^>]*)?>([\\s\\S]*?)</(?:\\w+:)?${sectionTag}>`,
+    "i"
+  );
+  const sec = xml.match(secRe)?.[1] ?? "";
+  const postal =
+    sec.match(
+      /<(?:\w+:)?PostalAddress(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?PostalAddress>/i
+    )?.[1] ?? "";
+  return {
+    name: pickTag(sec, "RegistrationName"),
+    companyId: pickTag(sec, "CompanyID"),
+    registrationId: pickTag(sec, "ID"),
+    legalForm: pickTag(sec, "CompanyLegalForm"),
+    street: pickTag(postal, "StreetName"),
+    city: pickTag(postal, "CityName"),
+    region: pickTag(postal, "CountrySubentity"),
+    country: pickTag(postal, "IdentificationCode"),
+    email: pickTag(sec, "ElectronicMail"),
+    endpoint: pickTag(sec, "EndpointID"),
+  };
+}
+
 function parseInvoiceXml(xml: string): ParsedInvoice {
   const lines: ParsedInvoiceLine[] = [];
   const lineRe = /<(?:\w+:)?InvoiceLine(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?InvoiceLine>/gi;
@@ -184,19 +232,34 @@ function parseInvoiceXml(xml: string): ParsedInvoice {
       name: pickTag(chunk, "Name") ?? "Articol",
       qty: pickTag(chunk, "InvoicedQuantity") ?? "-",
       net: pickTag(chunk, "LineExtensionAmount") ?? "-",
+      unitCode: chunk.match(/<(?:\w+:)?InvoicedQuantity[^>]*unitCode="([^"]+)"/i)?.[1] ?? null,
+      taxPercent: pickFromSection(chunk, "ClassifiedTaxCategory", "Percent"),
     });
     if (lines.length >= 100) break;
   }
+  const totals =
+    xml.match(
+      /<(?:\w+:)?LegalMonetaryTotal(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?LegalMonetaryTotal>/i
+    )?.[1] ?? "";
+  const taxTotal =
+    xml.match(/<(?:\w+:)?TaxTotal(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?TaxTotal>/i)?.[1] ??
+    "";
   return {
     invoiceId: pickTag(xml, "ID"),
+    invoiceTypeCode: pickTag(xml, "InvoiceTypeCode"),
     issueDate: pickTag(xml, "IssueDate"),
     dueDate: pickTag(xml, "DueDate"),
     currency: pickTag(xml, "DocumentCurrencyCode"),
-    payable: pickTag(xml, "PayableAmount"),
-    supplierName: pickFromSection(xml, "AccountingSupplierParty", "RegistrationName"),
-    supplierCui: pickFromSection(xml, "AccountingSupplierParty", "CompanyID"),
-    customerName: pickFromSection(xml, "AccountingCustomerParty", "RegistrationName"),
-    customerCui: pickFromSection(xml, "AccountingCustomerParty", "CompanyID"),
+    payable: pickTag(totals, "PayableAmount"),
+    lineExtensionTotal: pickTag(totals, "LineExtensionAmount"),
+    taxExclusiveTotal: pickTag(totals, "TaxExclusiveAmount"),
+    taxInclusiveTotal: pickTag(totals, "TaxInclusiveAmount"),
+    allowanceTotal: pickTag(totals, "AllowanceTotalAmount"),
+    chargeTotal: pickTag(totals, "ChargeTotalAmount"),
+    payableRounding: pickTag(totals, "PayableRoundingAmount"),
+    taxAmount: pickTag(taxTotal, "TaxAmount"),
+    supplier: parseParty(xml, "AccountingSupplierParty"),
+    customer: parseParty(xml, "AccountingCustomerParty"),
     lines,
   };
 }
@@ -237,10 +300,10 @@ async function buildEfacturaSummaryFromZip(zipBuffer: Buffer): Promise<string | 
     if (parsed.currency) out.push(`Moneda: ${parsed.currency}`);
     if (parsed.payable) out.push(`Total de plata: ${parsed.payable}${parsed.currency ? ` ${parsed.currency}` : ""}`);
     out.push("");
-    out.push(`Furnizor: ${parsed.supplierName ?? "-"}`);
-    out.push(`CUI furnizor: ${parsed.supplierCui ?? "-"}`);
-    out.push(`Beneficiar: ${parsed.customerName ?? "-"}`);
-    out.push(`CUI beneficiar: ${parsed.customerCui ?? "-"}`);
+    out.push(`Furnizor: ${parsed.supplier.name ?? "-"}`);
+    out.push(`CUI furnizor: ${parsed.supplier.companyId ?? "-"}`);
+    out.push(`Beneficiar: ${parsed.customer.name ?? "-"}`);
+    out.push(`CUI beneficiar: ${parsed.customer.companyId ?? "-"}`);
     out.push("");
     out.push("Linii factura:");
     if (lines.length === 0) out.push("- (nu am identificat linii in XML)");
@@ -262,52 +325,129 @@ async function buildReadablePdfFromZip(zipBuffer: Buffer): Promise<Buffer | null
     const pdf = await PDFDocument.create();
     const font = await pdf.embedFont(StandardFonts.Helvetica);
     const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
-    const page = pdf.addPage([842, 595]);
+    const page = pdf.addPage([842, 595]); // A4 landscape
 
-    let y = 560;
-    const left = 28;
-    const lineH = 14;
+    let y = 570;
+    const left = 22;
+    const lineH = 12;
     const sanitizePdfText = (text: string): string =>
       text
         .normalize("NFKD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^\x20-\x7E]/g, "?");
-    const draw = (text: string, x = left, size = 10, bold = false) => {
+    const draw = (text: string, x = left, size = 9, bold = false) => {
       page.drawText(sanitizePdfText(text), { x, y, size, font: bold ? fontBold : font });
       y -= lineH;
     };
     const drawLabelValue = (label: string, value: string | null, x = left) => {
-      draw(`${label}: ${value ?? "-"}`, x, 10, false);
+      draw(`${label} ${value ?? "-"}`, x, 8.5, false);
     };
-    const money = parsed.payable ?? "-";
+    const hLine = (yy: number, x1 = 20, x2 = 822, w = 0.8) =>
+      page.drawLine({ start: { x: x1, y: yy }, end: { x: x2, y: yy }, thickness: w });
+    const money = (v: string | null) => `${v ?? "0.00"} ${parsed.currency ?? "RON"}`;
 
-    draw("RO eFactura", 330, 20, true);
-    y -= 6;
-    drawLabelValue("Numar factura", parsed.invoiceId, 330);
-    drawLabelValue("Data emitere", parsed.issueDate, 330);
-    drawLabelValue("Data scadenta", parsed.dueDate, 330);
-    drawLabelValue("Moneda", parsed.currency, 330);
-    y += lineH * 4; // restore left block vertical baseline
+    // Header
+    page.drawText("RO eFactura", { x: 356, y: 560, size: 27, font: fontBold });
+    page.drawText(`Nr. autofactura ${sanitizePdfText(parsed.invoiceId ?? "-")}`, { x: 420, y: 535, size: 9, font });
+    page.drawText(`Codul tipului ${sanitizePdfText(parsed.invoiceTypeCode ?? "-")}`, { x: 420, y: 523, size: 9, font });
+    page.drawText(`Data emitere ${sanitizePdfText(parsed.issueDate ?? "-")}`, { x: 420, y: 511, size: 9, font });
+    page.drawText(`Data scadenta ${sanitizePdfText(parsed.dueDate ?? "-")}`, { x: 420, y: 499, size: 9, font });
+    page.drawText(`Moneda facturii ${sanitizePdfText(parsed.currency ?? "-")}`, { x: 420, y: 487, size: 9, font });
 
-    draw("VANZATOR", left, 11, true);
-    drawLabelValue("Nume", parsed.supplierName);
-    drawLabelValue("CUI", parsed.supplierCui);
-    y -= 8;
-    draw("CUMPARATOR", 560, 11, true);
-    y += lineH;
-    drawLabelValue("Nume", parsed.customerName, 560);
-    drawLabelValue("CUI", parsed.customerCui, 560);
-    y -= 20;
-    draw(`TOTAL: ${money} ${parsed.currency ?? ""}`, left, 12, true);
-    y -= 8;
-    draw("Linii factura:", left, 11, true);
+    // VANZATOR
+    y = 560;
+    draw("VANZATOR", 22, 11, true);
+    drawLabelValue("Nume", parsed.supplier.name, 22);
+    drawLabelValue("Nr. inregistrare", parsed.supplier.registrationId, 22);
+    drawLabelValue("Informatii juridice", parsed.supplier.legalForm, 22);
+    drawLabelValue("", parsed.supplier.companyId, 22);
+    drawLabelValue("Strada", parsed.supplier.street, 22);
+    drawLabelValue("Oras", parsed.supplier.city, 22);
+    drawLabelValue("Regiune", parsed.supplier.region, 22);
+    drawLabelValue("Tara", parsed.supplier.country, 22);
 
-    for (const [idx, line] of parsed.lines.slice(0, 20).entries()) {
-      const name = line.name.length > 58 ? `${line.name.slice(0, 58)}...` : line.name;
-      const txt = `${idx + 1}. ${name} | Cantitate: ${line.qty} | Net: ${line.net}`;
-      draw(txt, left, 10, false);
-      if (y < 40) break;
-    }
+    // CUMPARATOR
+    y = 560;
+    draw("CUMPARATOR", 635, 11, true);
+    drawLabelValue("Nume", parsed.customer.name, 635);
+    drawLabelValue("Nr. inregistrare", parsed.customer.companyId, 635);
+    drawLabelValue("Identificat", parsed.customer.registrationId, 635);
+    drawLabelValue("Strada", parsed.customer.street, 635);
+    drawLabelValue("Oras", parsed.customer.city, 635);
+    drawLabelValue("Regiune", parsed.customer.region, 635);
+    drawLabelValue("Tara", parsed.customer.country, 635);
+    drawLabelValue("Adresa electronica", parsed.customer.endpoint, 635);
+    drawLabelValue("E-mail", parsed.customer.email, 635);
+
+    // Totals
+    hLine(382);
+    page.drawText("TOTAL NET", { x: 24, y: 370, size: 9, font: fontBold });
+    page.drawText("VALOARE TOTALA fara TVA", { x: 150, y: 370, size: 9, font: fontBold });
+    page.drawText("VALOARE TOTALA cu TVA", { x: 320, y: 370, size: 9, font: fontBold });
+    page.drawText("TOTAL DEDUCERI", { x: 480, y: 370, size: 9, font: fontBold });
+    page.drawText("TOTAL TAXE SUPLIMENTARE", { x: 584, y: 370, size: 9, font: fontBold });
+    page.drawText("SUMA PLATITA", { x: 730, y: 370, size: 9, font: fontBold });
+    hLine(366, 20, 822, 0.5);
+    page.drawText(sanitizePdfText(parsed.lineExtensionTotal ?? "0.00"), { x: 24, y: 354, size: 9, font });
+    page.drawText(sanitizePdfText(parsed.taxExclusiveTotal ?? "0.00"), { x: 150, y: 354, size: 9, font });
+    page.drawText(sanitizePdfText(parsed.taxInclusiveTotal ?? "0.00"), { x: 320, y: 354, size: 9, font });
+    page.drawText(sanitizePdfText(parsed.allowanceTotal ?? "0.00"), { x: 480, y: 354, size: 9, font });
+    page.drawText(sanitizePdfText(parsed.chargeTotal ?? "0"), { x: 620, y: 354, size: 9, font });
+    page.drawText(sanitizePdfText(parsed.payable ?? "0.00"), { x: 730, y: 354, size: 9, font });
+    hLine(348, 20, 822, 0.5);
+    page.drawText("TOTAL PLATA", { x: 24, y: 336, size: 10, font: fontBold });
+    page.drawText(sanitizePdfText(parsed.payable ?? "0.00"), { x: 150, y: 336, size: 10, font: fontBold });
+    page.drawText(`TOTAL TVA ${sanitizePdfText(money(parsed.taxAmount))}`, { x: 24, y: 314, size: 9, font: fontBold });
+
+    // VAT detail
+    page.drawText("Detalierea TVA", { x: 24, y: 298, size: 9, font: fontBold });
+    page.drawText("Codul categoriei", { x: 24, y: 286, size: 8, font: fontBold });
+    page.drawText("Cota TVA", { x: 210, y: 286, size: 8, font: fontBold });
+    page.drawText("Baza de calcul", { x: 24, y: 274, size: 8, font: fontBold });
+    page.drawText("Valoare TVA", { x: 150, y: 274, size: 8, font: fontBold });
+    page.drawText("Codul motivului", { x: 260, y: 274, size: 8, font: fontBold });
+    page.drawText("Motivul scutirii", { x: 360, y: 274, size: 8, font: fontBold });
+    page.drawText("deO", { x: 120, y: 286, size: 8, font });
+    page.drawText(parsed.lines[0]?.taxPercent ?? "0", { x: 210, y: 286, size: 8, font });
+    page.drawText(sanitizePdfText(parsed.lineExtensionTotal ?? "0.00"), { x: 24, y: 262, size: 8, font });
+    page.drawText(sanitizePdfText(parsed.taxAmount ?? "0.00"), { x: 150, y: 262, size: 8, font });
+    page.drawText("VATEX-EU-O", { x: 260, y: 262, size: 8, font });
+    page.drawText("Nu face obiectul TVA", { x: 360, y: 262, size: 8, font });
+
+    // Lines
+    hLine(252);
+    page.drawText("Linia", { x: 24, y: 242, size: 8, font: fontBold });
+    page.drawText("Nume articol/Descriere articol", { x: 64, y: 242, size: 8, font: fontBold });
+    page.drawText("Moneda", { x: 560, y: 242, size: 8, font: fontBold });
+    page.drawText("Cantitate facturata", { x: 620, y: 242, size: 8, font: fontBold });
+    page.drawText("UM", { x: 730, y: 242, size: 8, font: fontBold });
+    page.drawText("Cota TVA", { x: 760, y: 242, size: 8, font: fontBold });
+    page.drawText("Valoare neta", { x: 790, y: 242, size: 8, font: fontBold });
+    hLine(238, 20, 822, 0.5);
+
+    let lineY = 226;
+    parsed.lines.slice(0, 6).forEach((line, idx) => {
+      const shortName = line.name.length > 62 ? `${line.name.slice(0, 62)}...` : line.name;
+      page.drawText(String(idx + 1), { x: 24, y: lineY, size: 8.5, font });
+      page.drawText(sanitizePdfText(shortName), { x: 64, y: lineY, size: 8.5, font });
+      page.drawText(sanitizePdfText(parsed.currency ?? "RON"), { x: 560, y: lineY, size: 8.5, font });
+      page.drawText(sanitizePdfText(line.qty), { x: 640, y: lineY, size: 8.5, font });
+      page.drawText(sanitizePdfText(line.unitCode ?? "H87"), { x: 730, y: lineY, size: 8.5, font });
+      page.drawText(sanitizePdfText(line.taxPercent ?? "0"), { x: 760, y: lineY, size: 8.5, font });
+      page.drawText(sanitizePdfText(line.net), { x: 792, y: lineY, size: 8.5, font });
+      lineY -= 12;
+    });
+    hLine(lineY + 6, 20, 822, 0.5);
+
+    page.drawText("Instructiuni de plata", { x: 24, y: lineY - 10, size: 9, font: fontBold });
+    page.drawText(`Aviz de plata ${sanitizePdfText(parsed.invoiceId ?? "-")}`, { x: 24, y: lineY - 24, size: 8.5, font });
+    page.drawText(`TOTAL PLATA ${sanitizePdfText(money(parsed.payable))}`, { x: 24, y: lineY - 36, size: 8.5, font });
+    page.drawText("Nota: PDF generat automat de Vello din XML UBL e-Factura.", {
+      x: 24,
+      y: lineY - 50,
+      size: 8,
+      font,
+    });
 
     const bytes = await pdf.save();
     return Buffer.from(bytes);
@@ -530,47 +670,12 @@ export async function syncAnafForAccountant(
 
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
-    const fileName = `eFactura_${partner || "necunoscut"}_${msg.id}_${year}-${String(month).padStart(2, "0")}.zip`;
-    const filePath = `${clientId}/${year}/${month}/${docTypeId}/anaf-${Date.now()}-${msg.id}.zip`;
-    const fileBuffer = Buffer.from(downloaded.buffer);
+    const zipBuffer = Buffer.from(downloaded.buffer);
 
-    const uploadResult = await supabase.storage.from(BUCKET).upload(filePath, fileBuffer, {
-      contentType: "application/zip",
-      upsert: false,
-    });
-    if (uploadResult.error) {
-      await upsertMessageReceipt(supabase, {
-        accountant_id: conn.accountant_id,
-        company_cif: companyCifNorm,
-        message_id: msg.id,
-        partner_tax_code: partner || null,
-        client_id: clientId,
-        upload_id: null,
-        file_path: null,
-        file_name: null,
-        status: "download_error",
-        detail: uploadResult.error.message.slice(0, 500),
-      });
-      errors.push(`Mesaj ${msg.id}: ${uploadResult.error.message}`);
-      skipped++;
-      continue;
-    }
-
-    const { data: insertedUpload, error: uploadInsertError } = await supabase
-      .from("uploads")
-      .insert({
-        client_id: clientId,
-        document_type_id: docTypeId,
-        file_path: filePath,
-        file_name: fileName,
-        month,
-        year,
-      })
-      .select("id")
-      .single();
-
-    if (uploadInsertError || !insertedUpload?.id) {
-      await supabase.storage.from(BUCKET).remove([filePath]);
+    // Salvam in Documente doar PDF-ul (original ANAF din ZIP sau generat din XML).
+    const extractedPdf = await extractPdfFromEfacturaZip(zipBuffer);
+    const displayPdfBuffer = extractedPdf?.buffer ?? (await buildReadablePdfFromZip(zipBuffer));
+    if (!displayPdfBuffer) {
       await upsertMessageReceipt(supabase, {
         accountant_id: conn.accountant_id,
         company_cif: companyCifNorm,
@@ -581,7 +686,62 @@ export async function syncAnafForAccountant(
         file_path: null,
         file_name: null,
         status: "parse_error",
-        detail: uploadInsertError?.message?.slice(0, 500) ?? "Nu pot salva upload-ul în DB.",
+        detail: "Nu pot obtine PDF din mesajul ANAF (nici original, nici generat).",
+      });
+      skipped++;
+      continue;
+    }
+
+    const safePdfName = (extractedPdf?.fileName ?? "efactura-generata.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+    const pdfPath = `${clientId}/${year}/${month}/${docTypeId}/anaf-${Date.now()}-${msg.id}-factura.pdf`;
+    const pdfDisplayName = `eFactura_pdf_${partner || "necunoscut"}_${msg.id}_${safePdfName}`;
+    const pdfUpload = await supabase.storage.from(BUCKET).upload(pdfPath, displayPdfBuffer, {
+      contentType: "application/pdf",
+      upsert: false,
+    });
+    if (pdfUpload.error) {
+      await upsertMessageReceipt(supabase, {
+        accountant_id: conn.accountant_id,
+        company_cif: companyCifNorm,
+        message_id: msg.id,
+        partner_tax_code: partner || null,
+        client_id: clientId,
+        upload_id: null,
+        file_path: null,
+        file_name: null,
+        status: "download_error",
+        detail: pdfUpload.error.message.slice(0, 500),
+      });
+      errors.push(`Mesaj ${msg.id}: ${pdfUpload.error.message}`);
+      skipped++;
+      continue;
+    }
+
+    const { data: insertedUpload, error: uploadInsertError } = await supabase
+      .from("uploads")
+      .insert({
+        client_id: clientId,
+        document_type_id: docTypeId,
+        file_path: pdfPath,
+        file_name: pdfDisplayName,
+        month,
+        year,
+      })
+      .select("id")
+      .single();
+    if (uploadInsertError || !insertedUpload?.id) {
+      await supabase.storage.from(BUCKET).remove([pdfPath]);
+      await upsertMessageReceipt(supabase, {
+        accountant_id: conn.accountant_id,
+        company_cif: companyCifNorm,
+        message_id: msg.id,
+        partner_tax_code: partner || null,
+        client_id: clientId,
+        upload_id: null,
+        file_path: null,
+        file_name: null,
+        status: "parse_error",
+        detail: uploadInsertError?.message?.slice(0, 500) ?? "Nu pot salva PDF-ul in DB.",
       });
       skipped++;
       continue;
@@ -594,59 +754,11 @@ export async function syncAnafForAccountant(
       partner_tax_code: partner || null,
       client_id: clientId,
       upload_id: insertedUpload.id,
-      file_path: filePath,
-      file_name: fileName,
+      file_path: pdfPath,
+      file_name: pdfDisplayName,
       status: "imported",
-      detail: "Document importat din ANAF SPV.",
+      detail: "Factura PDF importata din ANAF.",
     });
-
-    // Best effort: salvam PDF-ul original din ZIP; daca lipseste, generam un PDF lizibil din XML.
-    const extractedPdf = await extractPdfFromEfacturaZip(fileBuffer);
-    const displayPdfBuffer = extractedPdf?.buffer ?? (await buildReadablePdfFromZip(fileBuffer));
-    if (displayPdfBuffer) {
-      const safePdfName = (extractedPdf?.fileName ?? "efactura-generata.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
-      const pdfPath = `${clientId}/${year}/${month}/${docTypeId}/anaf-${Date.now()}-${msg.id}-factura.pdf`;
-      const pdfDisplayName = `eFactura_pdf_${partner || "necunoscut"}_${msg.id}_${safePdfName}`;
-      const pdfUpload = await supabase.storage.from(BUCKET).upload(pdfPath, displayPdfBuffer, {
-        contentType: "application/pdf",
-        upsert: false,
-      });
-      if (!pdfUpload.error) {
-        await supabase.from("uploads").insert({
-          client_id: clientId,
-          document_type_id: docTypeId,
-          file_path: pdfPath,
-          file_name: pdfDisplayName,
-          month,
-          year,
-        });
-      }
-    }
-
-    // Best effort: genereaza un sumar text usor de citit de contabil.
-    const summaryText = await buildEfacturaSummaryFromZip(fileBuffer);
-    if (summaryText) {
-      const summaryPath = `${clientId}/${year}/${month}/${docTypeId}/anaf-${Date.now()}-${msg.id}-sumar.txt`;
-      const summaryName = `eFactura_rezumat_${partner || "necunoscut"}_${msg.id}.txt`;
-      const summaryUpload = await supabase.storage.from(BUCKET).upload(
-        summaryPath,
-        Buffer.from(summaryText, "utf8"),
-        {
-          contentType: "text/plain; charset=utf-8",
-          upsert: false,
-        }
-      );
-      if (!summaryUpload.error) {
-        await supabase.from("uploads").insert({
-          client_id: clientId,
-          document_type_id: docTypeId,
-          file_path: summaryPath,
-          file_name: summaryName,
-          month,
-          year,
-        });
-      }
-    }
 
     imported++;
   }
