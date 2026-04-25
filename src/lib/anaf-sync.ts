@@ -146,6 +146,7 @@ export async function syncAnafForAccountant(
 ): Promise<{ imported: number; skipped: number; errors: string[] }> {
   conn = serverAuthFallback(conn);
   const errors: string[] = [];
+  const unmappedPartners = new Set<string>();
   let imported = 0;
   let skipped = 0;
   const now = new Date();
@@ -260,6 +261,7 @@ export async function syncAnafForAccountant(
     const partner = msg.partnerTaxCode ? normalizeTaxCode(msg.partnerTaxCode) : "";
     const clientId = partner ? mappingMap.get(partner) ?? null : null;
     if (!clientId) {
+      unmappedPartners.add(partner || "(fara_cui_partener)");
       await upsertMessageReceipt(supabase, {
         accountant_id: conn.accountant_id,
         company_cif: companyCifNorm,
@@ -381,6 +383,11 @@ export async function syncAnafForAccountant(
       detail: "Document importat din ANAF SPV.",
     });
     imported++;
+  }
+
+  if (unmappedPartners.size > 0) {
+    const sample = Array.from(unmappedPartners).slice(0, 5).join(", ");
+    errors.push(`Lipsesc mapari CUI/CIF partener -> client pentru: ${sample}.`);
   }
 
   if (errors.length > 0) {

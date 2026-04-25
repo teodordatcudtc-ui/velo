@@ -121,6 +121,9 @@ export function AnafIntegrationCard() {
       if (!res.ok) throw new Error(data?.error ?? "Sync ANAF esuat.");
       const msg = `Sync e-Factura: ${data.imported ?? 0} importate, ${data.skipped ?? 0} omise.`;
       toast.success(msg);
+      if (Array.isArray(data?.errors) && data.errors.length > 0) {
+        toast.error(String(data.errors[0]));
+      }
       await loadData();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Sync esuat.");
