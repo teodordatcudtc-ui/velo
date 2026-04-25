@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { anafApiDownload, anafApiGetJson, ensureAnafAccessToken, normalizeTaxCode, parseAnafMessageList } from "@/lib/anaf";
 import JSZip from "jszip";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 
 const BUCKET = "uploads";
 const ANAF_DOC_TYPE = "e-Factura SPV";
@@ -134,67 +135,112 @@ async function ensureDocType(supabase: SupabaseClient, clientId: string): Promis
   return inserted.id as string;
 }
 
+type ParsedInvoiceLine = { name: string; qty: string; net: string };
+type ParsedInvoice = {
+  invoiceId: string | null;
+  issueDate: string | null;
+  dueDate: string | null;
+  currency: string | null;
+  payable: string | null;
+  supplierName: string | null;
+  supplierCui: string | null;
+  customerName: string | null;
+  customerCui: string | null;
+  lines: ParsedInvoiceLine[];
+};
+
 function stripXmlValue(input: string | null): string {
-  return (input ?? "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/\s+/g, " ").trim();
+  return (input ?? "")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function pickTag(source: string, tag: string): string | null {
-  const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, "i");
+function pickTag(source: string, localTag: string): string | null {
+  const re = new RegExp(
+    `<(?:\\w+:)?${localTag}(?:\\s[^>]*)?>([\\s\\S]*?)</(?:\\w+:)?${localTag}>`,
+    "i"
+  );
   const m = source.match(re);
   return m ? stripXmlValue(m[1]) : null;
 }
 
 function pickFromSection(xml: string, sectionTag: string, valueTag: string): string | null {
-  const secRe = new RegExp(`<${sectionTag}(?:\\s[^>]*)?>([\\s\\S]*?)</${sectionTag}>`, "i");
+  const secRe = new RegExp(
+    `<(?:\\w+:)?${sectionTag}(?:\\s[^>]*)?>([\\s\\S]*?)</(?:\\w+:)?${sectionTag}>`,
+    "i"
+  );
   const sec = xml.match(secRe);
   if (!sec) return null;
   return pickTag(sec[1], valueTag);
 }
 
-async function buildEfacturaSummaryFromZip(zipBuffer: Buffer): Promise<string | null> {
+function parseInvoiceXml(xml: string): ParsedInvoice {
+  const lines: ParsedInvoiceLine[] = [];
+  const lineRe = /<(?:\w+:)?InvoiceLine(?:\s[^>]*)?>([\s\S]*?)<\/(?:\w+:)?InvoiceLine>/gi;
+  for (const match of xml.matchAll(lineRe)) {
+    const chunk = match[1];
+    lines.push({
+      name: pickTag(chunk, "Name") ?? "Articol",
+      qty: pickTag(chunk, "InvoicedQuantity") ?? "-",
+      net: pickTag(chunk, "LineExtensionAmount") ?? "-",
+    });
+    if (lines.length >= 100) break;
+  }
+  return {
+    invoiceId: pickTag(xml, "ID"),
+    issueDate: pickTag(xml, "IssueDate"),
+    dueDate: pickTag(xml, "DueDate"),
+    currency: pickTag(xml, "DocumentCurrencyCode"),
+    payable: pickTag(xml, "PayableAmount"),
+    supplierName: pickFromSection(xml, "AccountingSupplierParty", "RegistrationName"),
+    supplierCui: pickFromSection(xml, "AccountingSupplierParty", "CompanyID"),
+    customerName: pickFromSection(xml, "AccountingCustomerParty", "RegistrationName"),
+    customerCui: pickFromSection(xml, "AccountingCustomerParty", "CompanyID"),
+    lines,
+  };
+}
+
+async function extractInvoiceXmlFromZip(zipBuffer: Buffer): Promise<string | null> {
   try {
     const zip = await JSZip.loadAsync(zipBuffer);
-    const xmlEntry = Object.values(zip.files).find((f) => !f.dir && f.name.toLowerCase().endsWith(".xml"));
-    if (!xmlEntry) return null;
-    const xml = await xmlEntry.async("text");
-
-    const invoiceId = pickTag(xml, "cbc:ID");
-    const issueDate = pickTag(xml, "cbc:IssueDate");
-    const dueDate = pickTag(xml, "cbc:DueDate");
-    const currency = pickTag(xml, "cbc:DocumentCurrencyCode");
-    const payable = pickTag(xml, "cbc:PayableAmount");
-
-    const supplierName = pickFromSection(xml, "cac:AccountingSupplierParty", "cbc:RegistrationName");
-    const supplierCui = pickFromSection(xml, "cac:AccountingSupplierParty", "cbc:CompanyID");
-    const customerName = pickFromSection(xml, "cac:AccountingCustomerParty", "cbc:RegistrationName");
-    const customerCui = pickFromSection(xml, "cac:AccountingCustomerParty", "cbc:CompanyID");
-
-    const lines: string[] = [];
-    const lineRe = /<cac:InvoiceLine(?:\s[^>]*)?>([\s\S]*?)<\/cac:InvoiceLine>/gi;
-    let idx = 0;
-    for (const match of xml.matchAll(lineRe)) {
-      idx++;
-      const chunk = match[1];
-      const name = pickTag(chunk, "cbc:Name") ?? "Articol";
-      const qty = pickTag(chunk, "cbc:InvoicedQuantity") ?? "-";
-      const amount = pickTag(chunk, "cbc:LineExtensionAmount") ?? "-";
-      lines.push(`${idx}. ${name} | Cantitate: ${qty} | Valoare neta: ${amount}`);
-      if (lines.length >= 50) break;
+    const xmlEntries = Object.values(zip.files).filter(
+      (f) => !f.dir && f.name.toLowerCase().endsWith(".xml")
+    );
+    if (xmlEntries.length === 0) return null;
+    for (const entry of xmlEntries) {
+      const xml = await entry.async("text");
+      if (/<(?:\w+:)?Invoice\b/i.test(xml)) {
+        return xml;
+      }
     }
+    return await xmlEntries[0].async("text");
+  } catch {
+    return null;
+  }
+}
 
+async function buildEfacturaSummaryFromZip(zipBuffer: Buffer): Promise<string | null> {
+  try {
+    const xml = await extractInvoiceXmlFromZip(zipBuffer);
+    if (!xml) return null;
+    const parsed = parseInvoiceXml(xml);
+    const lines = parsed.lines.map(
+      (line, idx) => `${idx + 1}. ${line.name} | Cantitate: ${line.qty} | Valoare neta: ${line.net}`
+    );
     const out: string[] = [];
     out.push("SUMAR E-FACTURA (generat automat din XML)");
     out.push("---------------------------------------");
-    if (invoiceId) out.push(`Numar factura: ${invoiceId}`);
-    if (issueDate) out.push(`Data emitere: ${issueDate}`);
-    if (dueDate) out.push(`Data scadenta: ${dueDate}`);
-    if (currency) out.push(`Moneda: ${currency}`);
-    if (payable) out.push(`Total de plata: ${payable}${currency ? ` ${currency}` : ""}`);
+    if (parsed.invoiceId) out.push(`Numar factura: ${parsed.invoiceId}`);
+    if (parsed.issueDate) out.push(`Data emitere: ${parsed.issueDate}`);
+    if (parsed.dueDate) out.push(`Data scadenta: ${parsed.dueDate}`);
+    if (parsed.currency) out.push(`Moneda: ${parsed.currency}`);
+    if (parsed.payable) out.push(`Total de plata: ${parsed.payable}${parsed.currency ? ` ${parsed.currency}` : ""}`);
     out.push("");
-    out.push(`Furnizor: ${supplierName ?? "-"}`);
-    out.push(`CUI furnizor: ${supplierCui ?? "-"}`);
-    out.push(`Beneficiar: ${customerName ?? "-"}`);
-    out.push(`CUI beneficiar: ${customerCui ?? "-"}`);
+    out.push(`Furnizor: ${parsed.supplierName ?? "-"}`);
+    out.push(`CUI furnizor: ${parsed.supplierCui ?? "-"}`);
+    out.push(`Beneficiar: ${parsed.customerName ?? "-"}`);
+    out.push(`CUI beneficiar: ${parsed.customerCui ?? "-"}`);
     out.push("");
     out.push("Linii factura:");
     if (lines.length === 0) out.push("- (nu am identificat linii in XML)");
@@ -202,6 +248,59 @@ async function buildEfacturaSummaryFromZip(zipBuffer: Buffer): Promise<string | 
     out.push("");
     out.push("Nota: Acest sumar este orientativ; XML-ul semnat ramane documentul sursa.");
     return out.join("\n");
+  } catch {
+    return null;
+  }
+}
+
+async function buildReadablePdfFromZip(zipBuffer: Buffer): Promise<Buffer | null> {
+  try {
+    const xml = await extractInvoiceXmlFromZip(zipBuffer);
+    if (!xml) return null;
+    const parsed = parseInvoiceXml(xml);
+
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const page = pdf.addPage([842, 595]);
+
+    let y = 560;
+    const left = 28;
+    const lineH = 14;
+    const draw = (text: string, x = left, size = 10, bold = false) => {
+      page.drawText(text, { x, y, size, font: bold ? fontBold : font });
+      y -= lineH;
+    };
+
+    draw("RO eFactura", 360, 20, true);
+    y -= 6;
+    draw(`Numar factura: ${parsed.invoiceId ?? "-"}`, 360);
+    draw(`Data emitere: ${parsed.issueDate ?? "-"}`, 360);
+    draw(`Data scadenta: ${parsed.dueDate ?? "-"}`, 360);
+    draw(`Moneda: ${parsed.currency ?? "-"}`, 360);
+    y += lineH * 4; // restore left block vertical baseline
+
+    draw("VANZATOR", left, 11, true);
+    draw(`Nume: ${parsed.supplierName ?? "-"}`);
+    draw(`CUI: ${parsed.supplierCui ?? "-"}`);
+    y -= 8;
+    draw("CUMPARATOR", 560, 11, true);
+    y += lineH;
+    draw(`Nume: ${parsed.customerName ?? "-"}`, 560);
+    draw(`CUI: ${parsed.customerCui ?? "-"}`, 560);
+    y -= 20;
+    draw(`TOTAL: ${parsed.payable ?? "-"} ${parsed.currency ?? ""}`, left, 12, true);
+    y -= 8;
+    draw("Linii factura:", left, 11, true);
+
+    for (const [idx, line] of parsed.lines.slice(0, 20).entries()) {
+      const txt = `${idx + 1}. ${line.name} | Cantitate: ${line.qty} | Valoare neta: ${line.net}`;
+      draw(txt, left, 10, false);
+      if (y < 40) break;
+    }
+
+    const bytes = await pdf.save();
+    return Buffer.from(bytes);
   } catch {
     return null;
   }
@@ -491,13 +590,14 @@ export async function syncAnafForAccountant(
       detail: "Document importat din ANAF SPV.",
     });
 
-    // Best effort: daca ZIP-ul ANAF contine PDF, il salvam separat pentru vizualizare usoara.
+    // Best effort: salvam PDF-ul original din ZIP; daca lipseste, generam un PDF lizibil din XML.
     const extractedPdf = await extractPdfFromEfacturaZip(fileBuffer);
-    if (extractedPdf) {
-      const safePdfName = extractedPdf.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const displayPdfBuffer = extractedPdf?.buffer ?? (await buildReadablePdfFromZip(fileBuffer));
+    if (displayPdfBuffer) {
+      const safePdfName = (extractedPdf?.fileName ?? "efactura-generata.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
       const pdfPath = `${clientId}/${year}/${month}/${docTypeId}/anaf-${Date.now()}-${msg.id}-factura.pdf`;
       const pdfDisplayName = `eFactura_pdf_${partner || "necunoscut"}_${msg.id}_${safePdfName}`;
-      const pdfUpload = await supabase.storage.from(BUCKET).upload(pdfPath, extractedPdf.buffer, {
+      const pdfUpload = await supabase.storage.from(BUCKET).upload(pdfPath, displayPdfBuffer, {
         contentType: "application/pdf",
         upsert: false,
       });
