@@ -227,3 +227,56 @@ export async function GET(
 
   return NextResponse.redirect(signed.signedUrl);
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ uploadId: string }> }
+) {
+  const { uploadId } = await params;
+  if (!uploadId) {
+    return NextResponse.json({ error: "Upload invalid." }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Neautorizat." }, { status: 401 });
+  }
+
+  const { data: upload, error: uploadError } = await supabase
+    .from("uploads")
+    .select("id, file_path, client_id")
+    .eq("id", uploadId)
+    .single();
+
+  if (uploadError || !upload) {
+    return NextResponse.json({ error: "Documentul nu exista." }, { status: 404 });
+  }
+
+  const { data: owningClient, error: clientError } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", upload.client_id)
+    .eq("accountant_id", user.id)
+    .single();
+
+  if (clientError || !owningClient) {
+    return NextResponse.json({ error: "Nu ai dreptul sa stergi acest document." }, { status: 403 });
+  }
+
+  const admin = createAdminClient();
+  await admin.storage.from(BUCKET).remove([upload.file_path]);
+
+  const { error: deleteError } = await admin
+    .from("uploads")
+    .delete()
+    .eq("id", upload.id);
+
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}

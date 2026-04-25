@@ -153,6 +153,7 @@ export function DocumenteList({
   const [filterYear, setFilterYear] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortDesc, setSortDesc] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const clientById = useMemo(
     () => new Map(clientOptions.map((c) => [c.id, c.name])),
@@ -234,6 +235,22 @@ export function DocumenteList({
 
   function openUpload(id: string) {
     window.open(`/api/uploads/${id}`, "_blank");
+  }
+
+  async function deleteUpload(id: string) {
+    const ok = window.confirm("Sigur vrei sa stergi acest document?");
+    if (!ok) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/uploads/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Nu pot sterge documentul.");
+      window.location.reload();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Eroare la stergere.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   if (uploads.length === 0) {
@@ -380,6 +397,14 @@ export function DocumenteList({
                     >
                       Descarcă
                     </a>
+                    <button
+                      type="button"
+                      onClick={() => deleteUpload(u.id)}
+                      disabled={deletingId === u.id}
+                      className="text-[var(--terracotta)] hover:underline disabled:opacity-60"
+                    >
+                      {deletingId === u.id ? "Stergere..." : "Sterge"}
+                    </button>
                   </td>
                 </tr>
               ))}
