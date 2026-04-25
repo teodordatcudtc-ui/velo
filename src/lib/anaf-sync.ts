@@ -342,14 +342,24 @@ export async function syncAnafForAccountant(
   for (const msg of messages) {
     const { data: existing } = await supabase
       .from("anaf_message_receipts")
-      .select("id, status")
+      .select("id, status, upload_id")
       .eq("accountant_id", conn.accountant_id)
       .eq("company_cif", companyCifNorm)
       .eq("message_id", msg.id)
       .maybeSingle();
     if (existing?.id && existing.status === "imported") {
-      skipped++;
-      continue;
+      // Daca upload-ul a fost sters manual din documente, permitem reimportul.
+      if (existing.upload_id) {
+        const { data: stillThere } = await supabase
+          .from("uploads")
+          .select("id")
+          .eq("id", existing.upload_id)
+          .maybeSingle();
+        if (stillThere?.id) {
+          skipped++;
+          continue;
+        }
+      }
     }
 
     const partner = msg.partnerTaxCode ? normalizeTaxCode(msg.partnerTaxCode) : "";

@@ -278,5 +278,11 @@ export async function DELETE(
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
+  // Curata si markerul de deduplicare ANAF pentru a permite reimportul aceluiasi mesaj.
+  await admin
+    .from("anaf_message_receipts")
+    .delete()
+    .eq("upload_id", upload.id);
+
   return NextResponse.json({ ok: true });
 }
