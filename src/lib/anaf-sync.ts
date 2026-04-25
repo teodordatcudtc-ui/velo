@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { anafApiDownload, anafApiGetJson, ensureAnafAccessToken, normalizeTaxCode, parseAnafMessageList } from "@/lib/anaf";
+import JSZip from "jszip";
 
 const BUCKET = "uploads";
 const ANAF_DOC_TYPE = "e-Factura SPV";
@@ -131,6 +132,96 @@ async function ensureDocType(supabase: SupabaseClient, clientId: string): Promis
     .single();
   if (error || !inserted?.id) return null;
   return inserted.id as string;
+}
+
+function stripXmlValue(input: string | null): string {
+  return (input ?? "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/\s+/g, " ").trim();
+}
+
+function pickTag(source: string, tag: string): string | null {
+  const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, "i");
+  const m = source.match(re);
+  return m ? stripXmlValue(m[1]) : null;
+}
+
+function pickFromSection(xml: string, sectionTag: string, valueTag: string): string | null {
+  const secRe = new RegExp(`<${sectionTag}(?:\\s[^>]*)?>([\\s\\S]*?)</${sectionTag}>`, "i");
+  const sec = xml.match(secRe);
+  if (!sec) return null;
+  return pickTag(sec[1], valueTag);
+}
+
+async function buildEfacturaSummaryFromZip(zipBuffer: Buffer): Promise<string | null> {
+  try {
+    const zip = await JSZip.loadAsync(zipBuffer);
+    const xmlEntry = Object.values(zip.files).find((f) => !f.dir && f.name.toLowerCase().endsWith(".xml"));
+    if (!xmlEntry) return null;
+    const xml = await xmlEntry.async("text");
+
+    const invoiceId = pickTag(xml, "cbc:ID");
+    const issueDate = pickTag(xml, "cbc:IssueDate");
+    const dueDate = pickTag(xml, "cbc:DueDate");
+    const currency = pickTag(xml, "cbc:DocumentCurrencyCode");
+    const payable = pickTag(xml, "cbc:PayableAmount");
+
+    const supplierName = pickFromSection(xml, "cac:AccountingSupplierParty", "cbc:RegistrationName");
+    const supplierCui = pickFromSection(xml, "cac:AccountingSupplierParty", "cbc:CompanyID");
+    const customerName = pickFromSection(xml, "cac:AccountingCustomerParty", "cbc:RegistrationName");
+    const customerCui = pickFromSection(xml, "cac:AccountingCustomerParty", "cbc:CompanyID");
+
+    const lines: string[] = [];
+    const lineRe = /<cac:InvoiceLine(?:\s[^>]*)?>([\s\S]*?)<\/cac:InvoiceLine>/gi;
+    let idx = 0;
+    for (const match of xml.matchAll(lineRe)) {
+      idx++;
+      const chunk = match[1];
+      const name = pickTag(chunk, "cbc:Name") ?? "Articol";
+      const qty = pickTag(chunk, "cbc:InvoicedQuantity") ?? "-";
+      const amount = pickTag(chunk, "cbc:LineExtensionAmount") ?? "-";
+      lines.push(`${idx}. ${name} | Cantitate: ${qty} | Valoare neta: ${amount}`);
+      if (lines.length >= 50) break;
+    }
+
+    const out: string[] = [];
+    out.push("SUMAR E-FACTURA (generat automat din XML)");
+    out.push("---------------------------------------");
+    if (invoiceId) out.push(`Numar factura: ${invoiceId}`);
+    if (issueDate) out.push(`Data emitere: ${issueDate}`);
+    if (dueDate) out.push(`Data scadenta: ${dueDate}`);
+    if (currency) out.push(`Moneda: ${currency}`);
+    if (payable) out.push(`Total de plata: ${payable}${currency ? ` ${currency}` : ""}`);
+    out.push("");
+    out.push(`Furnizor: ${supplierName ?? "-"}`);
+    out.push(`CUI furnizor: ${supplierCui ?? "-"}`);
+    out.push(`Beneficiar: ${customerName ?? "-"}`);
+    out.push(`CUI beneficiar: ${customerCui ?? "-"}`);
+    out.push("");
+    out.push("Linii factura:");
+    if (lines.length === 0) out.push("- (nu am identificat linii in XML)");
+    else out.push(...lines);
+    out.push("");
+    out.push("Nota: Acest sumar este orientativ; XML-ul semnat ramane documentul sursa.");
+    return out.join("\n");
+  } catch {
+    return null;
+  }
+}
+
+async function extractPdfFromEfacturaZip(
+  zipBuffer: Buffer
+): Promise<{ fileName: string; buffer: Buffer } | null> {
+  try {
+    const zip = await JSZip.loadAsync(zipBuffer);
+    const pdfEntry = Object.values(zip.files).find(
+      (f) => !f.dir && f.name.toLowerCase().endsWith(".pdf")
+    );
+    if (!pdfEntry) return null;
+    const pdfBytes = await pdfEntry.async("nodebuffer");
+    const rawName = pdfEntry.name.split("/").pop() || "efactura.pdf";
+    return { fileName: rawName, buffer: Buffer.from(pdfBytes) };
+  } catch {
+    return null;
+  }
 }
 
 function parseListDays(): string {
@@ -389,6 +480,54 @@ export async function syncAnafForAccountant(
       status: "imported",
       detail: "Document importat din ANAF SPV.",
     });
+
+    // Best effort: daca ZIP-ul ANAF contine PDF, il salvam separat pentru vizualizare usoara.
+    const extractedPdf = await extractPdfFromEfacturaZip(fileBuffer);
+    if (extractedPdf) {
+      const safePdfName = extractedPdf.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const pdfPath = `${clientId}/${year}/${month}/${docTypeId}/anaf-${Date.now()}-${msg.id}-factura.pdf`;
+      const pdfDisplayName = `eFactura_pdf_${partner || "necunoscut"}_${msg.id}_${safePdfName}`;
+      const pdfUpload = await supabase.storage.from(BUCKET).upload(pdfPath, extractedPdf.buffer, {
+        contentType: "application/pdf",
+        upsert: false,
+      });
+      if (!pdfUpload.error) {
+        await supabase.from("uploads").insert({
+          client_id: clientId,
+          document_type_id: docTypeId,
+          file_path: pdfPath,
+          file_name: pdfDisplayName,
+          month,
+          year,
+        });
+      }
+    }
+
+    // Best effort: genereaza un sumar text usor de citit de contabil.
+    const summaryText = await buildEfacturaSummaryFromZip(fileBuffer);
+    if (summaryText) {
+      const summaryPath = `${clientId}/${year}/${month}/${docTypeId}/anaf-${Date.now()}-${msg.id}-sumar.txt`;
+      const summaryName = `eFactura_rezumat_${partner || "necunoscut"}_${msg.id}.txt`;
+      const summaryUpload = await supabase.storage.from(BUCKET).upload(
+        summaryPath,
+        Buffer.from(summaryText, "utf8"),
+        {
+          contentType: "text/plain; charset=utf-8",
+          upsert: false,
+        }
+      );
+      if (!summaryUpload.error) {
+        await supabase.from("uploads").insert({
+          client_id: clientId,
+          document_type_id: docTypeId,
+          file_path: summaryPath,
+          file_name: summaryName,
+          month,
+          year,
+        });
+      }
+    }
+
     imported++;
   }
 
