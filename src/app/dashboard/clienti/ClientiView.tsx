@@ -1724,6 +1724,7 @@ function ClientiDrawer({
   const [archivePending, setArchivePending] = useState(false);
   const [closingRequest, setClosingRequest] = useState(false);
   const [exportPending, setExportPending] = useState(false);
+  const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "all">("all");
   const router = useRouter();
   const toast = useToast();
   const types = client.document_types ?? [];
@@ -1736,7 +1737,7 @@ function ClientiDrawer({
   const offset = circ * (1 - pct / 100);
   const monthName = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"][currentMonth - 1];
 
-  async function handleExportClientZip() {
+  async function handleExportClientPdf() {
     if (uploads.length === 0) {
       toast.info("Clientul nu are documente de exportat.");
       return;
@@ -1744,42 +1745,25 @@ function ClientiDrawer({
 
     setExportPending(true);
     try {
-      const zip = new JSZip();
-      const usedPaths = new Set<string>();
-      let exported = 0;
-      const failed: string[] = [];
+      const periodLabel =
+        exportPeriod === "all"
+          ? "toate documentele"
+          : `ultimele ${exportPeriod} zile`;
+      const response = await fetch(
+        `/api/clients/${client.id}/export-pdf?period=${exportPeriod}`
+      );
 
-      for (const u of uploads) {
-        const monthFolder = `${u.year}-${String(u.month).padStart(2, "0")}`;
-        const baseName = sanitizeZipPart(u.file_name ?? "document");
-        let path = `${monthFolder}/${baseName}`;
-        let inc = 1;
-        while (usedPaths.has(path)) {
-          path = `${monthFolder}/${baseName}-${inc}`;
-          inc++;
-        }
-        usedPaths.add(path);
-
-        const res = await fetch(`/api/uploads/${u.id}?download=1`);
-        if (!res.ok) {
-          if (failed.length < 5) failed.push(u.file_name ?? "document");
-          continue;
-        }
-        const blob = await res.blob();
-        zip.file(path, blob);
-        exported++;
-      }
-
-      if (exported === 0) {
-        toast.error("Nu am putut exporta niciun document pentru acest client.");
-        if (failed.length > 0) toast.info(`Eșecuri: ${failed.join(" | ")}`);
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        toast.error(data?.error ?? "Nu am putut genera PDF-ul.");
         return;
       }
 
-      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const pdfBlob = await response.blob();
       const clientName = sanitizeZipPart(client.name || "client");
-      const fileName = `documente-${clientName}.zip`;
-      const url = URL.createObjectURL(zipBlob);
+      const suffix = exportPeriod === "all" ? "toate" : `${exportPeriod}zile`;
+      const fileName = `documente-${clientName}-${suffix}.pdf`;
+      const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement("a");
       a.href = url;
       a.download = fileName;
@@ -1788,10 +1772,9 @@ function ClientiDrawer({
       a.remove();
       URL.revokeObjectURL(url);
 
-      toast.success(`ZIP exportat cu ${exported} documente.`);
-      if (failed.length > 0) toast.info(`Fișiere neexportate: ${failed.join(" | ")}`);
+      toast.success(`PDF generat cu ${periodLabel}.`);
     } catch {
-      toast.error("A apărut o eroare la exportul ZIP.");
+      toast.error("A apărut o eroare la exportul PDF.");
     } finally {
       setExportPending(false);
     }
@@ -2140,14 +2123,32 @@ function ClientiDrawer({
               >
                 Copiază date client
               </button>
+              <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>
+                  Perioadă export PDF
+                </span>
+                <select
+                  value={exportPeriod}
+                  onChange={(e) =>
+                    setExportPeriod(e.target.value as "7" | "30" | "60" | "all")
+                  }
+                  className={styles.filterSelect}
+                  style={{ width: "100%", height: 34, fontSize: 12.5 }}
+                >
+                  <option value="7">Ultimele 7 zile</option>
+                  <option value="30">Ultimele 30 zile</option>
+                  <option value="60">Ultimele 60 zile</option>
+                  <option value="all">Toate documentele</option>
+                </select>
+              </label>
               <button
                 type="button"
                 className={`${styles.btn} ${styles.btnSecondary}`}
                 style={{ width: "100%", justifyContent: "center" }}
-                onClick={handleExportClientZip}
+                onClick={handleExportClientPdf}
                 disabled={exportPending}
               >
-                {exportPending ? "Se exportă..." : "Exportă documente client (ZIP)"}
+                {exportPending ? "Se exportă..." : "Exportă documente client (PDF unic)"}
               </button>
               <button
                 type="button"
