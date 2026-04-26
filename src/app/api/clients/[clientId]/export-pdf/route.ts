@@ -9,7 +9,7 @@ import {
 } from "@/lib/image-to-pdf";
 
 const BUCKET = "uploads";
-const A4: readonly [number, number] = [595.28, 841.89];
+const A4: [number, number] = [595.28, 841.89];
 
 type Period = "7" | "30" | "60" | "all";
 
