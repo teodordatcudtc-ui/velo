@@ -1744,6 +1744,16 @@ function ClientiDrawer({
   const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "all">("all");
   const router = useRouter();
   const toast = useToast();
+  const showDrawerActionError = useCallback((message: string) => {
+    if (isExpiredSubscriptionError(message)) {
+      toast.error(
+        "Abonamentul tau a expirat. Actiunea este blocata pana la reinnoire."
+      );
+      toast.info("Reinnoieste din Dashboard -> Abonamente pentru a continua.");
+      return;
+    }
+    toast.error(message);
+  }, [toast]);
   const types = client.document_types ?? [];
   const total = types.length;
   const received = new Set(
@@ -1950,7 +1960,7 @@ function ClientiDrawer({
                     const result = await closeCurrentDocumentRequest(client.id);
                     setClosingRequest(false);
                     if (result?.error) {
-                      showActionError(result.error);
+                      showDrawerActionError(result.error);
                       return;
                     }
                     toast.success("Solicitarea curentă a fost închisă manual.");
@@ -2115,7 +2125,7 @@ function ClientiDrawer({
                   const result = await closeCurrentDocumentRequest(client.id);
                   setClosingRequest(false);
                   if (result?.error) {
-                    showActionError(result.error);
+                    showDrawerActionError(result.error);
                     return;
                   }
                   toast.success("Solicitarea curentă a fost închisă manual.");
