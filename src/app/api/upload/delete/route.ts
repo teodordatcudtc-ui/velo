@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
+import { hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
 
 const BUCKET = "uploads";
 type UploadLookup = { id: string; file_path: string; client_id: string };
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
 
   const { data: client, error: clientError } = await supabase
     .from("clients")
-    .select("id")
+    .select("id, accountant_id")
     .eq("unique_token", token)
     .single();
 
@@ -29,7 +30,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Link invalid." }, { status: 404 });
   }
 
-  const clientId = (client as { id: string }).id;
+  const clientId = (client as { id: string; accountant_id: string }).id;
+  const accountantId = (client as { id: string; accountant_id: string }).accountant_id;
+
+  const { data: accountant } = await supabase
+    .from("accountants")
+    .select("subscription_plan, premium_until")
+    .eq("id", accountantId)
+    .maybeSingle();
+
+  if (!hasActiveSubscription(accountant) && !hasPremiumAccess(accountant)) {
+    return NextResponse.json(
+      { error: "Abonamentul contabilului este expirat. Ștergerea documentelor este indisponibilă." },
+      { status: 403 }
+    );
+  }
 
   const { data: uploadData, error: uploadError } = await supabase
     .from("uploads")

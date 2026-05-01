@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef, type ChangeEvent } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import JSZip from "jszip";
 import {
@@ -45,6 +45,7 @@ type Upload = {
 
 const MONTH_NAMES = ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"];
 const MONTH_NAMES_FULL = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
+const EXPIRED_SUBSCRIPTION_PREFIX = "Abonamentul tău a expirat.";
 
 // Returns "YYYY-MM-DD" string to avoid timezone issues
 function nextRecurringDateFromDay(dayOfMonth: number): string {
@@ -102,6 +103,11 @@ function avatarColor(index: number): { bg: string; fg: string } {
     { bg: "var(--paper-2)", fg: "var(--ink-soft)" },
   ];
   return colors[index % colors.length];
+}
+
+function isExpiredSubscriptionError(message?: string | null): boolean {
+  if (!message) return false;
+  return message.startsWith(EXPIRED_SUBSCRIPTION_PREFIX);
 }
 
 function sanitizeZipPart(value: string): string {
@@ -200,6 +206,17 @@ export function ClientiView({
   });
   const csvInputRef = useRef<HTMLInputElement | null>(null);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const showActionError = useCallback((message: string) => {
+    if (isExpiredSubscriptionError(message)) {
+      toast.error(
+        "Abonamentul tau a expirat. Actiunea este blocata pana la reinnoire."
+      );
+      toast.info("Reinnoieste din Dashboard -> Abonamente pentru a continua.");
+      return;
+    }
+    toast.error(message);
+  }, [toast]);
 
   useEffect(() => {
     try {
@@ -512,7 +529,7 @@ export function ClientiView({
       const text = await file.text();
       const result = await importClientsFromCsv(text);
       if (result?.error) {
-        toast.error(result.error);
+        showActionError(result.error);
         return;
       }
       if (!result) {
@@ -552,7 +569,7 @@ export function ClientiView({
     const result = await addClient(formData);
     setAddPending(false);
     if (result.error) {
-      toast.error(result.error);
+      showActionError(result.error);
       return;
     }
     toast.success("Client adăugat.");
@@ -582,7 +599,7 @@ export function ClientiView({
     const result = await updateClient(editClient.id, formData);
     setEditPending(false);
     if (result.error) {
-      toast.error(result.error);
+      showActionError(result.error);
       return;
     }
     toast.success("Client actualizat.");
@@ -1122,7 +1139,7 @@ export function ClientiView({
                               setRestorePendingId(client.id);
                               const result = await restoreClient(client.id);
                               setRestorePendingId(null);
-                              if (result?.error) toast?.error(result.error);
+                              if (result?.error) showActionError(result.error);
                               else { toast?.success("Client restaurat."); router.refresh(); }
                             }}
                           >
@@ -1470,7 +1487,7 @@ export function ClientiView({
                     methods: [data.delivery],
                   });
             if (result?.error) {
-              toast.error(result.error);
+              showActionError(result.error);
               return false;
             }
 
@@ -1933,7 +1950,7 @@ function ClientiDrawer({
                     const result = await closeCurrentDocumentRequest(client.id);
                     setClosingRequest(false);
                     if (result?.error) {
-                      toast.error(result.error);
+                      showActionError(result.error);
                       return;
                     }
                     toast.success("Solicitarea curentă a fost închisă manual.");
@@ -2098,7 +2115,7 @@ function ClientiDrawer({
                   const result = await closeCurrentDocumentRequest(client.id);
                   setClosingRequest(false);
                   if (result?.error) {
-                    toast.error(result.error);
+                    showActionError(result.error);
                     return;
                   }
                   toast.success("Solicitarea curentă a fost închisă manual.");
@@ -2226,7 +2243,14 @@ function EmailToggle({
         if (result?.error) {
           // revenim la starea anterioară dacă a eșuat
           setOn(!next);
-          toast.error(result.error);
+          if (isExpiredSubscriptionError(result.error)) {
+            toast.error(
+              "Abonamentul tau a expirat. Actiunea este blocata pana la reinnoire."
+            );
+            toast.info("Reinnoieste din Dashboard -> Abonamente pentru a continua.");
+          } else {
+            toast.error(result.error);
+          }
         } else {
           router.refresh();
         }

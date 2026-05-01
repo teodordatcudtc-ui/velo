@@ -147,13 +147,13 @@ export function DocumenteList({
   clientOptions: ClientOption[];
   docTypeOptions: DocTypeOption[];
 }) {
-  const [filterClient, setFilterClient] = useState<string>("");
   const [filterDocType, setFilterDocType] = useState<string>("");
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [filterYear, setFilterYear] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortDesc, setSortDesc] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
 
   const clientById = useMemo(
     () => new Map(clientOptions.map((c) => [c.id, c.name])),
@@ -164,37 +164,59 @@ export function DocumenteList({
     [docTypeOptions]
   );
 
-  const years = useMemo(() => {
-    const set = new Set(uploads.map((u) => u.year));
-    return Array.from(set).sort((a, b) => b - a);
+  const docsCountByClient = useMemo(() => {
+    const countMap = new Map<string, number>();
+    for (const u of uploads) {
+      countMap.set(u.client_id, (countMap.get(u.client_id) ?? 0) + 1);
+    }
+    return countMap;
   }, [uploads]);
 
-  const clientFilterOptions = useMemo<Option[]>(
-    () => [{ value: "", label: "Client" }, ...clientOptions.map((c) => ({ value: c.id, label: c.name }))],
-    [clientOptions]
+  const selectedClientUploads = useMemo(() => {
+    if (!selectedClientId) return [];
+    return uploads.filter((u) => u.client_id === selectedClientId);
+  }, [uploads, selectedClientId]);
+
+  const selectedClientName = useMemo(
+    () => clientById.get(selectedClientId) ?? "",
+    [clientById, selectedClientId]
   );
-  const docTypeFilterOptions = useMemo<Option[]>(
-    () => [{ value: "", label: "Tip" }, ...docTypeOptions.map((d) => ({ value: d.id, label: d.name }))],
-    [docTypeOptions]
-  );
+
+  const selectedDocTypeOptions = useMemo<Option[]>(() => {
+    if (!selectedClientId) return [{ value: "", label: "Tip" }];
+    const ids = new Set(selectedClientUploads.map((u) => u.document_type_id));
+    const options = docTypeOptions
+      .filter((d) => ids.has(d.id))
+      .map((d) => ({ value: d.id, label: d.name }));
+    return [{ value: "", label: "Tip" }, ...options];
+  }, [selectedClientId, selectedClientUploads, docTypeOptions]);
+
+  const selectedYears = useMemo(() => {
+    const set = new Set(selectedClientUploads.map((u) => u.year));
+    return Array.from(set).sort((a, b) => b - a);
+  }, [selectedClientUploads]);
+
   const monthFilterOptions = useMemo<Option[]>(
     () => [{ value: "", label: "Lună" }, ...MONTH_NAMES.map((name, i) => ({ value: String(i + 1), label: name }))],
     []
   );
-  const yearFilterOptions = useMemo<Option[]>(
-    () => [{ value: "", label: "An" }, ...years.map((y) => ({ value: String(y), label: String(y) }))],
-    [years]
+
+  const selectedYearFilterOptions = useMemo<Option[]>(
+    () => [{ value: "", label: "An" }, ...selectedYears.map((y) => ({ value: String(y), label: String(y) }))],
+    [selectedYears]
   );
 
   const filtered = useMemo(() => {
-    return uploads.filter((u) => {
-      if (filterClient && u.client_id !== filterClient) return false;
+    const source = selectedClientId
+      ? uploads.filter((u) => u.client_id === selectedClientId)
+      : uploads;
+    return source.filter((u) => {
       if (filterDocType && u.document_type_id !== filterDocType) return false;
       if (filterMonth && u.month !== parseInt(filterMonth, 10)) return false;
       if (filterYear && u.year !== parseInt(filterYear, 10)) return false;
       return true;
     });
-  }, [uploads, filterClient, filterDocType, filterMonth, filterYear]);
+  }, [uploads, selectedClientId, filterDocType, filterMonth, filterYear]);
 
   const sorted = useMemo(() => {
     const dir = sortDesc ? -1 : 1;
@@ -254,16 +276,116 @@ export function DocumenteList({
   }
 
   if (uploads.length === 0) {
+    if (clientOptions.length === 0) {
+      return (
+        <div className="dash-card-empty">
+          Nu există încă clienți. Adaugă primul client și vei vedea aici folderul lui
+          cu documente.
+        </div>
+      );
+    }
     return (
-      <div className="dash-card-empty">
-        Nu există încă documente încărcate. Ele vor apărea aici după ce clienții
-        trimit fișiere pe linkul de colectare.
+      <div className="dash-card">
+        <p className="text-sm text-[var(--ink-muted)] mb-4">
+          Alege un folder de client. Documentele vor apărea în interior după încărcare.
+        </p>
+        <div
+          className="grid gap-3"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+        >
+          {clientOptions.map((client) => (
+            <button
+              key={client.id}
+              type="button"
+              onClick={() => {
+                setSelectedClientId(client.id);
+                setFilterDocType("");
+                setFilterMonth("");
+                setFilterYear("");
+              }}
+              className="dash-input text-left hover:border-[var(--sage)] transition"
+              style={{
+                minHeight: 92,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 16 }}>📁</span>
+                <strong className="text-sm text-[var(--ink)]">{client.name}</strong>
+              </div>
+              <span className="text-xs text-[var(--ink-muted)]">0 documente</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedClientId) {
+    return (
+      <div className="dash-card">
+        <p className="text-sm text-[var(--ink-muted)] mb-4">
+          Deschide folderul unui client ca să vezi documentele lui.
+        </p>
+        <div
+          className="grid gap-3"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+        >
+          {clientOptions.map((client) => (
+            <button
+              key={client.id}
+              type="button"
+              onClick={() => {
+                setSelectedClientId(client.id);
+                setFilterDocType("");
+                setFilterMonth("");
+                setFilterYear("");
+              }}
+              className="dash-input text-left hover:border-[var(--sage)] transition"
+              style={{
+                minHeight: 92,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 16 }}>📁</span>
+                <strong className="text-sm text-[var(--ink)]">{client.name}</strong>
+              </div>
+              <span className="text-xs text-[var(--ink-muted)]">
+                {docsCountByClient.get(client.id) ?? 0} documente
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="dash-card">
+      <div className="flex items-center justify-between mb-3">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedClientId("");
+            setFilterDocType("");
+            setFilterMonth("");
+            setFilterYear("");
+          }}
+          className="text-sm text-[var(--sage)] hover:underline"
+        >
+          ← Înapoi la foldere
+        </button>
+        <div className="text-sm text-[var(--ink)]">
+          <strong>📁 {selectedClientName}</strong>
+        </div>
+      </div>
       <div
         className="flex flex-nowrap items-center gap-2 mb-4 pb-4 border-b border-[var(--paper-3)]"
         style={{ overflowX: "auto", overflowY: "visible", position: "relative", zIndex: 10 }}
@@ -272,16 +394,9 @@ export function DocumenteList({
           Filtre:
         </span>
         <FilterDropdown
-          label="Client"
-          value={filterClient}
-          options={clientFilterOptions}
-          onChange={setFilterClient}
-          width={160}
-        />
-        <FilterDropdown
           label="Tip"
           value={filterDocType}
-          options={docTypeFilterOptions}
+          options={selectedDocTypeOptions}
           onChange={setFilterDocType}
           width={120}
         />
@@ -295,7 +410,7 @@ export function DocumenteList({
         <FilterDropdown
           label="An"
           value={filterYear}
-          options={yearFilterOptions}
+          options={selectedYearFilterOptions}
           onChange={setFilterYear}
           width={96}
         />
@@ -363,9 +478,7 @@ export function DocumenteList({
                   key={u.id}
                   className="border-b border-[var(--paper-3)] last:border-0"
                 >
-                  <td className="py-2.5 pr-4 text-[var(--ink)]">
-                    {clientById.get(u.client_id) ?? "—"}
-                  </td>
+                  <td className="py-2.5 pr-4 text-[var(--ink)]">{selectedClientName}</td>
                   <td className="py-2.5 pr-4 text-[var(--ink-soft)]">
                     {docTypeById.get(u.document_type_id) ?? "—"}
                   </td>

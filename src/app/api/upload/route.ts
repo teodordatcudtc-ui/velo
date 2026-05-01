@@ -3,6 +3,7 @@ import { buildPdfFromImageBuffer, guessIsImageMime, guessIsPdf } from "@/lib/ima
 import { buildUploadFileName, fileExtension } from "@/lib/upload-naming";
 import type { Database } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
+import { hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
 
 type UploadInsert = Database["public"]["Tables"]["uploads"]["Insert"];
 
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
   /* ── 1. Validare token → client (cu nume) ─────────────────────────────── */
   const { data: client, error: clientError } = await supabase
     .from("clients")
-    .select("id, name")
+    .select("id, name, accountant_id")
     .eq("unique_token", token)
     .single();
 
@@ -44,8 +45,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Link invalid." }, { status: 404 });
   }
 
-  const clientId   = (client as { id: string; name: string }).id;
-  const clientName = (client as { id: string; name: string }).name;
+  const clientId = (client as { id: string; name: string; accountant_id: string }).id;
+  const clientName = (client as { id: string; name: string; accountant_id: string }).name;
+  const accountantId = (client as { id: string; name: string; accountant_id: string }).accountant_id;
+
+  const { data: accountant } = await supabase
+    .from("accountants")
+    .select("subscription_plan, premium_until")
+    .eq("id", accountantId)
+    .maybeSingle();
+
+  if (!hasActiveSubscription(accountant) && !hasPremiumAccess(accountant)) {
+    return NextResponse.json(
+      { error: "Abonamentul contabilului este expirat. Încărcarea documentelor este indisponibilă." },
+      { status: 403 }
+    );
+  }
 
   /* ── 2. Validare tip document (cu nume) ───────────────────────────────── */
   const { data: docType } = await supabase

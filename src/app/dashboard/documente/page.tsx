@@ -64,7 +64,7 @@ export default async function DocumentePage() {
       <header>
         <h1 className="dash-page-title">Documente</h1>
         <p className="dash-page-sub">
-          Toate documentele încărcate de clienți. Filtrează și sortează după client, tip, lună.
+          Documente organizate pe foldere de client. Intră într-un folder pentru filtrare și sortare.
         </p>
       </header>
 

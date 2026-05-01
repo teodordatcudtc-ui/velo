@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { generateUploadToken } from "@/lib/upload-token";
 import { customAlphabet } from "nanoid";
 import { Resend } from "resend";
-import { getClientLimit, hasPremiumAccess } from "@/lib/subscription";
+import { getClientLimit, hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
 
 const fallbackAlphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -69,6 +69,15 @@ async function getAccountantPlanInfo(supabase: Awaited<ReturnType<typeof createC
 
   if (error || !accountant) return null;
   return accountant;
+}
+
+async function requireActiveSubscription(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<string | null> {
+  const accountant = await getAccountantPlanInfo(supabase, userId);
+  if (hasActiveSubscription(accountant) || hasPremiumAccess(accountant)) return null;
+  return "Abonamentul tău a expirat. Reînnoiește abonamentul pentru a folosi această funcție.";
 }
 
 function parseCsvLine(line: string, delimiter: string): string[] {
@@ -194,6 +203,8 @@ export async function addClient(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   // Sigurăm existența rândului în `accountants` pentru acest user (altfel FK-ul pică la insert în clients)
   await ensureAccountantExists({
@@ -266,6 +277,8 @@ export async function importClientsFromCsv(csvText: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   await ensureAccountantExists({
     id: user.id,
@@ -342,6 +355,8 @@ export async function updateClient(clientId: string, formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const { data: client } = await supabase
     .from("clients")
@@ -481,6 +496,8 @@ export async function saveDocumentRequest(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const { data: client } = await supabase
     .from("clients")
@@ -539,6 +556,8 @@ export async function sendDocumentRequestNow(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const { data: client } = await supabase
     .from("clients")
@@ -624,6 +643,8 @@ export async function closeCurrentDocumentRequest(clientId: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const { data: client } = await supabase
     .from("clients")
@@ -669,6 +690,8 @@ export async function addDocumentType(clientId: string, formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const name = formData.get("name") as string;
   if (!name?.trim()) return { error: "Numele documentului este obligatoriu" };
@@ -689,6 +712,8 @@ export async function removeDocumentType(documentTypeId: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const { error } = await supabase
     .from("document_types")
@@ -706,6 +731,8 @@ export async function removeClient(clientId: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const { data: client, error: fetchError } = await supabase
     .from("clients")
@@ -735,6 +762,8 @@ export async function restoreClient(clientId: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const { data: client, error: fetchError } = await supabase
     .from("clients")
@@ -787,6 +816,8 @@ export async function updateClientReminder(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const accountant = await getAccountantPlanInfo(supabase, user.id);
   if (!hasPremiumAccess(accountant)) {
@@ -833,6 +864,8 @@ export async function markLinkCopied(clientId: string): Promise<{ ok?: true; err
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Neautentificat.' };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
 
   const { data: client } = await supabase
     .from('clients')

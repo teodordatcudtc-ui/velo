@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
 
 function todayStrInTimeZone(timeZone: string) {
   // Returns YYYY-MM-DD in the given IANA timezone (e.g. Europe/Bucharest)
@@ -31,7 +32,7 @@ type ClientReminderRow = {
   email: string | null;
   unique_token: string;
   accountant_id: string;
-  accountants: { name: string } | null;
+  accountants: { name: string; subscription_plan: string | null; premium_until: string | null } | null;
   reminder_enabled?: boolean;
   archived?: boolean;
 };
@@ -55,7 +56,7 @@ type RequestReminderRow = {
         accountant_id?: string;
         reminder_enabled?: boolean;
         archived?: boolean;
-        accountants: { name: string } | null;
+        accountants: { name: string; subscription_plan: string | null; premium_until: string | null } | null;
       }
     | {
         id: string;
@@ -65,7 +66,7 @@ type RequestReminderRow = {
         accountant_id?: string;
         reminder_enabled?: boolean;
         archived?: boolean;
-        accountants: { name: string } | null;
+        accountants: { name: string; subscription_plan: string | null; premium_until: string | null } | null;
       }[]
     | null;
 };
@@ -123,7 +124,7 @@ export async function GET(request: Request) {
   const { data: scheduledReqs, error: scheduledErr } = await supabase
     .from("document_requests")
     .select(
-      "id, client_id, month, year, sent_at, message, reminder_after_3_days, request_closed, doc_type_names, clients(id, name, email, unique_token, accountant_id, archived, reminder_enabled, accountants(name))"
+      "id, client_id, month, year, sent_at, message, reminder_after_3_days, request_closed, doc_type_names, clients(id, name, email, unique_token, accountant_id, archived, reminder_enabled, accountants(name, subscription_plan, premium_until))"
     )
     .eq("channel", "email_scheduled")
     .lte("sent_at", horizonIso);
@@ -147,6 +148,8 @@ export async function GET(request: Request) {
       if (!client?.email?.trim()) return false;
       if (client.archived) return false;
       if (req.request_closed) return false;
+      const accountant = client.accountants;
+      if (!hasActiveSubscription(accountant) && !hasPremiumAccess(accountant)) return false;
       // Cererea programată (email_scheduled) nu depinde de clients.reminder_enabled —
       // acel toggle e doar pentru reminder lunar recurent din UI; aici contabilul a ales explicit data.
       // due by RO calendar day (never before the scheduled date in RO)
@@ -278,7 +281,7 @@ export async function GET(request: Request) {
   const { data: pendingReqs, error: reqErr } = await supabase
     .from("document_requests")
     .select(
-      "id, client_id, month, year, sent_at, message, doc_type_names, request_closed, clients(id, name, email, unique_token, accountants(name))"
+      "id, client_id, month, year, sent_at, message, doc_type_names, request_closed, clients(id, name, email, unique_token, accountants(name, subscription_plan, premium_until))"
     )
     .eq("channel", "email")
     .eq("reminder_after_3_days", true)
@@ -302,6 +305,8 @@ export async function GET(request: Request) {
     const clientRaw = req.clients;
     const client = Array.isArray(clientRaw) ? clientRaw[0] : clientRaw;
     if (!client?.email?.trim()) continue;
+    const accountant = client.accountants;
+    if (!hasActiveSubscription(accountant) && !hasPremiumAccess(accountant)) continue;
 
     // Send reminder only when NOT all required documents are uploaded for that requested period.
     // We treat the client's current document_types list as the required set.
