@@ -12,6 +12,82 @@ const MONTH_NAMES = [
 type SortBy = "date" | "client" | "type" | "month";
 type Option = { value: string; label: string };
 
+function FolderIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ width: 46, height: 46, color: "var(--sage)" }}
+      aria-hidden="true"
+    >
+      <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v1H3z" />
+      <path d="M3 10h18l-1.1 8.1a2 2 0 0 1-2 1.7H6.1a2 2 0 0 1-2-1.7z" />
+    </svg>
+  );
+}
+
+function ClientFolderCard({
+  name,
+  count,
+  onOpen,
+}: {
+  name: string;
+  count: number;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="dash-input text-left hover:border-[var(--sage)] transition"
+      style={{
+        minHeight: 178,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+        padding: "18px 14px",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          height: 96,
+          borderRadius: 12,
+          background: "linear-gradient(180deg, #f7f2c9 0%, #efe6a5 100%)",
+          border: "1px solid #e4d88b",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <FolderIcon />
+      </div>
+      <div style={{ textAlign: "center", width: "100%" }}>
+        <strong
+          className="text-sm text-[var(--ink)]"
+          style={{
+            display: "block",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {name}
+        </strong>
+        <span className="text-xs text-[var(--ink-muted)]">
+          {count} {count === 1 ? "document" : "documente"}
+        </span>
+      </div>
+    </button>
+  );
+}
+
 function FilterDropdown({
   label,
   value,
@@ -294,30 +370,17 @@ export function DocumenteList({
           style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
         >
           {clientOptions.map((client) => (
-            <button
+            <ClientFolderCard
               key={client.id}
-              type="button"
-              onClick={() => {
+              name={client.name}
+              count={0}
+              onOpen={() => {
                 setSelectedClientId(client.id);
                 setFilterDocType("");
                 setFilterMonth("");
                 setFilterYear("");
               }}
-              className="dash-input text-left hover:border-[var(--sage)] transition"
-              style={{
-                minHeight: 92,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                gap: 10,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 16 }}>📁</span>
-                <strong className="text-sm text-[var(--ink)]">{client.name}</strong>
-              </div>
-              <span className="text-xs text-[var(--ink-muted)]">0 documente</span>
-            </button>
+            />
           ))}
         </div>
       </div>
@@ -335,32 +398,17 @@ export function DocumenteList({
           style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
         >
           {clientOptions.map((client) => (
-            <button
+            <ClientFolderCard
               key={client.id}
-              type="button"
-              onClick={() => {
+              name={client.name}
+              count={docsCountByClient.get(client.id) ?? 0}
+              onOpen={() => {
                 setSelectedClientId(client.id);
                 setFilterDocType("");
                 setFilterMonth("");
                 setFilterYear("");
               }}
-              className="dash-input text-left hover:border-[var(--sage)] transition"
-              style={{
-                minHeight: 92,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                gap: 10,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 16 }}>📁</span>
-                <strong className="text-sm text-[var(--ink)]">{client.name}</strong>
-              </div>
-              <span className="text-xs text-[var(--ink-muted)]">
-                {docsCountByClient.get(client.id) ?? 0} documente
-              </span>
-            </button>
+            />
           ))}
         </div>
       </div>
@@ -383,7 +431,7 @@ export function DocumenteList({
           ← Înapoi la foldere
         </button>
         <div className="text-sm text-[var(--ink)]">
-          <strong>📁 {selectedClientName}</strong>
+          <strong>{selectedClientName}</strong>
         </div>
       </div>
       <div
