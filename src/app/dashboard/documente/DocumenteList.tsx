@@ -21,7 +21,7 @@ function FolderIcon() {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ width: 46, height: 46, color: "var(--sage)" }}
+      style={{ width: 64, height: 64, color: "var(--sage)" }}
       aria-hidden="true"
     >
       <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v1H3z" />
@@ -59,8 +59,6 @@ function ClientFolderCard({
           width: "100%",
           height: 96,
           borderRadius: 12,
-          background: "linear-gradient(180deg, #f7f2c9 0%, #efe6a5 100%)",
-          border: "1px solid #e4d88b",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
