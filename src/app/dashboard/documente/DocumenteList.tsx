@@ -43,21 +43,28 @@ function ClientFolderCard({
     <button
       type="button"
       onClick={onOpen}
-      className="dash-input text-left hover:border-[var(--sage)] transition"
+      className="text-left transition"
       style={{
-        minHeight: 178,
+        width: "100%",
+        minHeight: 228,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
         alignItems: "center",
-        gap: 12,
-        padding: "18px 14px",
+        gap: 6,
+        padding: "18px 14px 14px",
+        border: "none",
+        outline: "none",
+        boxShadow: "none",
+        background: "transparent",
+        borderRadius: 14,
+        cursor: "pointer",
       }}
     >
       <div
         style={{
           width: "100%",
-          height: 96,
+          height: 140,
           borderRadius: 12,
           display: "flex",
           alignItems: "center",
