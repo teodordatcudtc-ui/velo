@@ -431,7 +431,15 @@ export function DocumenteList({
             setFilterMonth("");
             setFilterYear("");
           }}
-          className="text-sm text-[var(--sage)] hover:underline"
+          className="inline-flex items-center justify-center text-sm font-semibold"
+          style={{
+            background: "var(--sage)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 9999,
+            padding: "8px 14px",
+            boxShadow: "var(--shadow-sm)",
+          }}
         >
           ← Înapoi la foldere
         </button>
