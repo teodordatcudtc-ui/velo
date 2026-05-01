@@ -21,7 +21,7 @@ function FolderIcon() {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ width: 64, height: 64, color: "var(--sage)" }}
+      style={{ width: 78, height: 78, color: "var(--sage)" }}
       aria-hidden="true"
     >
       <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v1H3z" />
@@ -46,14 +46,14 @@ function ClientFolderCard({
       className="text-left transition"
       style={{
         width: "100%",
-        minHeight: 228,
+        minHeight: 208,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
         alignItems: "center",
-        gap: 6,
-        padding: "18px 14px 14px",
-        border: "none",
+        gap: 2,
+        padding: "16px 14px 14px",
+        border: "1px solid var(--paper-3)",
         outline: "none",
         boxShadow: "none",
         background: "transparent",
@@ -64,7 +64,7 @@ function ClientFolderCard({
       <div
         style={{
           width: "100%",
-          height: 140,
+          height: 116,
           borderRadius: 12,
           display: "flex",
           alignItems: "center",
