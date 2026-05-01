@@ -155,6 +155,8 @@ export function ClientiView({
   currentMonth,
   currentYear,
   isPremium,
+  hasActiveSubscription,
+  subscriptionPlan,
   clientLimit,
   userId,
 }: {
@@ -167,6 +169,8 @@ export function ClientiView({
   currentMonth: number;
   currentYear: number;
   isPremium: boolean;
+  hasActiveSubscription: boolean;
+  subscriptionPlan: "none" | "standard" | "premium";
   clientLimit: number | null;
   userId?: string;
 }) {
@@ -433,6 +437,8 @@ export function ClientiView({
   }, [clientsWithStatus, archivedClients]);
 
   const totalClients = initialClients.length;
+  const isExpiredSubscription =
+    !hasActiveSubscription && !isPremium && subscriptionPlan !== "none";
   const isAtClientLimit =
     !isPremium && totalClients >= (clientLimit ?? 30);
   const overdueCount = counts.late;
@@ -442,7 +448,9 @@ export function ClientiView({
   function openAddClientModal() {
     if (isAtClientLimit) {
       toast.info(
-        (clientLimit ?? 50) === 5
+        isExpiredSubscription
+          ? "Abonamentul tău a expirat. Reînnoiește abonamentul pentru a adăuga clienți noi."
+          : (clientLimit ?? 50) === 5
           ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
           : "Ai atins limita de 50 clienți pe Standard. Treci pe Premium pentru clienți nelimitați."
       );
@@ -842,7 +850,9 @@ export function ClientiView({
           Clienții <em>mei</em>
         </div>
         <div style={{ marginLeft: 12, fontSize: 12, color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
-          {isPremium
+          {isExpiredSubscription
+            ? `Abonament expirat · ${initialClients.length} clienți`
+            : isPremium
             ? "Plan Premium · clienți nelimitați"
             : (clientLimit ?? 50) === 5
               ? `Plan gratuit · ${initialClients.length}/5 clienți`
@@ -1378,7 +1388,9 @@ export function ClientiView({
             </div>
             {isAtClientLimit && (
               <p style={{ fontSize: 12, color: "var(--ink-muted)", marginTop: 8 }}>
-                {(clientLimit ?? 50) === 5
+                {isExpiredSubscription
+                  ? "Abonamentul tău a expirat. Reînnoiește abonamentul ca să poți adăuga clienți noi."
+                  : (clientLimit ?? 50) === 5
                   ? "Planul gratuit permite maxim 5 clienți. Alege Standard sau Premium pentru mai mulți."
                   : "Ai atins limita de 50 clienți pentru planul Standard."}
               </p>

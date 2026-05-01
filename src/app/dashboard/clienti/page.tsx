@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ClientiView } from "./ClientiView";
-import { getClientLimit, hasPremiumAccess } from "@/lib/subscription";
+import { getClientLimit, hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,14 @@ export default async function ClientiPage() {
     .single();
 
   const isPremium = hasPremiumAccess(accountant);
+  const hasActiveSub = hasActiveSubscription(accountant);
   const clientLimit = getClientLimit(accountant);
+  const subscriptionPlan =
+    accountant?.subscription_plan === "premium"
+      ? "premium"
+      : accountant?.subscription_plan === "none"
+        ? "none"
+        : "standard";
 
   const { data: activeClients } = await supabase
     .from("clients")
@@ -107,6 +114,8 @@ export default async function ClientiPage() {
       currentMonth={currentMonth}
       currentYear={currentYear}
       isPremium={isPremium}
+      hasActiveSubscription={hasActiveSub}
+      subscriptionPlan={subscriptionPlan}
       clientLimit={clientLimit}
       userId={user.id}
     />
