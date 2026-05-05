@@ -76,6 +76,11 @@ async function requireActiveSubscription(
   userId: string
 ): Promise<string | null> {
   const accountant = await getAccountantPlanInfo(supabase, userId);
+  // New accounts can temporarily have no accountant row yet.
+  // Do not block onboarding in this case (the row is created immediately after).
+  if (!accountant) return null;
+  // Free plan ("none") is valid and should keep core functionality available.
+  if (accountant.subscription_plan === "none") return null;
   if (hasActiveSubscription(accountant) || hasPremiumAccess(accountant)) return null;
   return "Abonamentul tău a expirat. Reînnoiește abonamentul pentru a folosi această funcție.";
 }
