@@ -149,7 +149,10 @@ export async function GET(request: Request) {
       if (client.archived) return false;
       if (req.request_closed) return false;
       const accountant = client.accountants;
-      if (!hasActiveSubscription(accountant) && !hasPremiumAccess(accountant)) return false;
+      const isFreePlan = accountant?.subscription_plan === "none";
+      if (!isFreePlan && !hasActiveSubscription(accountant) && !hasPremiumAccess(accountant)) {
+        return false;
+      }
       // Cererea programată (email_scheduled) nu depinde de clients.reminder_enabled —
       // acel toggle e doar pentru reminder lunar recurent din UI; aici contabilul a ales explicit data.
       // due by RO calendar day (never before the scheduled date in RO)
@@ -306,7 +309,10 @@ export async function GET(request: Request) {
     const client = Array.isArray(clientRaw) ? clientRaw[0] : clientRaw;
     if (!client?.email?.trim()) continue;
     const accountant = client.accountants;
-    if (!hasActiveSubscription(accountant) && !hasPremiumAccess(accountant)) continue;
+    const isFreePlan = accountant?.subscription_plan === "none";
+    if (!isFreePlan && !hasActiveSubscription(accountant) && !hasPremiumAccess(accountant)) {
+      continue;
+    }
 
     // Send reminder only when NOT all required documents are uploaded for that requested period.
     // We treat the client's current document_types list as the required set.
