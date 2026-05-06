@@ -55,7 +55,9 @@ export async function POST(request: Request) {
     .eq("id", accountantId)
     .maybeSingle();
 
-  if (!hasActiveSubscription(accountant) && !hasPremiumAccess(accountant)) {
+  const accPlan = accountant as { subscription_plan?: string | null; premium_until?: string | null } | null;
+  const isFreePlan = accPlan?.subscription_plan === "none";
+  if (!isFreePlan && !hasActiveSubscription(accPlan) && !hasPremiumAccess(accPlan)) {
     return NextResponse.json(
       { error: "Abonamentul contabilului este expirat. Încărcarea documentelor este indisponibilă." },
       { status: 403 }
