@@ -8,48 +8,68 @@ const MAX_SCAN_SIZE = 2000;
 
 /**
  * Enhances a document photo to look like a clean scan.
- * Uses only native sharp operations (no raw pixel loops) for reliability.
- * Two-stage: normalise lighting, then boost text contrast.
+ *
+ * Technique: "division normalisation" — divide each pixel by the local
+ * background estimate (heavily blurred version of the same image).
+ * Paper pixels that are at 70% of their local background map to ~70% → 255
+ * regardless of whether they sit in a bright or shadowed region, so uneven
+ * lighting and finger/sofa shadows are neutralised before the contrast stretch.
  */
 export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Promise<Buffer> {
-  // Pass 1: orient, resize, greyscale, global normalise
-  let pass1: Buffer;
   try {
-    pass1 = await sharp(imageBuffer)
+    // Step 1 – orient, resize, convert to single-channel greyscale PNG
+    const base = await sharp(imageBuffer)
       .rotate()
       .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
       .removeAlpha()
       .greyscale()
-      .normalise()
-      .jpeg({ quality: 92 })
+      .png()
       .toBuffer();
-  } catch {
-    try {
-      pass1 = await sharp(imageBuffer).rotate().removeAlpha().greyscale().jpeg({ quality: 85 }).toBuffer();
-    } catch {
-      pass1 = await sharp(imageBuffer).rotate().jpeg({ quality: 80 }).toBuffer();
-    }
-  }
 
-  // Pass 2: CLAHE for local contrast (equalises shadows/glare per region),
-  // then aggressive linear to push paper to white and text to black.
-  try {
-    return await sharp(pass1)
-      .clahe({ width: 48, height: 48, maxSlope: 4 })
-      .linear(2.2, -65)
+    // Step 2 – read raw pixels and their blurred background estimate
+    const { data: src, info } = await sharp(base).raw().toBuffer({ resolveWithObject: true });
+    const { width: w, height: h, channels: ch } = info;
+
+    // Blur sigma ≈ 1/12 of shortest dimension → covers large background regions
+    // without being so large it times out (capped 15–80 px)
+    const blurSigma = Math.max(15, Math.min(80, Math.floor(Math.min(w, h) / 12)));
+    const { data: bg } = await sharp(base).blur(blurSigma).raw().toBuffer({ resolveWithObject: true });
+
+    // Step 3 – divide: output = clamp(src / bg * 240, 0, 255)
+    // Paper in bright area: src=210, bg=220 → 210/220*240 = 229
+    // Paper in shadow:      src=100, bg=120 → 100/120*240 = 200
+    // Text in bright area:  src=50,  bg=220 → 50/220*240  = 55
+    // Text in shadow:       src=35,  bg=120 → 35/120*240  = 70
+    // After normalise() these compress nicely to [0..255]
+    const out = Buffer.alloc(w * h);
+    for (let i = 0; i < w * h; i++) {
+      const s = src[i * ch] ?? 128;
+      const b = Math.max(bg[i * ch] ?? 128, 1);
+      out[i] = Math.min(255, Math.round((s / b) * 240));
+    }
+
+    // Step 4 – final contrast pass: normalise → linear stretch → sharpen
+    return await sharp(out, { raw: { width: w, height: h, channels: 1 } })
+      .normalise()
+      .linear(1.9, -50)
       .sharpen({ sigma: 1.5, m1: 2, m2: 5 })
       .jpeg({ quality: 88 })
       .toBuffer();
   } catch {
-    // CLAHE not available — skip it, use stronger linear only
+    // Fallback: no division — plain normalise + aggressive linear
     try {
-      return await sharp(pass1)
-        .linear(2.5, -82)
+      return await sharp(imageBuffer)
+        .rotate()
+        .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
+        .removeAlpha()
+        .greyscale()
+        .normalise()
+        .linear(2.2, -65)
         .sharpen({ sigma: 1.5, m1: 2, m2: 5 })
         .jpeg({ quality: 88 })
         .toBuffer();
     } catch {
-      return pass1;
+      return await sharp(imageBuffer).rotate().jpeg({ quality: 80 }).toBuffer();
     }
   }
 }
