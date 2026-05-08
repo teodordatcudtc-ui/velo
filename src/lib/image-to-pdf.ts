@@ -100,10 +100,28 @@ export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Pro
  * Folosește sharp pentru rotație EXIF și conversie WebP/HEIC/GIF → JPEG înainte de încorporare.
  */
 export async function buildPdfFromImageBuffer(imageBuffer: Buffer): Promise<Uint8Array> {
-  const jpegBuffer = await buildEnhancedDocumentImageBuffer(imageBuffer);
-
+  const enhancedJpeg = await buildEnhancedDocumentImageBuffer(imageBuffer);
   const pdf = await PDFDocument.create();
-  const image = await pdf.embedJpg(jpegBuffer);
+
+  let image: Awaited<ReturnType<typeof pdf.embedJpg>> | Awaited<ReturnType<typeof pdf.embedPng>>;
+  try {
+    image = await pdf.embedJpg(enhancedJpeg);
+  } catch {
+    // Fallback 1: some JPEG variants fail in pdf-lib parser; re-encode to PNG.
+    try {
+      const enhancedPng = await sharp(enhancedJpeg).png().toBuffer();
+      image = await pdf.embedPng(enhancedPng);
+    } catch {
+      // Fallback 2: last resort from original image, robust conversion path.
+      const safePng = await sharp(imageBuffer)
+        .rotate()
+        .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
+        .removeAlpha()
+        .png()
+        .toBuffer();
+      image = await pdf.embedPng(safePng);
+    }
+  }
 
   const iw = image.width;
   const ih = image.height;
