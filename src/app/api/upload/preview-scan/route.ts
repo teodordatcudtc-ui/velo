@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   try {
     const raw = Buffer.from(await file.arrayBuffer());
     const enhanced = await buildEnhancedDocumentImageBuffer(raw);
-    return new NextResponse(enhanced, {
+    return new NextResponse(enhanced.buffer as ArrayBuffer, {
       status: 200,
       headers: {
         "Content-Type": "image/jpeg",
