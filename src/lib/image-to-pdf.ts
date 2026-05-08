@@ -17,6 +17,47 @@ type CropRegion = {
   height: number;
 };
 
+type ToneStats = {
+  darkRatio: number;
+  brightRatio: number;
+  contrast: number;
+};
+
+async function analyzeTone(imageBuffer: Buffer): Promise<ToneStats> {
+  const { data, info } = await sharp(imageBuffer)
+    .greyscale()
+    .resize(320, 320, { fit: "inside", withoutEnlargement: true })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const total = Math.max(info.width * info.height, 1);
+  let dark = 0;
+  let bright = 0;
+  let sum = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const v = data[i] ?? 0;
+    sum += v;
+    if (v < 28) dark++;
+    if (v > 238) bright++;
+  }
+
+  const mean = sum / total;
+  let varianceSum = 0;
+  for (let i = 0; i < data.length; i++) {
+    const v = data[i] ?? 0;
+    const d = v - mean;
+    varianceSum += d * d;
+  }
+  const contrast = Math.sqrt(varianceSum / total);
+
+  return {
+    darkRatio: dark / total,
+    brightRatio: bright / total,
+    contrast,
+  };
+}
+
 async function detectDocumentRegion(
   imageBuffer: Buffer,
   sourceWidth: number,
@@ -74,26 +115,29 @@ async function normalizeReceiptPhoto(imageBuffer: Buffer): Promise<Buffer> {
           .toBuffer()
       : normalized;
 
-  // Scanner-style pass: emphasize text and flatten background noise.
+  // Shadow-safe base enhancement (similar to scanner apps before B/W decision).
   const scannerBase = await sharp(croppedOrFull)
     .greyscale()
     .normalise()
-    .sharpen({ sigma: 1.2, m1: 1, m2: 3 })
+    .gamma(1.08)
+    .linear(1.08, -4)
+    .sharpen({ sigma: 1.15, m1: 1, m2: 2 })
     .median(1)
     .toBuffer();
 
-  const stats = await sharp(scannerBase).stats();
-  const contrast = stats.channels[0]?.stdev ?? 0;
-  const thresholdValue = contrast < 42 ? 170 : 186;
+  const tone = await analyzeTone(scannerBase);
 
-  const highContrast = await sharp(scannerBase)
-    .linear(1.25, -16)
-    .threshold(thresholdValue, { grayscale: true })
-    .toBuffer();
+  // Adaptive B/W only when shadows are low; otherwise keep grayscale to avoid black blobs.
+  const canUseBinary = tone.darkRatio < 0.12 && tone.brightRatio < 0.9 && tone.contrast > 26;
 
-  return sharp(highContrast)
-    .jpeg({ quality: 92, mozjpeg: true })
-    .toBuffer();
+  const finalBuffer = canUseBinary
+    ? await sharp(scannerBase)
+        .linear(1.12, -6)
+        .threshold(178, { grayscale: true })
+        .toBuffer()
+    : scannerBase;
+
+  return sharp(finalBuffer).jpeg({ quality: 92, mozjpeg: true }).toBuffer();
 }
 
 /**
