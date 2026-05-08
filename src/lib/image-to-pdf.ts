@@ -5,6 +5,7 @@ const A4_W = 595.28;
 const A4_H = 841.89;
 const MARGIN = 40;
 const MAX_SCAN_SIZE = 2000;
+type ImageToPdfMode = "scan" | "photo";
 
 /**
  * Enhances a document photo to look like a clean scan.
@@ -78,14 +79,33 @@ export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Pro
  * Converts an image buffer to a PDF A4 document.
  * Always embeds as PNG to avoid JPEG parser edge-cases in pdf-lib.
  */
-export async function buildPdfFromImageBuffer(imageBuffer: Buffer): Promise<Uint8Array> {
-  // Produce enhanced JPEG first
-  const enhanced = await buildEnhancedDocumentImageBuffer(imageBuffer);
+export async function buildPdfFromImageBuffer(
+  imageBuffer: Buffer,
+  options?: { mode?: ImageToPdfMode }
+): Promise<Uint8Array> {
+  const mode: ImageToPdfMode = options?.mode === "photo" ? "photo" : "scan";
+
+  // Produce image for PDF: enhanced scan or natural photo.
+  let prepared: Buffer;
+  if (mode === "photo") {
+    try {
+      prepared = await sharp(imageBuffer)
+        .rotate()
+        .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
+        .removeAlpha()
+        .jpeg({ quality: 92 })
+        .toBuffer();
+    } catch {
+      prepared = await sharp(imageBuffer).rotate().jpeg({ quality: 85 }).toBuffer();
+    }
+  } else {
+    prepared = await buildEnhancedDocumentImageBuffer(imageBuffer);
+  }
 
   // Convert to PNG for embedding — pdf-lib embedPng is more robust than embedJpg
   let pngBuffer: Buffer;
   try {
-    pngBuffer = await sharp(enhanced).png().toBuffer();
+    pngBuffer = await sharp(prepared).png().toBuffer();
   } catch {
     // If even PNG conversion fails, embed from the original as last resort
     pngBuffer = await sharp(imageBuffer)

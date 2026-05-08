@@ -17,6 +17,8 @@ export async function POST(request: Request) {
   const token = formData.get("token") as string | null;
   const documentTypeId = formData.get("documentTypeId") as string | null;
   const file = formData.get("file") as File | null;
+  const imageModeRaw = (formData.get("imageMode") as string | null)?.toLowerCase();
+  const imageMode = imageModeRaw === "photo" ? "photo" : "scan";
 
   if (!token || !documentTypeId || !file?.size) {
     return NextResponse.json(
@@ -107,7 +109,7 @@ export async function POST(request: Request) {
   if (isImage) {
     try {
       const raw      = Buffer.from(await file.arrayBuffer());
-      const pdfBytes = await buildPdfFromImageBuffer(raw);
+      const pdfBytes = await buildPdfFromImageBuffer(raw, { mode: imageMode });
       uploadBody  = pdfBytes;
       contentType = "application/pdf";
       ext         = ".pdf";

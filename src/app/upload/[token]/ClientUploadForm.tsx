@@ -51,6 +51,8 @@ async function buildScanPreviewDataUrl(file: File): Promise<string | null> {
   }
 }
 
+type ImageUploadMode = "scan" | "photo";
+
 async function buildFallbackScanPreviewDataUrl(file: File): Promise<string | null> {
   try {
     const imageUrl = URL.createObjectURL(file);
@@ -376,11 +378,16 @@ export function ClientUploadForm({
     }
   }
 
-  async function uploadDirectFile(documentTypeId: string, file: File): Promise<boolean> {
+  async function uploadDirectFile(
+    documentTypeId: string,
+    file: File,
+    imageMode: ImageUploadMode = "scan"
+  ): Promise<boolean> {
     const formData = new FormData();
     formData.set("token", token);
     formData.set("documentTypeId", documentTypeId);
     formData.set("file", file);
+    formData.set("imageMode", imageMode);
 
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     const data = await res.json().catch(() => ({}));
@@ -432,7 +439,7 @@ export function ClientUploadForm({
       return;
     }
 
-    const ok = await uploadDirectFile(scanReview.documentTypeId, transformed);
+    const ok = await uploadDirectFile(scanReview.documentTypeId, transformed, "scan");
     setUploading(null);
     if (ok) closeScanReview();
   }
@@ -448,7 +455,7 @@ export function ClientUploadForm({
           source,
           isImage: image,
           originalPreviewUrl: image ? URL.createObjectURL(file) : null,
-          scanPreviewUrl: image ? await buildScanPreviewDataUrl(file) : null,
+          scanPreviewUrl: image && source === "scan" ? await buildScanPreviewDataUrl(file) : null,
         } satisfies PendingUpload;
       })
     );
@@ -474,6 +481,9 @@ export function ClientUploadForm({
       formData.set("token", token);
       formData.set("documentTypeId", documentTypeId);
       formData.set("file", item.file);
+      if (item.isImage) {
+        formData.set("imageMode", item.source === "scan" ? "scan" : "photo");
+      }
 
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json().catch(() => ({}));
@@ -621,7 +631,7 @@ export function ClientUploadForm({
                     : "bg-[var(--sage)] text-white hover:bg-[var(--sage-dark)]"
                 }`}
               >
-                Scanează
+                Scanare document
               </label>
               <button
                 type="button"
@@ -640,11 +650,11 @@ export function ClientUploadForm({
                     Se încarcă...
                   </>
                 ) : (
-                  "Alege fișier"
+                  "Poză / fișier normal"
                 )}
               </button>
               <span className="text-sm text-[var(--ink-muted)]">
-                PDF, Office sau imagini (convertite automat în PDF). Pe telefon: «Fișiere» / «Browse».
+                Scanare = text evidențiat. Poză normală = imaginea rămâne naturală.
               </span>
             </div>
 
@@ -722,8 +732,8 @@ export function ClientUploadForm({
                           <div className="w-full h-48 rounded-[var(--r-sm)] border border-[var(--paper-3)] bg-[var(--paper-2)]" />
                         )}
                         <p className="text-xs text-[var(--ink-muted)]">
-                          {item.source === "scan" ? "Scanare cameră" : "Fișier selectat"}
-                          {item.isImage ? " · preview scan activ" : ""}
+                          {item.source === "scan" ? "Scanare document" : "Poză/fișier normal"}
+                          {item.isImage && item.source === "scan" ? " · preview scan activ" : ""}
                         </p>
                       </div>
                     </li>
