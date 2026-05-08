@@ -17,14 +17,15 @@ const MAX_SCAN_SIZE = 2400;
  * without hard thresholds that create black blobs in shadow areas.
  */
 export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Promise<Buffer> {
-  // Step 1: orient + resize + explicit single-channel PNG (guarantees 1 byte/pixel in raw)
-  const grey = await sharp(imageBuffer)
-    .rotate()
-    .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
-    .removeAlpha()
-    .greyscale()
-    .png()
-    .toBuffer();
+  try {
+    // Step 1: orient + resize + explicit single-channel PNG (guarantees 1 byte/pixel in raw)
+    const grey = await sharp(imageBuffer)
+      .rotate()
+      .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
+      .removeAlpha()
+      .greyscale()
+      .png()
+      .toBuffer();
 
   // Step 2: get raw 1-channel pixel array + dimensions
   const { data: grayPx, info } = await sharp(grey)
@@ -32,51 +33,66 @@ export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Pro
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  const w = info.width;
-  const h = info.height;
-  const ch = info.channels; // should be 1
+    const w = info.width;
+    const h = info.height;
+    const ch = info.channels; // should be 1
 
-  // Step 3: heavily blurred version = local background/lighting estimate
-  // Clamp sigma to at most 1/6 of shortest dimension to avoid libvips kernel errors
-  const blurSigma = Math.max(10, Math.min(60, Math.floor(Math.min(w, h) / 6)));
-  const { data: bgPx } = await sharp(grey)
-    .greyscale()
-    .blur(blurSigma)
-    .raw()
-    .toBuffer({ resolveWithObject: true });
+    // Step 3: heavily blurred version = local background/lighting estimate
+    // Keep sigma conservative so it works on very small crops too.
+    const minSide = Math.max(1, Math.min(w, h));
+    const blurSigma = Math.max(1, Math.min(24, Math.floor(minSide / 20)));
+    const { data: bgPx } = await sharp(grey)
+      .greyscale()
+      .blur(blurSigma)
+      .raw()
+      .toBuffer({ resolveWithObject: true });
 
-  // Step 4: division normalization — cancels uneven shadows without hard threshold
-  // Multiplier 232 keeps glare areas slightly below pure white so text stays visible
-  const pixelCount = w * h;
-  const divided = Buffer.alloc(pixelCount);
-  for (let i = 0; i < pixelCount; i++) {
-    const g = grayPx[i * ch] ?? 128;
-    const bg = Math.max(bgPx[i * ch] ?? 128, 1);
-    divided[i] = Math.min(255, Math.round((g / bg) * 232));
-  }
+    // Step 4: division normalization — cancels uneven shadows without hard threshold
+    // Multiplier 232 keeps glare areas slightly below pure white so text stays visible
+    const pixelCount = w * h;
+    const divided = Buffer.alloc(pixelCount);
+    for (let i = 0; i < pixelCount; i++) {
+      const g = grayPx[i * ch] ?? 128;
+      const bg = Math.max(bgPx[i * ch] ?? 128, 1);
+      divided[i] = Math.min(255, Math.round((g / bg) * 232));
+    }
 
-  // Step 5: CLAHE tiles sized to ~1/24 of image for local glare recovery, then stretch + sharpen
-  const claheTile = Math.max(8, Math.min(32, Math.floor(Math.min(w, h) / 24)));
-  let enhancedBase: Buffer;
-  try {
-    enhancedBase = await sharp(divided, { raw: { width: w, height: h, channels: 1 } })
-      .clahe({ width: claheTile, height: claheTile, maxSlope: 4 })
+    // Step 5: CLAHE tiles sized to ~1/24 of image for local glare recovery, then stretch + sharpen
+    const claheTile = Math.max(8, Math.min(32, Math.floor(Math.min(w, h) / 24)));
+    let enhancedBase: Buffer;
+    try {
+      enhancedBase = await sharp(divided, { raw: { width: w, height: h, channels: 1 } })
+        .clahe({ width: claheTile, height: claheTile, maxSlope: 4 })
+        .toBuffer();
+    } catch {
+      // fallback: skip CLAHE if it fails (older libvips or edge-case dimensions)
+      enhancedBase = await sharp(divided, { raw: { width: w, height: h, channels: 1 } })
+        .png()
+        .toBuffer();
+    }
+
+    return sharp(enhancedBase)
+      .greyscale()
+      .normalise()
+      .gamma(0.88)
+      .linear(1.32, -22)
+      .sharpen({ sigma: 1.15, m1: 0.9, m2: 2.4 })
+      .jpeg({ quality: 92, mozjpeg: true })
       .toBuffer();
   } catch {
-    // fallback: skip CLAHE if it fails (older libvips or edge-case dimensions)
-    enhancedBase = await sharp(divided, { raw: { width: w, height: h, channels: 1 } })
-      .png()
+    // Hard fallback: never fail preview generation. Return a robust, simpler enhancement.
+    return sharp(imageBuffer)
+      .rotate()
+      .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
+      .removeAlpha()
+      .greyscale()
+      .normalise()
+      .gamma(0.95)
+      .linear(1.18, -12)
+      .sharpen({ sigma: 1.05, m1: 0.8, m2: 2 })
+      .jpeg({ quality: 90, mozjpeg: true })
       .toBuffer();
   }
-
-  return sharp(enhancedBase)
-    .greyscale()
-    .normalise()
-    .gamma(0.88)
-    .linear(1.32, -22)
-    .sharpen({ sigma: 1.15, m1: 0.9, m2: 2.4 })
-    .jpeg({ quality: 92, mozjpeg: true })
-    .toBuffer();
 }
 
 /**
