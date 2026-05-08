@@ -6,16 +6,88 @@ const A4_W = 595.28;
 const A4_H = 841.89;
 const MARGIN = 40;
 
+const MAX_SCAN_SIZE = 3200;
+const MIN_CROP_EDGE = 500;
+const MIN_CROP_AREA_RATIO = 0.18;
+
+type CropRegion = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+async function detectDocumentRegion(
+  imageBuffer: Buffer,
+  sourceWidth: number,
+  sourceHeight: number
+): Promise<CropRegion | null> {
+  try {
+    const { info } = await sharp(imageBuffer)
+      .greyscale()
+      .normalise()
+      .blur(1.1)
+      .threshold(210)
+      .negate()
+      .trim({ threshold: 16 })
+      .toBuffer({ resolveWithObject: true });
+
+    const left = Number(info.trimOffsetLeft ?? 0);
+    const top = Number(info.trimOffsetTop ?? 0);
+    const width = Number(info.width ?? 0);
+    const height = Number(info.height ?? 0);
+    if (width < MIN_CROP_EDGE || height < MIN_CROP_EDGE) return null;
+
+    const areaRatio = (width * height) / Math.max(sourceWidth * sourceHeight, 1);
+    if (areaRatio < MIN_CROP_AREA_RATIO) return null;
+
+    return { left, top, width, height };
+  } catch {
+    return null;
+  }
+}
+
+async function normalizeReceiptPhoto(imageBuffer: Buffer): Promise<Buffer> {
+  const normalized = await sharp(imageBuffer)
+    .rotate()
+    .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
+    .removeAlpha()
+    .jpeg({ quality: 92, mozjpeg: true })
+    .toBuffer();
+
+  const metadata = await sharp(normalized).metadata();
+  const baseWidth = metadata.width ?? 0;
+  const baseHeight = metadata.height ?? 0;
+  const baseArea = Math.max(baseWidth * baseHeight, 1);
+
+  const region = await detectDocumentRegion(normalized, baseWidth, baseHeight);
+
+  const croppedOrFull =
+    region && region.width * region.height >= baseArea * MIN_CROP_AREA_RATIO
+      ? await sharp(normalized)
+          .extract({
+            left: Math.max(0, Math.min(region.left, Math.max(baseWidth - 1, 0))),
+            top: Math.max(0, Math.min(region.top, Math.max(baseHeight - 1, 0))),
+            width: Math.max(1, Math.min(region.width, baseWidth)),
+            height: Math.max(1, Math.min(region.height, baseHeight)),
+          })
+          .toBuffer()
+      : normalized;
+
+  return sharp(croppedOrFull)
+    .normalise()
+    .sharpen({ sigma: 1.0, m1: 1, m2: 2 })
+    .modulate({ brightness: 1.04, saturation: 0.85 })
+    .jpeg({ quality: 90, mozjpeg: true })
+    .toBuffer();
+}
+
 /**
  * Construiește un PDF valid (A4) cu imaginea scalată la încadrare, potrivit pentru arhivă contabilă.
  * Folosește sharp pentru rotație EXIF și conversie WebP/HEIC/GIF → JPEG înainte de încorporare.
  */
 export async function buildPdfFromImageBuffer(imageBuffer: Buffer): Promise<Uint8Array> {
-  const jpegBuffer = await sharp(imageBuffer)
-    .rotate()
-    .resize(3200, 3200, { fit: "inside", withoutEnlargement: true })
-    .jpeg({ quality: 88, mozjpeg: true })
-    .toBuffer();
+  const jpegBuffer = await normalizeReceiptPhoto(imageBuffer);
 
   const pdf = await PDFDocument.create();
   const image = await pdf.embedJpg(jpegBuffer);
