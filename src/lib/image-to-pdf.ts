@@ -37,26 +37,32 @@ export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Pro
   const ch = info.channels; // should be 1
 
   // Step 3: heavily blurred version = local background/lighting estimate
+  // Larger blur (80) gives a better estimate for wide glare/shadow patches
   const { data: bgPx } = await sharp(grey)
     .greyscale()
-    .blur(50)
+    .blur(80)
     .raw()
     .toBuffer({ resolveWithObject: true });
 
   // Step 4: division normalization — cancels uneven shadows without hard threshold
+  // Multiplier 232 (not 255) keeps glare areas slightly below pure white so text remains visible
   const pixelCount = w * h;
   const divided = Buffer.alloc(pixelCount);
   for (let i = 0; i < pixelCount; i++) {
     const g = grayPx[i * ch] ?? 128;
     const bg = Math.max(bgPx[i * ch] ?? 128, 1);
-    divided[i] = Math.min(255, Math.round((g / bg) * 240));
+    divided[i] = Math.min(255, Math.round((g / bg) * 232));
   }
 
-  // Step 5: final contrast stretch + sharpen
+  // Step 5: CLAHE for local contrast recovery (text in glare areas) + sharpen + stretch
+  // CLAHE tiles (16×16) adaptively boost contrast in each local region,
+  // recovering text even where direct light washes out the global contrast.
   return sharp(divided, { raw: { width: w, height: h, channels: 1 } })
+    .clahe({ width: 16, height: 16, maxSlope: 4 })
     .normalise()
-    .linear(1.28, -18)
-    .sharpen({ sigma: 1.1, m1: 0.8, m2: 2.2 })
+    .gamma(0.88)
+    .linear(1.32, -22)
+    .sharpen({ sigma: 1.15, m1: 0.9, m2: 2.4 })
     .jpeg({ quality: 92, mozjpeg: true })
     .toBuffer();
 }
