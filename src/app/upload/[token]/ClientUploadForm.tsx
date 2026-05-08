@@ -63,12 +63,9 @@ async function buildScanPreviewDataUrl(file: File): Promise<string | null> {
     }
     const pixelCount = Math.max(data.length / 4, 1);
     const mean = sum / pixelCount;
-    const threshold = clamp(mean + 10, 150, 205);
-
     for (let i = 0; i < data.length; i += 4) {
       const gray = 0.299 * (data[i] ?? 0) + 0.587 * (data[i + 1] ?? 0) + 0.114 * (data[i + 2] ?? 0);
-      const contrast = clamp((gray - mean) * 1.35 + 172, 0, 255);
-      const finalGray = contrast > threshold ? 252 : clamp(contrast * 0.42, 0, 145);
+      const finalGray = clamp((gray - mean) * 1.12 + 188, 0, 255);
       const out = Math.round(finalGray);
       data[i] = out;
       data[i + 1] = out;
@@ -101,6 +98,8 @@ export function ClientUploadForm({
   const [error, setError] = useState<string | null>(null);
   const [lastSuccess, setLastSuccess] = useState<string | null>(null);
   const [pendingByType, setPendingByType] = useState<Record<string, PendingUpload[]>>({});
+  const [activePreviewUrl, setActivePreviewUrl] = useState<string | null>(null);
+  const [activePreviewLabel, setActivePreviewLabel] = useState<string>("");
   const toast = useToast();
   const [uploadedByType, setUploadedByType] = useState<Record<string, UploadItem[]>>(
     () => {
@@ -327,7 +326,8 @@ export function ClientUploadForm({
               >
                 Scanează
               </label>
-              <span
+              <button
+                type="button"
                 onClick={() => (document.getElementById(`file-picker-${dt.id}`) as HTMLInputElement | null)?.click()}
                 className={`
                   inline-flex items-center gap-2 px-4 py-2.5 rounded-[var(--r-md)] text-sm font-medium
@@ -346,7 +346,7 @@ export function ClientUploadForm({
                 ) : (
                   "Alege fișier"
                 )}
-              </span>
+              </button>
               <span className="text-sm text-[var(--ink-muted)]">
                 PDF, Office sau imagini (convertite automat în PDF). Pe telefon: «Fișiere» / «Browse».
               </span>
@@ -376,44 +376,64 @@ export function ClientUploadForm({
                     </button>
                   </div>
                 </div>
-                <ul className="space-y-3">
+                <ul className="space-y-4">
                   {pendingList.map((item) => (
                     <li
                       key={item.id}
-                      className="flex items-start justify-between gap-3 p-2 border border-[var(--paper-3)] rounded-[var(--r-sm)]"
+                      className="p-3 border border-[var(--paper-3)] rounded-[var(--r-sm)]"
                     >
-                      <div className="flex items-start gap-3 min-w-0">
-                        {item.scanPreviewUrl ? (
-                          <img
-                            src={item.scanPreviewUrl}
-                            alt={`Preview scan ${item.file.name}`}
-                            className="w-24 h-32 object-cover rounded-[var(--r-sm)] border border-[var(--paper-3)] shrink-0 bg-white"
-                          />
-                        ) : item.originalPreviewUrl ? (
-                          <img
-                            src={item.originalPreviewUrl}
-                            alt={`Preview ${item.file.name}`}
-                            className="w-24 h-32 object-cover rounded-[var(--r-sm)] border border-[var(--paper-3)] shrink-0 bg-white"
-                          />
-                        ) : (
-                          <div className="w-24 h-32 rounded-[var(--r-sm)] border border-[var(--paper-3)] bg-[var(--paper-2)] shrink-0" />
-                        )}
-                        <div className="min-w-0">
+                      <div className="space-y-3">
+                        <div className="min-w-0 flex items-center justify-between gap-3">
                           <p className="text-sm text-[var(--ink)] font-medium truncate">{item.file.name}</p>
+                          <button
+                            type="button"
+                            disabled={isUploading}
+                            onClick={() => removePendingItem(dt.id, item.id)}
+                            className="text-[var(--terracotta)] hover:underline text-sm disabled:opacity-50 shrink-0"
+                          >
+                            Șterge
+                          </button>
+                        </div>
+                        {item.scanPreviewUrl ? (
+                          <button
+                            type="button"
+                            className="block w-full"
+                            onClick={() => {
+                              setActivePreviewUrl(item.scanPreviewUrl);
+                              setActivePreviewLabel(item.file.name);
+                            }}
+                          >
+                            <img
+                              src={item.scanPreviewUrl}
+                              alt={`Preview scan ${item.file.name}`}
+                              className="w-full max-h-[72vh] object-contain rounded-[var(--r-sm)] border border-[var(--paper-3)] bg-white"
+                            />
+                          </button>
+                        ) : item.originalPreviewUrl ? (
+                          <button
+                            type="button"
+                            className="block w-full"
+                            onClick={() => {
+                              setActivePreviewUrl(item.originalPreviewUrl);
+                              setActivePreviewLabel(item.file.name);
+                            }}
+                          >
+                            <img
+                              src={item.originalPreviewUrl}
+                              alt={`Preview ${item.file.name}`}
+                              className="w-full max-h-[72vh] object-contain rounded-[var(--r-sm)] border border-[var(--paper-3)] bg-white"
+                            />
+                          </button>
+                        ) : (
+                          <div className="w-full h-48 rounded-[var(--r-sm)] border border-[var(--paper-3)] bg-[var(--paper-2)]" />
+                        )}
+                        <div>
                           <p className="text-xs text-[var(--ink-muted)] mt-1">
                             {item.source === "scan" ? "Scanare cameră" : "Fișier selectat"}
                             {item.isImage ? " · preview scan activ" : ""}
                           </p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        disabled={isUploading}
-                        onClick={() => removePendingItem(dt.id, item.id)}
-                        className="text-[var(--terracotta)] hover:underline text-sm disabled:opacity-50 shrink-0"
-                      >
-                        Șterge
-                      </button>
                     </li>
                   ))}
                 </ul>
@@ -455,6 +475,33 @@ export function ClientUploadForm({
           <p className="text-sm text-[var(--sage)] font-medium">
             {lastSuccess}
           </p>
+        </div>
+      )}
+      {activePreviewUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Preview scan"
+          onClick={() => setActivePreviewUrl(null)}
+        >
+          <div className="w-full max-w-4xl max-h-full flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between text-white">
+              <p className="text-sm truncate pr-3">{activePreviewLabel}</p>
+              <button
+                type="button"
+                onClick={() => setActivePreviewUrl(null)}
+                className="text-sm px-3 py-1 rounded bg-white/15 hover:bg-white/25"
+              >
+                Închide
+              </button>
+            </div>
+            <img
+              src={activePreviewUrl}
+              alt={`Preview ${activePreviewLabel}`}
+              className="w-full h-auto max-h-[86vh] object-contain rounded-[var(--r-sm)] bg-white"
+            />
+          </div>
         </div>
       )}
     </div>
