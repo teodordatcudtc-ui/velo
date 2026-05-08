@@ -36,17 +36,72 @@ async function buildScanPreviewDataUrl(file: File): Promise<string | null> {
     const formData = new FormData();
     formData.set("file", file);
     const res = await fetch("/api/upload/preview-scan", { method: "POST", body: formData });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
+    if (res.ok) {
+      const blob = await res.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result ?? ""));
+        reader.onerror = () => reject(new Error("reader failed"));
+        reader.readAsDataURL(blob);
+      });
+    }
+    return await buildFallbackScanPreviewDataUrl(file);
+  } catch {
+    return await buildFallbackScanPreviewDataUrl(file);
+  }
+}
+
+async function buildFallbackScanPreviewDataUrl(file: File): Promise<string | null> {
+  try {
+    const imageUrl = URL.createObjectURL(file);
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = reject;
+      element.src = imageUrl;
+    });
+
+    const maxSide = 1800;
+    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    const width = Math.max(1, Math.round(img.naturalWidth * scale));
+    const height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      URL.revokeObjectURL(imageUrl);
+      return null;
+    }
+    ctx.drawImage(img, 0, 0, width, height);
+
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const pixels = imageData.data;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i] ?? 0;
+      const g = pixels[i + 1] ?? 0;
+      const b = pixels[i + 2] ?? 0;
+      const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+      const enhanced = Math.max(0, Math.min(255, Math.round((gray - 128) * 1.28 + 168)));
+      pixels[i] = enhanced;
+      pixels[i + 1] = enhanced;
+      pixels[i + 2] = enhanced;
+    }
+    ctx.putImageData(imageData, 0, 0);
+    URL.revokeObjectURL(imageUrl);
+    return canvas.toDataURL("image/jpeg", 0.9);
+  } catch {
+    return null;
+  }
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result ?? ""));
       reader.onerror = () => reject(new Error("reader failed"));
       reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
+  });
 }
 
 async function rotateDataUrl90(dataUrl: string): Promise<string | null> {
