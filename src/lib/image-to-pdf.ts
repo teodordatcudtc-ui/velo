@@ -12,34 +12,44 @@ const MAX_SCAN_SIZE = 2000;
  * Two-stage: normalise lighting, then boost text contrast.
  */
 export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Promise<Buffer> {
+  // Pass 1: orient, resize, greyscale, global normalise
+  let pass1: Buffer;
   try {
-    return await sharp(imageBuffer)
-      .rotate()                             // fix EXIF orientation
+    pass1 = await sharp(imageBuffer)
+      .rotate()
       .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
       .removeAlpha()
       .greyscale()
-      .normalise()                          // stretch histogram: removes uneven lighting
-      .gamma(0.72)                          // compress highlights more → paper whiter, text darker
-      .linear(1.6, -48)                     // stronger contrast stretch
-      .sharpen({ sigma: 1.4, m1: 1.5, m2: 4 }) // more aggressive edge sharpening for text
+      .normalise()
+      .jpeg({ quality: 92 })
+      .toBuffer();
+  } catch {
+    try {
+      pass1 = await sharp(imageBuffer).rotate().removeAlpha().greyscale().jpeg({ quality: 85 }).toBuffer();
+    } catch {
+      pass1 = await sharp(imageBuffer).rotate().jpeg({ quality: 80 }).toBuffer();
+    }
+  }
+
+  // Pass 2: CLAHE for local contrast (equalises shadows/glare per region),
+  // then aggressive linear to push paper to white and text to black.
+  try {
+    return await sharp(pass1)
+      .clahe({ width: 48, height: 48, maxSlope: 4 })
+      .linear(2.2, -65)
+      .sharpen({ sigma: 1.5, m1: 2, m2: 5 })
       .jpeg({ quality: 88 })
       .toBuffer();
   } catch {
-    // Absolute fallback — must never throw
+    // CLAHE not available — skip it, use stronger linear only
     try {
-      return await sharp(imageBuffer)
-        .rotate()
-        .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
-        .removeAlpha()
-        .greyscale()
-        .normalise()
-        .jpeg({ quality: 85 })
+      return await sharp(pass1)
+        .linear(2.5, -82)
+        .sharpen({ sigma: 1.5, m1: 2, m2: 5 })
+        .jpeg({ quality: 88 })
         .toBuffer();
     } catch {
-      return await sharp(imageBuffer)
-        .rotate()
-        .jpeg({ quality: 80 })
-        .toBuffer();
+      return pass1;
     }
   }
 }
