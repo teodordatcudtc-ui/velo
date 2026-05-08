@@ -416,17 +416,23 @@ export function ClientUploadForm({
     setError(null);
     setLastSuccess(null);
 
-    let fileToUpload = scanReview.file;
-    if (scanRotation !== 0 || cropMode) {
-      const transformed = await applyTransformsToFile(
-        scanReview.file,
-        scanRotation,
-        cropMode ? cropRect : null
-      );
-      if (transformed) fileToUpload = transformed;
+    // Always normalize camera scan to JPEG before upload.
+    // This avoids backend decode failures on HEIC/odd mobile formats,
+    // even when user does not rotate/crop.
+    const transformed = await applyTransformsToFile(
+      scanReview.file,
+      scanRotation,
+      cropMode ? cropRect : null
+    );
+    if (!transformed) {
+      const msg = "Nu am putut pregăti scanarea pentru upload. Reîncearcă poza.";
+      setUploading(null);
+      setError(msg);
+      toast.error(msg);
+      return;
     }
 
-    const ok = await uploadDirectFile(scanReview.documentTypeId, fileToUpload);
+    const ok = await uploadDirectFile(scanReview.documentTypeId, transformed);
     setUploading(null);
     if (ok) closeScanReview();
   }
