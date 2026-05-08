@@ -624,13 +624,28 @@ export function ClientUploadForm({
               type="button"
               onClick={() => void confirmScanUpload()}
               disabled={!!uploading}
-              className="w-14 h-14 rounded-full bg-[var(--sage)] text-white text-2xl font-bold disabled:opacity-60"
+              className="min-w-14 h-14 rounded-full bg-[var(--sage)] text-white text-2xl font-bold disabled:opacity-60 px-4 inline-flex items-center justify-center gap-2"
               aria-label="Trimite scanarea"
               title="Trimite scanarea"
             >
-              ✓
+              {uploading ? (
+                <>
+                  <span className="inline-block w-5 h-5 border-2 border-white/90 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm font-medium">Se încarcă...</span>
+                </>
+              ) : (
+                "✓"
+              )}
             </button>
           </div>
+          {uploading && (
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <div className="bg-black/45 rounded-[var(--r-sm)] px-4 py-2 text-white text-sm inline-flex items-center gap-2">
+                <span className="inline-block w-4 h-4 border-2 border-white/90 border-t-transparent rounded-full animate-spin" />
+                Încărcare în curs...
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
