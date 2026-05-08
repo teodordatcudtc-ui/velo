@@ -29,66 +29,24 @@ function isImageFile(file: File): boolean {
   return ["jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif", "tif", "tiff", "jfif"].includes(ext);
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
 async function buildScanPreviewDataUrl(file: File): Promise<string | null> {
   if (!isImageFile(file)) return null;
   try {
-    const objectUrl = URL.createObjectURL(file);
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = reject;
-      el.src = objectUrl;
+    const formData = new FormData();
+    formData.set("file", file);
+    const res = await fetch("/api/upload/preview-scan", {
+      method: "POST",
+      body: formData,
     });
 
-    const maxSide = 1400;
-    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
-    const width = Math.max(1, Math.round(img.naturalWidth * scale));
-    const height = Math.max(1, Math.round(img.naturalHeight * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      URL.revokeObjectURL(objectUrl);
-      return null;
-    }
-
-    ctx.drawImage(img, 0, 0, width, height);
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-
-    let sum = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = 0.299 * (data[i] ?? 0) + 0.587 * (data[i + 1] ?? 0) + 0.114 * (data[i + 2] ?? 0);
-      sum += gray;
-    }
-    const pixelCount = Math.max(data.length / 4, 1);
-    const mean = sum / pixelCount;
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = 0.299 * (data[i] ?? 0) + 0.587 * (data[i + 1] ?? 0) + 0.114 * (data[i + 2] ?? 0);
-      const normalized = clamp((gray - mean) * 1.32 + 186, 0, 255);
-      const finalGray =
-        normalized > 206
-          ? 252
-          : normalized > 172
-            ? clamp(228 + (normalized - 172) * 0.45, 200, 248)
-            : clamp(36 + normalized * 0.66, 24, 188);
-      const out = Math.round(clamp(finalGray, 0, 255));
-      data[i] = out;
-      data[i + 1] = out;
-      data[i + 2] = out;
-      data[i + 3] = 255;
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    const result = canvas.toDataURL("image/jpeg", 0.9);
-    URL.revokeObjectURL(objectUrl);
-    return result;
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("reader failed"));
+      reader.readAsDataURL(blob);
+    });
   } catch {
     return null;
   }

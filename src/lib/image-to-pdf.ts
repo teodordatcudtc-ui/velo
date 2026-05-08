@@ -6,88 +6,58 @@ const A4_W = 595.28;
 const A4_H = 841.89;
 const MARGIN = 40;
 
-const MAX_SCAN_SIZE = 3200;
-const MIN_CROP_EDGE = 500;
-const MIN_CROP_AREA_RATIO = 0.18;
+const MAX_SCAN_SIZE = 2400;
 
-type CropRegion = {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-};
-
-async function detectDocumentRegion(
-  imageBuffer: Buffer,
-  sourceWidth: number,
-  sourceHeight: number
-): Promise<CropRegion | null> {
-  try {
-    const { info } = await sharp(imageBuffer)
-      .greyscale()
-      .normalise()
-      .blur(1.1)
-      .threshold(210)
-      .negate()
-      .trim({ threshold: 16 })
-      .toBuffer({ resolveWithObject: true });
-
-    const left = Number(info.trimOffsetLeft ?? 0);
-    const top = Number(info.trimOffsetTop ?? 0);
-    const width = Number(info.width ?? 0);
-    const height = Number(info.height ?? 0);
-    if (width < MIN_CROP_EDGE || height < MIN_CROP_EDGE) return null;
-
-    const areaRatio = (width * height) / Math.max(sourceWidth * sourceHeight, 1);
-    if (areaRatio < MIN_CROP_AREA_RATIO) return null;
-
-    return { left, top, width, height };
-  } catch {
-    return null;
-  }
-}
-
-async function normalizeReceiptPhoto(imageBuffer: Buffer): Promise<Buffer> {
-  const normalized = await sharp(imageBuffer)
+/**
+ * CamScanner-style enhancement via division normalization.
+ *
+ * Core idea: divide each pixel by a heavily-blurred version of the image.
+ * The blur estimates local background lighting (including shadows), so dividing
+ * by it cancels uneven illumination. Text stays dark, paper turns white —
+ * without hard thresholds that create black blobs in shadow areas.
+ */
+export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Promise<Buffer> {
+  // Step 1: orient + resize + convert to greyscale
+  const grey = await sharp(imageBuffer)
     .rotate()
     .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
     .removeAlpha()
+    .greyscale()
+    .toBuffer();
+
+  const meta = await sharp(grey).metadata();
+  const w = meta.width ?? 0;
+  const h = meta.height ?? 0;
+
+  // Step 2: get raw pixels of the greyscale image
+  const { data: grayPx } = await sharp(grey)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  // Step 3: get raw pixels of a very heavily blurred version → background/lighting estimate
+  const { data: bgPx } = await sharp(grey)
+    .blur(50)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  // Step 4: division normalization  output = clamp( (grey / bg) * 240 )
+  // Shadow areas: grey ≈ bg → ratio ≈ 1 → output ≈ 240 (light)
+  // Text pixels: grey < bg → ratio < 1 → output dark
+  // No hard threshold, so gradual shadows stay smooth instead of turning black
+  const divided = Buffer.alloc(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const g = grayPx[i] ?? 128;
+    const bg = Math.max(bgPx[i] ?? 128, 1);
+    divided[i] = Math.min(255, Math.round((g / bg) * 240));
+  }
+
+  // Step 5: final pass — stretch contrast, sharpen text edges, clean up
+  return sharp(divided, { raw: { width: w, height: h, channels: 1 } })
+    .normalise()
+    .linear(1.28, -18)
+    .sharpen({ sigma: 1.1, m1: 0.8, m2: 2.2 })
     .jpeg({ quality: 92, mozjpeg: true })
     .toBuffer();
-
-  const metadata = await sharp(normalized).metadata();
-  const baseWidth = metadata.width ?? 0;
-  const baseHeight = metadata.height ?? 0;
-  const baseArea = Math.max(baseWidth * baseHeight, 1);
-
-  const region = await detectDocumentRegion(normalized, baseWidth, baseHeight);
-
-  const croppedOrFull =
-    region && region.width * region.height >= baseArea * MIN_CROP_AREA_RATIO
-      ? await sharp(normalized)
-          .extract({
-            left: Math.max(0, Math.min(region.left, Math.max(baseWidth - 1, 0))),
-            top: Math.max(0, Math.min(region.top, Math.max(baseHeight - 1, 0))),
-            width: Math.max(1, Math.min(region.width, baseWidth)),
-            height: Math.max(1, Math.min(region.height, baseHeight)),
-          })
-          .toBuffer()
-      : normalized;
-
-  // Shadow-safe base enhancement (similar to scanner apps before B/W decision).
-  const scannerBase = await sharp(croppedOrFull)
-    .greyscale()
-    .clahe({ width: 24, height: 24, maxSlope: 3 })
-    .normalise()
-    .gamma(1.08)
-    .linear(1.22, -20)
-    .modulate({ brightness: 1.06, saturation: 0.75 })
-    .sharpen({ sigma: 1.4, m1: 1, m2: 2.4 })
-    .median(1)
-    .toBuffer();
-
-  // Keep grayscale enhancement (no hard threshold) to avoid black artifacts in shadows.
-  return sharp(scannerBase).jpeg({ quality: 92, mozjpeg: true }).toBuffer();
 }
 
 /**
@@ -95,7 +65,7 @@ async function normalizeReceiptPhoto(imageBuffer: Buffer): Promise<Buffer> {
  * Folosește sharp pentru rotație EXIF și conversie WebP/HEIC/GIF → JPEG înainte de încorporare.
  */
 export async function buildPdfFromImageBuffer(imageBuffer: Buffer): Promise<Uint8Array> {
-  const jpegBuffer = await normalizeReceiptPhoto(imageBuffer);
+  const jpegBuffer = await buildEnhancedDocumentImageBuffer(imageBuffer);
 
   const pdf = await PDFDocument.create();
   const image = await pdf.embedJpg(jpegBuffer);
