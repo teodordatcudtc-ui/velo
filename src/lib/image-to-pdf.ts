@@ -74,11 +74,25 @@ async function normalizeReceiptPhoto(imageBuffer: Buffer): Promise<Buffer> {
           .toBuffer()
       : normalized;
 
-  return sharp(croppedOrFull)
+  // Scanner-style pass: emphasize text and flatten background noise.
+  const scannerBase = await sharp(croppedOrFull)
+    .greyscale()
     .normalise()
-    .sharpen({ sigma: 1.0, m1: 1, m2: 2 })
-    .modulate({ brightness: 1.04, saturation: 0.85 })
-    .jpeg({ quality: 90, mozjpeg: true })
+    .sharpen({ sigma: 1.2, m1: 1, m2: 3 })
+    .median(1)
+    .toBuffer();
+
+  const stats = await sharp(scannerBase).stats();
+  const contrast = stats.channels[0]?.stdev ?? 0;
+  const thresholdValue = contrast < 42 ? 170 : 186;
+
+  const highContrast = await sharp(scannerBase)
+    .linear(1.25, -16)
+    .threshold(thresholdValue, { grayscale: true })
+    .toBuffer();
+
+  return sharp(highContrast)
+    .jpeg({ quality: 92, mozjpeg: true })
     .toBuffer();
 }
 

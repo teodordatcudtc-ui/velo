@@ -165,7 +165,7 @@ export function ClientUploadForm({
                 )}
               </span>
               <span className="text-sm text-[var(--ink-muted)]">
-                PDF, documente Office sau imagini — pozele sunt convertite automat la PDF (A4), ușor de folosit în contabilitate. Pe telefon: «Fișiere» / «Browse» dacă nu vezi lista.
+                PDF, Office sau imagini (convertite automat în PDF). Pe telefon: «Fișiere» / «Browse».
               </span>
             </label>
             {uploadedList.length > 0 && (
