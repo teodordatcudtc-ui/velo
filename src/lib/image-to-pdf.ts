@@ -19,9 +19,9 @@ export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Pro
       .removeAlpha()
       .greyscale()
       .normalise()                          // stretch histogram: removes uneven lighting
-      .gamma(0.78)                          // compress highlights → paper turns white, text stays dark
-      .linear(1.45, -38)                    // boost contrast: push darks down, lights up
-      .sharpen({ sigma: 1.3, m1: 1, m2: 3 }) // crisp text edges
+      .gamma(0.72)                          // compress highlights more → paper whiter, text darker
+      .linear(1.6, -48)                     // stronger contrast stretch
+      .sharpen({ sigma: 1.4, m1: 1.5, m2: 4 }) // more aggressive edge sharpening for text
       .jpeg({ quality: 88 })
       .toBuffer();
   } catch {
