@@ -17,41 +17,42 @@ const MAX_SCAN_SIZE = 2400;
  * without hard thresholds that create black blobs in shadow areas.
  */
 export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Promise<Buffer> {
-  // Step 1: orient + resize + convert to greyscale
+  // Step 1: orient + resize + explicit single-channel PNG (guarantees 1 byte/pixel in raw)
   const grey = await sharp(imageBuffer)
     .rotate()
     .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
     .removeAlpha()
     .greyscale()
+    .png()
     .toBuffer();
 
-  const meta = await sharp(grey).metadata();
-  const w = meta.width ?? 0;
-  const h = meta.height ?? 0;
-
-  // Step 2: get raw pixels of the greyscale image
-  const { data: grayPx } = await sharp(grey)
+  // Step 2: get raw 1-channel pixel array + dimensions
+  const { data: grayPx, info } = await sharp(grey)
+    .greyscale()
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  // Step 3: get raw pixels of a very heavily blurred version → background/lighting estimate
+  const w = info.width;
+  const h = info.height;
+  const ch = info.channels; // should be 1
+
+  // Step 3: heavily blurred version = local background/lighting estimate
   const { data: bgPx } = await sharp(grey)
+    .greyscale()
     .blur(50)
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  // Step 4: division normalization  output = clamp( (grey / bg) * 240 )
-  // Shadow areas: grey ≈ bg → ratio ≈ 1 → output ≈ 240 (light)
-  // Text pixels: grey < bg → ratio < 1 → output dark
-  // No hard threshold, so gradual shadows stay smooth instead of turning black
-  const divided = Buffer.alloc(w * h);
-  for (let i = 0; i < w * h; i++) {
-    const g = grayPx[i] ?? 128;
-    const bg = Math.max(bgPx[i] ?? 128, 1);
+  // Step 4: division normalization — cancels uneven shadows without hard threshold
+  const pixelCount = w * h;
+  const divided = Buffer.alloc(pixelCount);
+  for (let i = 0; i < pixelCount; i++) {
+    const g = grayPx[i * ch] ?? 128;
+    const bg = Math.max(bgPx[i * ch] ?? 128, 1);
     divided[i] = Math.min(255, Math.round((g / bg) * 240));
   }
 
-  // Step 5: final pass — stretch contrast, sharpen text edges, clean up
+  // Step 5: final contrast stretch + sharpen
   return sharp(divided, { raw: { width: w, height: h, channels: 1 } })
     .normalise()
     .linear(1.28, -18)
