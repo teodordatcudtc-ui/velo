@@ -37,15 +37,16 @@ export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Pro
   const ch = info.channels; // should be 1
 
   // Step 3: heavily blurred version = local background/lighting estimate
-  // Larger blur (80) gives a better estimate for wide glare/shadow patches
+  // Clamp sigma to at most 1/6 of shortest dimension to avoid libvips kernel errors
+  const blurSigma = Math.max(10, Math.min(60, Math.floor(Math.min(w, h) / 6)));
   const { data: bgPx } = await sharp(grey)
     .greyscale()
-    .blur(80)
+    .blur(blurSigma)
     .raw()
     .toBuffer({ resolveWithObject: true });
 
   // Step 4: division normalization — cancels uneven shadows without hard threshold
-  // Multiplier 232 (not 255) keeps glare areas slightly below pure white so text remains visible
+  // Multiplier 232 keeps glare areas slightly below pure white so text stays visible
   const pixelCount = w * h;
   const divided = Buffer.alloc(pixelCount);
   for (let i = 0; i < pixelCount; i++) {
@@ -54,11 +55,22 @@ export async function buildEnhancedDocumentImageBuffer(imageBuffer: Buffer): Pro
     divided[i] = Math.min(255, Math.round((g / bg) * 232));
   }
 
-  // Step 5: CLAHE for local contrast recovery (text in glare areas) + sharpen + stretch
-  // CLAHE tiles (16×16) adaptively boost contrast in each local region,
-  // recovering text even where direct light washes out the global contrast.
-  return sharp(divided, { raw: { width: w, height: h, channels: 1 } })
-    .clahe({ width: 16, height: 16, maxSlope: 4 })
+  // Step 5: CLAHE tiles sized to ~1/24 of image for local glare recovery, then stretch + sharpen
+  const claheTile = Math.max(8, Math.min(32, Math.floor(Math.min(w, h) / 24)));
+  let enhancedBase: Buffer;
+  try {
+    enhancedBase = await sharp(divided, { raw: { width: w, height: h, channels: 1 } })
+      .clahe({ width: claheTile, height: claheTile, maxSlope: 4 })
+      .toBuffer();
+  } catch {
+    // fallback: skip CLAHE if it fails (older libvips or edge-case dimensions)
+    enhancedBase = await sharp(divided, { raw: { width: w, height: h, channels: 1 } })
+      .png()
+      .toBuffer();
+  }
+
+  return sharp(enhancedBase)
+    .greyscale()
     .normalise()
     .gamma(0.88)
     .linear(1.32, -22)

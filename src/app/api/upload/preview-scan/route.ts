@@ -31,7 +31,8 @@ export async function POST(request: Request) {
         "Cache-Control": "no-store",
       },
     });
-  } catch {
+  } catch (err) {
+    console.error("[preview-scan] buildEnhancedDocumentImageBuffer failed:", err);
     return NextResponse.json({ error: "Nu am putut genera preview-ul scanării." }, { status: 500 });
   }
 }
