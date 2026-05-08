@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
-import { buildEnhancedDocumentImageBuffer, guessIsImageMime } from "@/lib/image-to-pdf";
+import {
+  buildEnhancedDocumentImageBuffer,
+  buildNaturalDocumentImageBuffer,
+  guessIsImageMime,
+} from "@/lib/image-to-pdf";
 
 const MAX_BYTES = 25 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
+  const modeRaw = (formData.get("mode") as string | null)?.toLowerCase();
+  const mode = modeRaw === "photo" ? "photo" : "scan";
 
   if (!file?.size) {
     return NextResponse.json({ error: "Lipsește fișierul." }, { status: 400 });
@@ -23,8 +29,11 @@ export async function POST(request: Request) {
 
   try {
     const raw = Buffer.from(await file.arrayBuffer());
-    const enhanced = await buildEnhancedDocumentImageBuffer(raw);
-    return new Response(new Uint8Array(enhanced), {
+    const preview =
+      mode === "photo"
+        ? await buildNaturalDocumentImageBuffer(raw)
+        : await buildEnhancedDocumentImageBuffer(raw);
+    return new Response(new Uint8Array(preview), {
       status: 200,
       headers: {
         "Content-Type": "image/jpeg",
@@ -32,7 +41,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (err) {
-    console.error("[preview-scan] buildEnhancedDocumentImageBuffer failed:", err);
+    console.error("[preview-scan] preview build failed:", err);
     return NextResponse.json({ error: "Nu am putut genera preview-ul scanării." }, { status: 500 });
   }
 }

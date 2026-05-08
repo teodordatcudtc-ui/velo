@@ -7,6 +7,19 @@ const MARGIN = 40;
 const MAX_SCAN_SIZE = 2000;
 type ImageToPdfMode = "scan" | "photo";
 
+export async function buildNaturalDocumentImageBuffer(imageBuffer: Buffer): Promise<Buffer> {
+  try {
+    return await sharp(imageBuffer)
+      .rotate()
+      .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
+      .removeAlpha()
+      .jpeg({ quality: 92 })
+      .toBuffer();
+  } catch {
+    return await sharp(imageBuffer).rotate().jpeg({ quality: 85 }).toBuffer();
+  }
+}
+
 /**
  * Enhances a document photo to look like a clean scan.
  *
@@ -88,16 +101,7 @@ export async function buildPdfFromImageBuffer(
   // Produce image for PDF: enhanced scan or natural photo.
   let prepared: Buffer;
   if (mode === "photo") {
-    try {
-      prepared = await sharp(imageBuffer)
-        .rotate()
-        .resize(MAX_SCAN_SIZE, MAX_SCAN_SIZE, { fit: "inside", withoutEnlargement: true })
-        .removeAlpha()
-        .jpeg({ quality: 92 })
-        .toBuffer();
-    } catch {
-      prepared = await sharp(imageBuffer).rotate().jpeg({ quality: 85 }).toBuffer();
-    }
+    prepared = await buildNaturalDocumentImageBuffer(imageBuffer);
   } else {
     prepared = await buildEnhancedDocumentImageBuffer(imageBuffer);
   }

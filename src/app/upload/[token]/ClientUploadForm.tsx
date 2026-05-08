@@ -35,6 +35,7 @@ async function buildScanPreviewDataUrl(file: File): Promise<string | null> {
   try {
     const formData = new FormData();
     formData.set("file", file);
+    formData.set("mode", "scan");
     const res = await fetch("/api/upload/preview-scan", { method: "POST", body: formData });
     if (res.ok) {
       const blob = await res.blob();
@@ -49,6 +50,23 @@ async function buildScanPreviewDataUrl(file: File): Promise<string | null> {
   } catch {
     return await buildFallbackScanPreviewDataUrl(file);
   }
+}
+
+async function buildPhotoPreviewDataUrl(file: File): Promise<string | null> {
+  if (!isImageFile(file)) return null;
+  try {
+    const formData = new FormData();
+    formData.set("file", file);
+    formData.set("mode", "photo");
+    const res = await fetch("/api/upload/preview-scan", { method: "POST", body: formData });
+    if (res.ok) {
+      const blob = await res.blob();
+      return await blobToDataUrl(blob);
+    }
+  } catch {
+    // continue to local fallback
+  }
+  return URL.createObjectURL(file);
 }
 
 type ImageUploadMode = "scan" | "photo";
@@ -454,7 +472,12 @@ export function ClientUploadForm({
           file,
           source,
           isImage: image,
-          originalPreviewUrl: image ? URL.createObjectURL(file) : null,
+          originalPreviewUrl:
+            image && source === "file"
+              ? await buildPhotoPreviewDataUrl(file)
+              : image
+                ? URL.createObjectURL(file)
+                : null,
           scanPreviewUrl: image && source === "scan" ? await buildScanPreviewDataUrl(file) : null,
         } satisfies PendingUpload;
       })
@@ -536,6 +559,30 @@ export function ClientUploadForm({
     }
   }
 
+  async function uploadSimpleFilesDirect(documentTypeId: string, files: File[]) {
+    if (files.length === 0) return;
+    setError(null);
+    setLastSuccess(null);
+    setUploading(documentTypeId);
+
+    let uploadedCount = 0;
+    const uploadedNames: string[] = [];
+
+    for (const file of files) {
+      const mode: ImageUploadMode = isImageFile(file) ? "photo" : "scan";
+      const ok = await uploadDirectFile(documentTypeId, file, mode);
+      if (ok) {
+        uploadedCount++;
+        uploadedNames.push(file.name);
+      }
+    }
+
+    setUploading(null);
+    if (uploadedCount > 1) {
+      setLastSuccess(`${uploadedCount} fișiere au fost încărcate.`);
+    }
+  }
+
   function removePendingItem(documentTypeId: string, pendingId: string) {
     setPendingByType((prev) => {
       const current = prev[documentTypeId] ?? [];
@@ -606,7 +653,7 @@ export function ClientUploadForm({
                 disabled={!!uploading}
                 onChange={(e) => {
                   const files = e.target.files ? Array.from(e.target.files) : [];
-                  if (files.length > 0) void queueFilesForPreview(dt.id, files, "file");
+                  if (files.length > 0) void uploadSimpleFilesDirect(dt.id, files);
                   e.target.value = "";
                 }}
               />
