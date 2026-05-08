@@ -77,11 +77,12 @@ async function normalizeReceiptPhoto(imageBuffer: Buffer): Promise<Buffer> {
   // Shadow-safe base enhancement (similar to scanner apps before B/W decision).
   const scannerBase = await sharp(croppedOrFull)
     .greyscale()
+    .clahe({ width: 24, height: 24, maxSlope: 3 })
     .normalise()
-    .gamma(1.12)
-    .linear(1.16, -10)
-    .modulate({ brightness: 1.04, saturation: 0.8 })
-    .sharpen({ sigma: 1.25, m1: 1, m2: 2.2 })
+    .gamma(1.08)
+    .linear(1.22, -20)
+    .modulate({ brightness: 1.06, saturation: 0.75 })
+    .sharpen({ sigma: 1.4, m1: 1, m2: 2.4 })
     .median(1)
     .toBuffer();
 

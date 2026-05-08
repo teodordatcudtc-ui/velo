@@ -71,8 +71,14 @@ async function buildScanPreviewDataUrl(file: File): Promise<string | null> {
     const mean = sum / pixelCount;
     for (let i = 0; i < data.length; i += 4) {
       const gray = 0.299 * (data[i] ?? 0) + 0.587 * (data[i + 1] ?? 0) + 0.114 * (data[i + 2] ?? 0);
-      const finalGray = clamp((gray - mean) * 1.12 + 188, 0, 255);
-      const out = Math.round(finalGray);
+      const normalized = clamp((gray - mean) * 1.32 + 186, 0, 255);
+      const finalGray =
+        normalized > 206
+          ? 252
+          : normalized > 172
+            ? clamp(228 + (normalized - 172) * 0.45, 200, 248)
+            : clamp(36 + normalized * 0.66, 24, 188);
+      const out = Math.round(clamp(finalGray, 0, 255));
       data[i] = out;
       data[i + 1] = out;
       data[i + 2] = out;
