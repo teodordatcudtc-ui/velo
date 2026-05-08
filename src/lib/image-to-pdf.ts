@@ -78,9 +78,10 @@ async function normalizeReceiptPhoto(imageBuffer: Buffer): Promise<Buffer> {
   const scannerBase = await sharp(croppedOrFull)
     .greyscale()
     .normalise()
-    .gamma(1.08)
-    .linear(1.08, -4)
-    .sharpen({ sigma: 1.15, m1: 1, m2: 2 })
+    .gamma(1.12)
+    .linear(1.16, -10)
+    .modulate({ brightness: 1.04, saturation: 0.8 })
+    .sharpen({ sigma: 1.25, m1: 1, m2: 2.2 })
     .median(1)
     .toBuffer();
 

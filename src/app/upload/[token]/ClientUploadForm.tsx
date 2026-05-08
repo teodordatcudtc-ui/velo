@@ -13,6 +13,12 @@ type PendingUpload = {
   scanPreviewUrl: string | null;
   isImage: boolean;
 };
+type ScanReview = {
+  documentTypeId: string;
+  file: File;
+  previewUrl: string;
+  fileName: string;
+};
 
 const FILE_ACCEPT =
   "application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.xls,.xlsx,text/plain,.txt";
@@ -100,6 +106,7 @@ export function ClientUploadForm({
   const [pendingByType, setPendingByType] = useState<Record<string, PendingUpload[]>>({});
   const [activePreviewUrl, setActivePreviewUrl] = useState<string | null>(null);
   const [activePreviewLabel, setActivePreviewLabel] = useState<string>("");
+  const [scanReview, setScanReview] = useState<ScanReview | null>(null);
   const toast = useToast();
   const [uploadedByType, setUploadedByType] = useState<Record<string, UploadItem[]>>(
     () => {
@@ -142,6 +149,84 @@ export function ClientUploadForm({
       ...prev,
       [documentTypeId]: [...(prev[documentTypeId] ?? []), ...pendingItems],
     }));
+  }
+
+  async function openScanReview(documentTypeId: string, file: File) {
+    setError(null);
+    const scanPreview = await buildScanPreviewDataUrl(file);
+    if (!scanPreview) {
+      const msg = "Nu am putut genera preview-ul scanării. Reîncearcă poza.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+    setScanReview({
+      documentTypeId,
+      file,
+      previewUrl: scanPreview,
+      fileName: file.name,
+    });
+  }
+
+  async function uploadDirectFile(documentTypeId: string, file: File): Promise<boolean> {
+    const formData = new FormData();
+    formData.set("token", token);
+    formData.set("documentTypeId", documentTypeId);
+    formData.set("file", file);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = data.error ?? "Eroare la încărcare.";
+      setError(msg);
+      toast.error(msg);
+      return false;
+    }
+
+    const savedName =
+      typeof data?.fileName === "string" && data.fileName.length > 0
+        ? data.fileName
+        : file.name;
+
+    setUploadedByType((prev) => ({
+      ...prev,
+      [documentTypeId]: [
+        ...(prev[documentTypeId] ?? []),
+        {
+          id: String((data?.uploadId as string | undefined) ?? `${Date.now()}-${file.name}`),
+          file_name: savedName,
+        },
+      ],
+    }));
+
+    toast.success(`„${savedName}" a fost încărcat.`);
+    setLastSuccess(`„${savedName}" a fost încărcat.`);
+    return true;
+  }
+
+  async function confirmScanUpload() {
+    if (!scanReview) return;
+    setUploading(scanReview.documentTypeId);
+    setError(null);
+    setLastSuccess(null);
+    const ok = await uploadDirectFile(scanReview.documentTypeId, scanReview.file);
+    setUploading(null);
+    if (ok) setScanReview(null);
+  }
+
+  function retryScan() {
+    if (!scanReview) return;
+    const docId = scanReview.documentTypeId;
+    setScanReview(null);
+    const input = document.getElementById(`scan-picker-${docId}`) as HTMLInputElement | null;
+    if (input) {
+      input.value = "";
+      setTimeout(() => input.click(), 10);
+    }
   }
 
   async function uploadPending(documentTypeId: string) {
@@ -302,14 +387,13 @@ export function ClientUploadForm({
               <input
                 id={`scan-picker-${dt.id}`}
                 type="file"
-                multiple
                 accept="image/*"
                 capture="environment"
                 className="sr-only"
                 disabled={!!uploading}
                 onChange={(e) => {
                   const files = e.target.files ? Array.from(e.target.files) : [];
-                  if (files.length > 0) void queueFilesForPreview(dt.id, files, "scan");
+                  if (files[0]) void openScanReview(dt.id, files[0]);
                   e.target.value = "";
                 }}
               />
@@ -501,6 +585,45 @@ export function ClientUploadForm({
               alt={`Preview ${activePreviewLabel}`}
               className="w-full h-auto max-h-[86vh] object-contain rounded-[var(--r-sm)] bg-white"
             />
+          </div>
+        </div>
+      )}
+      {scanReview && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/95 flex flex-col"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirmare scanare"
+        >
+          <div className="px-4 py-3 text-white text-sm truncate">{scanReview.fileName}</div>
+          <div className="flex-1 px-2 pb-2">
+            <img
+              src={scanReview.previewUrl}
+              alt={`Scanare ${scanReview.fileName}`}
+              className="w-full h-full object-contain bg-white rounded-[var(--r-sm)]"
+            />
+          </div>
+          <div className="px-4 pb-5 pt-2 flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={retryScan}
+              disabled={!!uploading}
+              className="w-14 h-14 rounded-full border-2 border-white/80 text-white text-2xl font-bold disabled:opacity-60"
+              aria-label="Refă poza"
+              title="Refă poza"
+            >
+              ×
+            </button>
+            <button
+              type="button"
+              onClick={() => void confirmScanUpload()}
+              disabled={!!uploading}
+              className="w-14 h-14 rounded-full bg-[var(--sage)] text-white text-2xl font-bold disabled:opacity-60"
+              aria-label="Trimite scanarea"
+              title="Trimite scanarea"
+            >
+              ✓
+            </button>
           </div>
         </div>
       )}
