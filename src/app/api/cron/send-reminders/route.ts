@@ -18,12 +18,21 @@ function todayStrInTimeZone(timeZone: string) {
   return y && m && d ? `${y}-${m}-${d}` : new Date().toISOString().slice(0, 10);
 }
 
-function addDaysYmd(ymd: string, days: number) {
-  // ymd is YYYY-MM-DD
+function addOneMonthSameDayYmd(ymd: string) {
+  // ymd is YYYY-MM-DD; keep same day in next month, clamped to month's last day.
   const [y, m, d] = ymd.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, (m ?? 1) - 1, d ?? 1));
-  dt.setUTCDate(dt.getUTCDate() + days);
-  return dt.toISOString().slice(0, 10);
+  const year = y ?? 1970;
+  const month = m ?? 1;
+  const day = d ?? 1;
+
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const lastDayOfNextMonth = new Date(Date.UTC(nextYear, nextMonth, 0)).getUTCDate();
+  const safeDay = Math.min(day, lastDayOfNextMonth);
+
+  const mm = String(nextMonth).padStart(2, "0");
+  const dd = String(safeDay).padStart(2, "0");
+  return `${nextYear}-${mm}-${dd}`;
 }
 
 type ClientReminderRow = {
@@ -215,9 +224,9 @@ export async function GET(request: Request) {
       })
       .eq("id", req.id);
 
-    // Auto-schedule the next request 30 days after the scheduled date (RO calendar date).
+    // Auto-schedule on the same calendar day in the next month (clamped for short months).
     const scheduledDateRo = req.sent_at.slice(0, 10);
-    const nextDateRo = addDaysYmd(scheduledDateRo, 30);
+    const nextDateRo = addOneMonthSameDayYmd(scheduledDateRo);
     const nextScheduledIso = `${nextDateRo}T12:00:00.000Z`;
     const [ny, nm] = nextDateRo.split("-").map(Number);
 
