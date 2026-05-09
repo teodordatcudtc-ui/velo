@@ -404,6 +404,23 @@ type ImmediateDocumentRequestData = {
   reminderAfter3Days: boolean;
 };
 
+function addOneMonthSameDayYmd(ymd: string): string {
+  // ymd is YYYY-MM-DD; keep same day in next month, clamped to month's last day.
+  const [y, m, d] = ymd.split("-").map(Number);
+  const year = y ?? 1970;
+  const month = m ?? 1;
+  const day = d ?? 1;
+
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const lastDayOfNextMonth = new Date(Date.UTC(nextYear, nextMonth, 0)).getUTCDate();
+  const safeDay = Math.min(day, lastDayOfNextMonth);
+
+  const mm = String(nextMonth).padStart(2, "0");
+  const dd = String(safeDay).padStart(2, "0");
+  return `${nextYear}-${mm}-${dd}`;
+}
+
 async function ensureDocumentTypesExist(
   supabase: Awaited<ReturnType<typeof createClient>>,
   clientId: string,
@@ -635,6 +652,24 @@ export async function sendDocumentRequestNow(
       `,
     });
     if (sendError) return { error: sendError.message };
+
+    // Also schedule the next monthly request on the same calendar day.
+    const currentDateYmd = now.toISOString().slice(0, 10);
+    const nextDateYmd = addOneMonthSameDayYmd(currentDateYmd);
+    const [nextYear, nextMonth] = nextDateYmd.split("-").map(Number);
+    const nextScheduledIso = `${nextDateYmd}T12:00:00.000Z`;
+    const nextUpsert = await upsertDocumentRequestForPeriod(supabase, {
+      clientId,
+      accountantId: user.id,
+      month: nextMonth,
+      year: nextYear,
+      channel: "email_scheduled",
+      docTypeNames: data.docTypes,
+      message: data.message || null,
+      reminderAfter3Days: data.reminderAfter3Days,
+      sentAt: nextScheduledIso,
+    });
+    if ("error" in nextUpsert) return { error: nextUpsert.error };
   }
 
   revalidatePath("/dashboard");
