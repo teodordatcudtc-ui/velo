@@ -61,12 +61,12 @@ export default function HomePage() {
             <div className="hero-demo">
               <video
                 className="hero-demo-video"
-                autoPlay
                 muted
                 loop
                 playsInline
                 controls
-                preload="metadata"
+                preload="none"
+                aria-label="Demo video Vello — apasă redare pentru a porni"
               >
                 <source src="/demo2.mp4" type="video/mp4" />
               </video>
