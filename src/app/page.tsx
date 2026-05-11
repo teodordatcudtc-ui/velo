@@ -4,6 +4,7 @@ import { FooterLegalBadges } from "./components/FooterLegalBadges";
 import FaqSection from "./components/FaqSection";
 import ScrollEffects from "./components/ScrollEffects";
 import { HeroActions } from "./components/HeroActions";
+import { HeroDemoVideo } from "./components/HeroDemoVideo";
 import { LandingNavCta } from "./components/LandingNavCta";
 
 function Logo() {
@@ -58,19 +59,7 @@ export default function HomePage() {
               <span className="hero-demo-sep-text">Demo live</span>
               <span className="hero-demo-sep-line" />
             </div>
-            <div className="hero-demo">
-              <video
-                className="hero-demo-video"
-                muted
-                loop
-                playsInline
-                controls
-                preload="none"
-                aria-label="Demo video Vello — apasă redare pentru a porni"
-              >
-                <source src="/demo2.mp4" type="video/mp4" />
-              </video>
-            </div>
+            <HeroDemoVideo />
           </div>
         </div>
       </section>
