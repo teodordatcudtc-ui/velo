@@ -219,15 +219,22 @@ function FilterDropdown({
   );
 }
 
+type FolderView = "active" | "archived";
+
 export function DocumenteList({
-  uploads,
-  clientOptions,
+  activeUploads,
+  archivedUploads,
+  activeClientOptions,
+  archivedClientOptions,
   docTypeOptions,
 }: {
-  uploads: UploadRow[];
-  clientOptions: ClientOption[];
+  activeUploads: UploadRow[];
+  archivedUploads: UploadRow[];
+  activeClientOptions: ClientOption[];
+  archivedClientOptions: ClientOption[];
   docTypeOptions: DocTypeOption[];
 }) {
+  const [folderView, setFolderView] = useState<FolderView>("active");
   const [filterDocType, setFilterDocType] = useState<string>("");
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [filterYear, setFilterYear] = useState<string>("");
@@ -235,6 +242,10 @@ export function DocumenteList({
   const [sortDesc, setSortDesc] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+
+  const uploads = folderView === "archived" ? archivedUploads : activeUploads;
+  const clientOptions =
+    folderView === "archived" ? archivedClientOptions : activeClientOptions;
 
   const clientById = useMemo(
     () => new Map(clientOptions.map((c) => [c.id, c.name])),
@@ -356,7 +367,77 @@ export function DocumenteList({
     }
   }
 
+  function switchFolderView(next: FolderView) {
+    setFolderView(next);
+    setSelectedClientId("");
+    setFilterDocType("");
+    setFilterMonth("");
+    setFilterYear("");
+  }
+
+  function FolderViewToggle({ className = "" }: { className?: string }) {
+    if (folderView === "active") {
+      if (archivedClientOptions.length === 0) return null;
+      return (
+        <button
+          type="button"
+          onClick={() => switchFolderView("archived")}
+          className={`inline-flex items-center gap-2 text-sm font-medium ${className}`}
+          style={{
+            padding: "8px 14px",
+            borderRadius: 9999,
+            border: "1.5px solid var(--paper-3)",
+            background: "var(--paper-2)",
+            color: "var(--ink-soft)",
+          }}
+        >
+          Clienți arhivați
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              padding: "1px 7px",
+              borderRadius: 999,
+              background: "var(--ink-muted)",
+              color: "#fff",
+            }}
+          >
+            {archivedClientOptions.length}
+          </span>
+        </button>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => switchFolderView("active")}
+        className={`inline-flex items-center gap-2 text-sm font-semibold ${className}`}
+        style={{
+          padding: "8px 14px",
+          borderRadius: 9999,
+          border: "none",
+          background: "var(--sage)",
+          color: "#fff",
+        }}
+      >
+        ← Clienți activi
+      </button>
+    );
+  }
+
   if (uploads.length === 0) {
+    if (folderView === "archived") {
+      return (
+        <div className="space-y-4">
+          <FolderViewToggle />
+          <div className="dash-card-empty">
+            {archivedClientOptions.length === 0
+              ? "Nu ai clienți arhivați."
+              : "Niciun document la clienții arhivați."}
+          </div>
+        </div>
+      );
+    }
     if (clientOptions.length === 0) {
       return (
         <div className="dash-card-empty">
@@ -366,27 +447,30 @@ export function DocumenteList({
       );
     }
     return (
-      <div className="dash-card">
-        <p className="text-sm text-[var(--ink-muted)] mb-4">
-          Alege un folder de client. Documentele vor apărea în interior după încărcare.
-        </p>
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
-        >
-          {clientOptions.map((client) => (
-            <ClientFolderCard
-              key={client.id}
-              name={client.name}
-              count={0}
-              onOpen={() => {
-                setSelectedClientId(client.id);
-                setFilterDocType("");
-                setFilterMonth("");
-                setFilterYear("");
-              }}
-            />
-          ))}
+      <div className="space-y-4">
+        <FolderViewToggle />
+        <div className="dash-card">
+          <p className="text-sm text-[var(--ink-muted)] mb-4">
+            Alege un folder de client. Documentele vor apărea în interior după încărcare.
+          </p>
+          <div
+            className="grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+          >
+            {clientOptions.map((client) => (
+              <ClientFolderCard
+                key={client.id}
+                name={client.name}
+                count={0}
+                onOpen={() => {
+                  setSelectedClientId(client.id);
+                  setFilterDocType("");
+                  setFilterMonth("");
+                  setFilterYear("");
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -394,35 +478,48 @@ export function DocumenteList({
 
   if (!selectedClientId) {
     return (
-      <div className="dash-card">
-        <p className="text-sm text-[var(--ink-muted)] mb-4">
-          Deschide folderul unui client ca să vezi documentele lui.
-        </p>
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
-        >
-          {clientOptions.map((client) => (
-            <ClientFolderCard
-              key={client.id}
-              name={client.name}
-              count={docsCountByClient.get(client.id) ?? 0}
-              onOpen={() => {
-                setSelectedClientId(client.id);
-                setFilterDocType("");
-                setFilterMonth("");
-                setFilterYear("");
-              }}
-            />
-          ))}
+      <div className="space-y-4">
+        <FolderViewToggle />
+        <div className="dash-card">
+          <p className="text-sm text-[var(--ink-muted)] mb-1">
+            {folderView === "archived"
+              ? "Clienți arhivați — documentele rămân disponibile aici."
+              : "Deschide folderul unui client ca să vezi documentele lui."}
+          </p>
+          {folderView === "archived" && (
+            <p className="text-xs text-[var(--ink-muted)] mb-4">
+              Acești clienți nu mai apar în lista principală de clienți activi.
+            </p>
+          )}
+          {folderView === "active" && <div className="mb-4" />}
+          <div
+            className="grid gap-3"
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+          >
+            {clientOptions.map((client) => (
+              <ClientFolderCard
+                key={client.id}
+                name={client.name}
+                count={docsCountByClient.get(client.id) ?? 0}
+                onOpen={() => {
+                  setSelectedClientId(client.id);
+                  setFilterDocType("");
+                  setFilterMonth("");
+                  setFilterYear("");
+                }}
+              />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="dash-card">
-      <div className="flex items-center justify-between mb-3">
+    <div className="space-y-4">
+      <FolderViewToggle />
+      <div className="dash-card">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <button
           type="button"
           onClick={() => {
@@ -445,6 +542,14 @@ export function DocumenteList({
         </button>
         <div className="text-sm text-[var(--ink)]">
           <strong>{selectedClientName}</strong>
+          {folderView === "archived" && (
+            <span
+              className="ml-2 text-xs font-medium"
+              style={{ color: "var(--ink-muted)" }}
+            >
+              (arhivat)
+            </span>
+          )}
         </div>
       </div>
       <div
@@ -586,6 +691,7 @@ export function DocumenteList({
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 }

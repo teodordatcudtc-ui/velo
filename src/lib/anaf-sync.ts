@@ -475,8 +475,9 @@ async function extractPdfFromEfacturaZip(
 
 function parseListDays(): string {
   const raw = process.env.ANAF_LIST_DAYS;
-  const val = Number(raw ?? "3");
-  const safe = Number.isFinite(val) ? Math.min(60, Math.max(1, Math.floor(val))) : 3;
+  // Implicit 7 zile: cron SPV e ~2×/săptămână; intervalul maxim între rulari poate fi ~4 zile.
+  const val = Number(raw ?? "7");
+  const safe = Number.isFinite(val) ? Math.min(60, Math.max(1, Math.floor(val))) : 7;
   return String(safe);
 }
 

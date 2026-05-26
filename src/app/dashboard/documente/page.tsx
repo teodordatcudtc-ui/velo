@@ -22,26 +22,43 @@ export default async function DocumentePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: clients } = await supabase
+  const { data: activeClients } = await supabase
     .from("clients")
     .select("id, name")
     .eq("accountant_id", user.id)
+    .eq("archived", false)
     .order("name");
 
-  const clientIds = (clients ?? []).map((c) => c.id);
+  const { data: archivedClients } = await supabase
+    .from("clients")
+    .select("id, name")
+    .eq("accountant_id", user.id)
+    .eq("archived", true)
+    .order("name");
 
-  const { data: uploads } =
-    clientIds.length > 0
+  const activeIds = (activeClients ?? []).map((c) => c.id);
+  const archivedIds = (archivedClients ?? []).map((c) => c.id);
+
+  const { data: activeUploads } =
+    activeIds.length > 0
       ? await supabase
           .from("uploads")
           .select("id, client_id, document_type_id, file_name, month, year, created_at")
-          .in("client_id", clientIds)
+          .in("client_id", activeIds)
           .order("created_at", { ascending: false })
       : { data: [] };
 
-  const docTypeIds = [
-    ...new Set((uploads ?? []).map((u) => u.document_type_id)),
-  ];
+  const { data: archivedUploads } =
+    archivedIds.length > 0
+      ? await supabase
+          .from("uploads")
+          .select("id, client_id, document_type_id, file_name, month, year, created_at")
+          .in("client_id", archivedIds)
+          .order("created_at", { ascending: false })
+      : { data: [] };
+
+  const allUploads = [...(activeUploads ?? []), ...(archivedUploads ?? [])];
+  const docTypeIds = [...new Set(allUploads.map((u) => u.document_type_id))];
   const { data: docTypes } =
     docTypeIds.length > 0
       ? await supabase
@@ -50,7 +67,11 @@ export default async function DocumentePage() {
           .in("id", docTypeIds)
       : { data: [] };
 
-  const clientOptions: ClientOption[] = (clients ?? []).map((c) => ({
+  const activeClientOptions: ClientOption[] = (activeClients ?? []).map((c) => ({
+    id: c.id,
+    name: (c as { name: string }).name,
+  }));
+  const archivedClientOptions: ClientOption[] = (archivedClients ?? []).map((c) => ({
     id: c.id,
     name: (c as { name: string }).name,
   }));
@@ -64,13 +85,16 @@ export default async function DocumentePage() {
       <header>
         <h1 className="dash-page-title">Documente</h1>
         <p className="dash-page-sub">
-          Documente organizate pe foldere de client. Intră într-un folder pentru filtrare și sortare.
+          Foldere doar pentru clienți activi. Clienții arhivați și documentele lor sunt în „Clienți
+          arhivați”.
         </p>
       </header>
 
       <DocumenteList
-        uploads={(uploads ?? []) as UploadRow[]}
-        clientOptions={clientOptions}
+        activeUploads={(activeUploads ?? []) as UploadRow[]}
+        archivedUploads={(archivedUploads ?? []) as UploadRow[]}
+        activeClientOptions={activeClientOptions}
+        archivedClientOptions={archivedClientOptions}
         docTypeOptions={docTypeOptions}
       />
     </div>
