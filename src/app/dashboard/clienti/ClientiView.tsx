@@ -18,6 +18,8 @@ import { useToast } from "@/app/components/ToastProvider";
 import { ConfirmModal } from "@/app/components/ConfirmModal";
 import { ProgrameazaModal } from "../ProgrameazaModal";
 import { ClientiOnboardingTutorial } from "./ClientiOnboardingTutorial";
+import type { ClientSpvStatus } from "@/lib/client-anaf-status";
+import { SpvStatusBadge } from "../SpvStatusBadge";
 import styles from "./clienti.module.css";
 
 type DocType = { id: string; name: string };
@@ -159,6 +161,7 @@ export function ClientiView({
   subscriptionPlan,
   clientLimit,
   userId,
+  spvStatusByClient = {},
 }: {
   clients: Client[];
   archivedClients?: Client[];
@@ -173,6 +176,7 @@ export function ClientiView({
   subscriptionPlan: "none" | "standard" | "premium";
   clientLimit: number | null;
   userId?: string;
+  spvStatusByClient?: Record<string, ClientSpvStatus>;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -1238,6 +1242,7 @@ export function ClientiView({
                                   #{clientLabels[client.id]}
                                 </div>
                               )}
+                            <SpvStatusBadge status={spvStatusByClient[client.id]} />
                           </div>
                         </div>
                       </td>}
@@ -1329,6 +1334,7 @@ export function ClientiView({
           <ClientiDrawer
             client={drawerClient}
             uploads={uploads.filter((u) => u.client_id === drawerClient.id)}
+            spvStatus={spvStatusByClient[drawerClient.id]}
             currentMonth={currentMonth}
             currentYear={currentYear}
             isPremium={isPremium}
@@ -1726,6 +1732,7 @@ function ActivityTimeline({ uploads }: { uploads: Upload[] }) {
 function ClientiDrawer({
   client,
   uploads,
+  spvStatus,
   currentMonth,
   currentYear,
   isPremium,
@@ -1738,6 +1745,7 @@ function ClientiDrawer({
 }: {
   client: Client;
   uploads: Upload[];
+  spvStatus?: ClientSpvStatus;
   currentMonth: number;
   currentYear: number;
   isPremium: boolean;
@@ -1911,6 +1919,17 @@ function ClientiDrawer({
                 <div>
                   <div className={styles.infoKey}>Telefon</div>
                   <div className={styles.infoVal}>{client.phone ?? "—"}</div>
+                </div>
+                <div>
+                  <div className={styles.infoKey}>SPV e-Factura</div>
+                  <div className={styles.infoVal}>
+                    <SpvStatusBadge status={spvStatus} />
+                    {spvStatus?.connected && spvStatus.companyCif && (
+                      <span style={{ display: "block", fontSize: 11, color: "var(--ink-muted)", marginTop: 4 }}>
+                        CUI {spvStatus.companyCif}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <div className={styles.infoKey}>Client din</div>

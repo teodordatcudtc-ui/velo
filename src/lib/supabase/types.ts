@@ -203,6 +203,75 @@ export interface Database {
         };
         Relationships: [];
       };
+      client_anaf_connections: {
+        Row: {
+          client_id: string;
+          accountant_id: string;
+          enabled: boolean;
+          company_cif: string | null;
+          api_base_url: string;
+          oauth_token_url: string;
+          oauth_client_id: string;
+          oauth_client_secret: string;
+          oauth_refresh_token: string | null;
+          access_token: string | null;
+          access_token_expires_at: string | null;
+          connected_at: string | null;
+          consent_at: string | null;
+          consecutive_failures: number;
+          circuit_open_until: string | null;
+          last_synced_at: string | null;
+          last_error: string | null;
+          last_error_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          client_id: string;
+          accountant_id: string;
+          enabled?: boolean;
+          company_cif?: string | null;
+          api_base_url?: string;
+          oauth_token_url: string;
+          oauth_client_id: string;
+          oauth_client_secret: string;
+          oauth_refresh_token?: string | null;
+          access_token?: string | null;
+          access_token_expires_at?: string | null;
+          connected_at?: string | null;
+          consent_at?: string | null;
+          consecutive_failures?: number;
+          circuit_open_until?: string | null;
+          last_synced_at?: string | null;
+          last_error?: string | null;
+          last_error_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          client_id?: string;
+          accountant_id?: string;
+          enabled?: boolean;
+          company_cif?: string | null;
+          api_base_url?: string;
+          oauth_token_url?: string;
+          oauth_client_id?: string;
+          oauth_client_secret?: string;
+          oauth_refresh_token?: string | null;
+          access_token?: string | null;
+          access_token_expires_at?: string | null;
+          connected_at?: string | null;
+          consent_at?: string | null;
+          consecutive_failures?: number;
+          circuit_open_until?: string | null;
+          last_synced_at?: string | null;
+          last_error?: string | null;
+          last_error_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       anaf_client_tax_mappings: {
         Row: {
           id: string;

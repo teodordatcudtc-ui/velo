@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { DashboardClientsTable } from "./DashboardClientsTable";
 import { EarlyAccessAutoRedeem } from "./EarlyAccessAutoRedeem";
+import { getClientSpvStatusByClientIds } from "@/lib/client-anaf-status";
 import styles from "./DashboardLayout.module.css";
 
 export const dynamic = "force-dynamic";
@@ -103,6 +104,8 @@ export default async function DashboardPage(props: {
   });
   const dateStr = `${now.toLocaleDateString("ro-RO", { weekday: "long" })}, ${now.getDate()} ${MONTH_NAMES[currentMonth - 1]} ${now.getFullYear()}`;
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const spvStatusByClient = await getClientSpvStatusByClientIds(clientIds);
+  const spvConnectedCount = Object.values(spvStatusByClient).filter((s) => s.connected).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -146,6 +149,12 @@ export default async function DashboardPage(props: {
           { label: "CLIENȚI ACTIVI", value: (clients ?? []).length, sub: "↑ total în cont", color: "var(--ink)" },
           { label: "DOCUMENTE PRIMITE", value: uploadsThisMonth.length, sub: totalRequested > 0 ? `din ${totalRequested} cerute` : "luna aceasta", color: "var(--sage)" },
           { label: "FĂRĂ DOCUMENTE ÎNCĂ", value: clientsWithDocsNoUpload.length, sub: "clienți cu cereri, netrimis", color: "var(--amber)" },
+          {
+            label: "SPV E-FACTURA",
+            value: `${spvConnectedCount}/${(clients ?? []).length}`,
+            sub: "clienți conectați la SPV",
+            color: "var(--sky)",
+          },
         ].map((card) => (
           <div key={card.label} className={styles.dashboardStatCard}>
             <div className={styles.dashboardStatLabel}>{card.label}</div>
@@ -192,6 +201,7 @@ export default async function DashboardPage(props: {
         currentMonth={currentMonth}
         currentYear={currentYear}
         baseUrl={baseUrl}
+        spvStatusByClient={spvStatusByClient}
       />
 
       <div style={{ display: "flex", justifyContent: "flex-end" }}>

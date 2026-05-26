@@ -7,6 +7,8 @@ import styles from "./DashboardLayout.module.css";
 import { ProgrameazaModal } from "./ProgrameazaModal";
 import { useToast } from "@/app/components/ToastProvider";
 import { saveDocumentRequest, sendDocumentRequestNow, markLinkCopied } from "@/app/actions/clients";
+import type { ClientSpvStatus } from "@/lib/client-anaf-status";
+import { SpvStatusBadge } from "./SpvStatusBadge";
 
 type DocType = { id: string; name: string };
 type Client = {
@@ -45,6 +47,7 @@ export function DashboardClientsTable({
   currentMonth,
   currentYear,
   baseUrl,
+  spvStatusByClient = {},
 }: {
   clients: Client[];
   uploads: Upload[];
@@ -53,6 +56,7 @@ export function DashboardClientsTable({
   currentMonth: number;
   currentYear: number;
   baseUrl: string;
+  spvStatusByClient?: Record<string, ClientSpvStatus>;
 }) {
   const router = useRouter();
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -104,6 +108,7 @@ export function DashboardClientsTable({
             <th>CLIENT</th>
             <th>DOCUMENTE</th>
             <th>STATUS</th>
+            <th>SPV</th>
             <th>ACȚIUNI</th>
           </tr>
         </thead>
@@ -168,6 +173,9 @@ export function DashboardClientsTable({
                   ) : (
                     "—"
                   )}
+                </td>
+                <td>
+                  <SpvStatusBadge status={spvStatusByClient[client.id]} />
                 </td>
                 <td>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

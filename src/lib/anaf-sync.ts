@@ -817,6 +817,401 @@ export async function syncAllAnafConnections() {
     }
   }
 
+  const clientResult = await syncAllClientAnafConnections(supabase);
+  totalImported += clientResult.imported;
+  totalSkipped += clientResult.skipped;
+  for (const err of clientResult.errors) {
+    if (errors.length < 20) errors.push(err);
+  }
+
+  return {
+    connections: (rows ?? []).length + clientResult.connections,
+    imported: totalImported,
+    skipped: totalSkipped,
+    errors,
+  };
+}
+
+type ClientAnafConnRow = {
+  client_id: string;
+  accountant_id: string;
+  enabled: boolean;
+  company_cif: string | null;
+  api_base_url: string;
+  oauth_token_url: string;
+  oauth_client_id: string;
+  oauth_client_secret: string;
+  oauth_refresh_token: string | null;
+  access_token: string | null;
+  access_token_expires_at: string | null;
+  consecutive_failures: number;
+  circuit_open_until: string | null;
+};
+
+function clientAuthFallback(conn: ClientAnafConnRow): ClientAnafConnRow {
+  const envRt = process.env.ANAF_OAUTH_REFRESH_TOKEN?.trim();
+  const dbRt = conn.oauth_refresh_token?.trim();
+  return {
+    ...conn,
+    api_base_url: (process.env.ANAF_API_BASE_URL ?? conn.api_base_url).trim() || conn.api_base_url,
+    oauth_token_url: (process.env.ANAF_OAUTH_TOKEN_URL ?? conn.oauth_token_url).trim() || conn.oauth_token_url,
+    oauth_client_id: (process.env.ANAF_OAUTH_CLIENT_ID ?? conn.oauth_client_id).trim() || conn.oauth_client_id,
+    oauth_client_secret:
+      (process.env.ANAF_OAUTH_CLIENT_SECRET ?? conn.oauth_client_secret).trim() || conn.oauth_client_secret,
+    oauth_refresh_token: envRt || dbRt || null,
+  };
+}
+
+async function setClientConnectionFailure(
+  supabase: SupabaseClient,
+  conn: ClientAnafConnRow,
+  errorMessage: string
+) {
+  const failures = (conn.consecutive_failures ?? 0) + 1;
+  const shouldOpenCircuit = failures >= FAILURE_THRESHOLD;
+  const circuitUntil = shouldOpenCircuit
+    ? new Date(Date.now() + CIRCUIT_BREAK_MINUTES * 60_000).toISOString()
+    : null;
+  await supabase
+    .from("client_anaf_connections")
+    .update({
+      consecutive_failures: failures,
+      circuit_open_until: circuitUntil,
+      last_error: errorMessage.slice(0, 500),
+      last_error_at: new Date().toISOString(),
+    })
+    .eq("client_id", conn.client_id);
+}
+
+async function markClientConnectionSuccess(supabase: SupabaseClient, conn: ClientAnafConnRow) {
+  await supabase
+    .from("client_anaf_connections")
+    .update({
+      consecutive_failures: 0,
+      circuit_open_until: null,
+      last_error: null,
+      last_error_at: null,
+      last_synced_at: new Date().toISOString(),
+    })
+    .eq("client_id", conn.client_id);
+}
+
+/** Sincronizare ANAF pentru un client (token OAuth de pe linkul unic). */
+export async function syncAnafForClient(
+  supabase: SupabaseClient,
+  rawConn: ClientAnafConnRow
+): Promise<{ imported: number; skipped: number; errors: string[] }> {
+  let conn = clientAuthFallback(rawConn);
+  const errors: string[] = [];
+  let imported = 0;
+  let skipped = 0;
+  const now = new Date();
+  const clientId = conn.client_id;
+  const accountantId = conn.accountant_id;
+
+  if (!conn.enabled) {
+    await logSync(supabase, {
+      accountantId,
+      status: "skipped",
+      detail: `SPV dezactivat pentru client ${clientId}.`,
+    });
+    return { imported, skipped: skipped + 1, errors };
+  }
+
+  if (!conn.oauth_refresh_token?.trim()) {
+    await logSync(supabase, {
+      accountantId,
+      status: "skipped",
+      detail: `Client ${clientId}: SPV neconectat.`,
+      skippedCount: 1,
+    });
+    return { imported, skipped: skipped + 1, errors: ["SPV neconectat."] };
+  }
+
+  if (conn.circuit_open_until && new Date(conn.circuit_open_until).getTime() > Date.now()) {
+    await logSync(supabase, {
+      accountantId,
+      status: "skipped",
+      detail: `Client ${clientId}: circuit breaker activ.`,
+      skippedCount: 1,
+    });
+    return { imported, skipped: skipped + 1, errors };
+  }
+
+  const companyCifNorm = normalizeTaxCode(conn.company_cif ?? "");
+  if (!companyCifNorm) {
+    await logSync(supabase, {
+      accountantId,
+      status: "skipped",
+      detail: `Client ${clientId}: lipsește CUI-ul firmei.`,
+      skippedCount: 1,
+    });
+    return {
+      imported,
+      skipped: skipped + 1,
+      errors: ["Lipsește CUI-ul firmei pentru SPV."],
+    };
+  }
+
+  const tokenConn = {
+    api_base_url: conn.api_base_url,
+    oauth_token_url: conn.oauth_token_url,
+    oauth_client_id: conn.oauth_client_id,
+    oauth_client_secret: conn.oauth_client_secret,
+    oauth_refresh_token: conn.oauth_refresh_token,
+    access_token: conn.access_token,
+    access_token_expires_at: conn.access_token_expires_at,
+  };
+  const tokenResult = await ensureAnafAccessToken(tokenConn);
+  if (!tokenResult.ok) {
+    await setClientConnectionFailure(supabase, conn, tokenResult.error);
+    await logSync(supabase, {
+      accountantId,
+      status: "error",
+      errorMessage: tokenResult.error,
+      skippedCount: 1,
+      detail: `Client ${clientId}`,
+    });
+    return { imported, skipped: skipped + 1, errors: [tokenResult.error] };
+  }
+
+  if (tokenResult.refreshed) {
+    await supabase
+      .from("client_anaf_connections")
+      .update({
+        access_token: tokenResult.accessToken,
+        access_token_expires_at: tokenResult.expiresAtIso,
+        oauth_refresh_token: tokenResult.refreshToken,
+      })
+      .eq("client_id", conn.client_id);
+    conn = {
+      ...conn,
+      access_token: tokenResult.accessToken,
+      access_token_expires_at: tokenResult.expiresAtIso,
+      oauth_refresh_token: tokenResult.refreshToken,
+    };
+  }
+
+  const list = await anafApiGetJson<unknown>(
+    conn.api_base_url,
+    "listaMesajeFactura",
+    tokenResult.accessToken,
+    { cif: companyCifNorm, zile: parseListDays() }
+  );
+  if (!list.ok) {
+    await setClientConnectionFailure(supabase, conn, list.error);
+    await logSync(supabase, {
+      accountantId,
+      status: "error",
+      errorMessage: list.error,
+      skippedCount: 1,
+      detail: `Client ${clientId}`,
+    });
+    return { imported, skipped: skipped + 1, errors: [list.error] };
+  }
+
+  const messages = parseAnafMessageList(list.data);
+  if (messages.length === 0) {
+    await markClientConnectionSuccess(supabase, conn);
+    await logSync(supabase, {
+      accountantId,
+      status: "success",
+      detail: `Client ${clientId}: nu există mesaje noi.`,
+    });
+    return { imported, skipped, errors };
+  }
+
+  for (const msg of messages) {
+    const { data: existing } = await supabase
+      .from("anaf_message_receipts")
+      .select("id, status, upload_id")
+      .eq("accountant_id", accountantId)
+      .eq("company_cif", companyCifNorm)
+      .eq("message_id", msg.id)
+      .maybeSingle();
+    if (existing?.id && existing.status === "imported") {
+      if (existing.upload_id) {
+        const { data: stillThere } = await supabase
+          .from("uploads")
+          .select("id")
+          .eq("id", existing.upload_id)
+          .maybeSingle();
+        if (stillThere?.id) {
+          skipped++;
+          continue;
+        }
+      }
+    }
+
+    const partner = msg.partnerTaxCode ? normalizeTaxCode(msg.partnerTaxCode) : "";
+
+    const downloaded = await anafApiDownload(conn.api_base_url, msg.id, tokenResult.accessToken);
+    if (!downloaded.ok) {
+      await upsertMessageReceipt(supabase, {
+        accountant_id: accountantId,
+        company_cif: companyCifNorm,
+        message_id: msg.id,
+        partner_tax_code: partner || null,
+        client_id: clientId,
+        status: "download_error",
+        detail: downloaded.error.slice(0, 500),
+      });
+      errors.push(`Mesaj ${msg.id}: ${downloaded.error}`);
+      skipped++;
+      continue;
+    }
+
+    const docTypeId = await ensureDocType(supabase, clientId);
+    if (!docTypeId) {
+      await upsertMessageReceipt(supabase, {
+        accountant_id: accountantId,
+        company_cif: companyCifNorm,
+        message_id: msg.id,
+        partner_tax_code: partner || null,
+        client_id: clientId,
+        status: "parse_error",
+        detail: "Nu pot crea tipul de document e-Factura SPV.",
+      });
+      skipped++;
+      continue;
+    }
+
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const zipBuffer = Buffer.from(downloaded.buffer);
+    const extractedPdf = await extractPdfFromEfacturaZip(zipBuffer);
+    const displayPdfBuffer = extractedPdf?.buffer ?? (await buildReadablePdfFromZip(zipBuffer));
+    if (!displayPdfBuffer) {
+      await upsertMessageReceipt(supabase, {
+        accountant_id: accountantId,
+        company_cif: companyCifNorm,
+        message_id: msg.id,
+        partner_tax_code: partner || null,
+        client_id: clientId,
+        status: "parse_error",
+        detail: "Nu pot obtine PDF din mesajul ANAF.",
+      });
+      skipped++;
+      continue;
+    }
+
+    const safePdfName = (extractedPdf?.fileName ?? "efactura-generata.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+    const pdfPath = `${clientId}/${year}/${month}/${docTypeId}/anaf-${Date.now()}-${msg.id}-factura.pdf`;
+    const pdfDisplayName = `eFactura_pdf_${partner || "spv"}_${msg.id}_${safePdfName}`;
+    const pdfUpload = await supabase.storage.from(BUCKET).upload(pdfPath, displayPdfBuffer, {
+      contentType: "application/pdf",
+      upsert: false,
+    });
+    if (pdfUpload.error) {
+      await upsertMessageReceipt(supabase, {
+        accountant_id: accountantId,
+        company_cif: companyCifNorm,
+        message_id: msg.id,
+        partner_tax_code: partner || null,
+        client_id: clientId,
+        status: "download_error",
+        detail: pdfUpload.error.message.slice(0, 500),
+      });
+      errors.push(`Mesaj ${msg.id}: ${pdfUpload.error.message}`);
+      skipped++;
+      continue;
+    }
+
+    const { data: insertedUpload, error: uploadInsertError } = await supabase
+      .from("uploads")
+      .insert({
+        client_id: clientId,
+        document_type_id: docTypeId,
+        file_path: pdfPath,
+        file_name: pdfDisplayName,
+        month,
+        year,
+      })
+      .select("id")
+      .single();
+    if (uploadInsertError || !insertedUpload?.id) {
+      await supabase.storage.from(BUCKET).remove([pdfPath]);
+      await upsertMessageReceipt(supabase, {
+        accountant_id: accountantId,
+        company_cif: companyCifNorm,
+        message_id: msg.id,
+        partner_tax_code: partner || null,
+        client_id: clientId,
+        status: "parse_error",
+        detail: uploadInsertError?.message?.slice(0, 500) ?? "Nu pot salva PDF-ul.",
+      });
+      skipped++;
+      continue;
+    }
+
+    await upsertMessageReceipt(supabase, {
+      accountant_id: accountantId,
+      company_cif: companyCifNorm,
+      message_id: msg.id,
+      partner_tax_code: partner || null,
+      client_id: clientId,
+      upload_id: insertedUpload.id,
+      file_path: pdfPath,
+      file_name: pdfDisplayName,
+      status: "imported",
+      detail: "Factura PDF importata din SPV (client).",
+    });
+    imported++;
+  }
+
+  if (errors.length > 0) {
+    await setClientConnectionFailure(supabase, conn, errors[0]);
+    await logSync(supabase, {
+      accountantId,
+      status: imported > 0 ? "partial" : "error",
+      errorMessage: errors[0],
+      importedCount: imported,
+      skippedCount: skipped,
+      detail: `Client ${clientId}: ${messages.length} mesaje`,
+    });
+  } else {
+    await markClientConnectionSuccess(supabase, conn);
+    await logSync(supabase, {
+      accountantId,
+      status: skipped > 0 ? "partial" : "success",
+      importedCount: imported,
+      skippedCount: skipped,
+      detail: `Client ${clientId}: ${messages.length} mesaje`,
+    });
+  }
+
+  return { imported, skipped, errors };
+}
+
+export async function syncAllClientAnafConnections(supabase?: SupabaseClient) {
+  const db = supabase ?? createAdminClient();
+  const { data: rows, error } = await db
+    .from("client_anaf_connections")
+    .select(
+      "client_id, accountant_id, enabled, company_cif, api_base_url, oauth_token_url, oauth_client_id, oauth_client_secret, oauth_refresh_token, access_token, access_token_expires_at, consecutive_failures, circuit_open_until"
+    )
+    .not("oauth_refresh_token", "is", null);
+
+  if (error) throw new Error(error.message);
+
+  let totalImported = 0;
+  let totalSkipped = 0;
+  const errors: string[] = [];
+
+  for (const row of (rows ?? []) as ClientAnafConnRow[]) {
+    try {
+      const result = await syncAnafForClient(db, row);
+      totalImported += result.imported;
+      totalSkipped += result.skipped;
+      for (const err of result.errors) {
+        if (errors.length < 20) errors.push(`[client:${row.client_id}] ${err}`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Eroare necunoscută";
+      if (errors.length < 20) errors.push(`[client:${row.client_id}] ${msg}`);
+    }
+  }
+
   return {
     connections: (rows ?? []).length,
     imported: totalImported,

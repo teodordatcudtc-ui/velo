@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { notFound } from "next/navigation";
+import { getClientAnafConnectionByClientId } from "@/lib/supabase/client-anaf";
+import { Suspense } from "react";
 import { ClientUploadForm } from "./ClientUploadForm";
+import { SpvConnectCard } from "./SpvConnectCard";
 
 type ClientWithDocs = {
   id: string;
@@ -74,6 +76,20 @@ export default async function UploadPage({
     file_name: u.file_name,
   }));
 
+  const { data: spvConn } = await getClientAnafConnectionByClientId(
+    supabase,
+    client.id,
+    "company_cif, oauth_refresh_token, connected_at, last_synced_at, last_error"
+  );
+
+  const spvInitial = {
+    connected: !!spvConn?.oauth_refresh_token?.trim(),
+    companyCif: spvConn?.company_cif ?? null,
+    connectedAt: spvConn?.connected_at ?? null,
+    lastSyncedAt: spvConn?.last_synced_at ?? null,
+    lastError: spvConn?.last_error ?? null,
+  };
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-[var(--paper)]">
       <div className="w-full max-w-xl">
@@ -109,6 +125,10 @@ export default async function UploadPage({
             />
           </div>
         )}
+
+        <Suspense fallback={null}>
+          <SpvConnectCard token={token} clientName={client.name} initial={spvInitial} />
+        </Suspense>
 
         <p className="mt-10 text-center text-xs text-[var(--ink-muted)]">
           Vel<em className="text-[var(--sage)] not-italic font-semibold">lo</em>

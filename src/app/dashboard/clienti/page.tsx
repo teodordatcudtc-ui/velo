@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ClientiView } from "./ClientiView";
 import { getClientLimit, hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
+import { getClientSpvStatusByClientIds } from "@/lib/client-anaf-status";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +104,8 @@ export default async function ClientiPage() {
     }
   }
 
+  const spvStatusByClient = await getClientSpvStatusByClientIds(activeIds);
+
   return (
     <ClientiView
       clients={activeClients ?? []}
@@ -118,6 +121,7 @@ export default async function ClientiPage() {
       subscriptionPlan={subscriptionPlan}
       clientLimit={clientLimit}
       userId={user.id}
+      spvStatusByClient={spvStatusByClient}
     />
   );
 }
