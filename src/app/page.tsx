@@ -32,6 +32,7 @@ export default function HomePage() {
         </div>
         <div className="nav-links">
           <Link href="#how" className="nav-link">Cum funcționează</Link>
+          <Link href="#spv" className="nav-link">SPV</Link>
           <Link href="#pricing" className="nav-link">Prețuri</Link>
           <Link href="#faq" className="nav-link">FAQ</Link>
           <Link href="/blog" className="nav-link">Blog</Link>
@@ -44,12 +45,18 @@ export default function HomePage() {
         <div className="container">
           <div className="hero-inner">
             <div className="hero-copy">
+              <div className="hero-badge d1">
+                <span className="hero-badge-dot" aria-hidden="true" />
+                Nou · integrare nativă SPV e-Factura
+              </div>
+
               <div className="hero-title d1">
                 <span className="hero-title-line1">Actele clienților tăi</span><br /><em>colectate automat.</em>
               </div>
 
               <div className="hero-subtitle lead">
-                Trimite cereri de documente în 30 de secunde. Ei răspund cu un click, tu primești totul organizat.
+                Cereri de documente în 30 de secunde — și facturi din SPV la dosarul fiecărui client, fără descărcări
+                manuale și fără potriviri pe WhatsApp.
               </div>
 
               <HeroActions />
@@ -104,6 +111,20 @@ export default function HomePage() {
               <div className="pain-item">
                 <div className="pain-icon" aria-hidden="true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                </div>
+                <div className="pain-content">
+                  <h4>SPV într-o parte, bonuri pe WhatsApp în alta</h4>
+                  <p>Descarci e-Factura din SPV, apoi cauți bonul primit pe chat ca să le potrivești. Ore pierdute, în fiecare lună.</p>
+                </div>
+              </div>
+              <div className="pain-item">
+                <div className="pain-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M6 2h12" />
                     <path d="M6 22h12" />
                     <path d="M4 2h16v4a4 4 0 0 1-1.17 2.83L15 13l3.83 4.17A4 4 0 0 1 20 20v2H4v-2a4 4 0 0 1 1.17-2.83L9 13 5.17 8.83A4 4 0 0 1 4 6z" />
@@ -130,6 +151,28 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SPV integration */}
+      <section id="spv">
+        <div className="container">
+          <div className="spv-spotlight">
+            <span className="overline">Integrare SPV</span>
+            <h2 className="spv-spotlight-title">
+              Ce e mai obositor decât SPV?<br />
+              <em>Să le potrivești cu bonurile de pe WhatsApp.</em>
+            </h2>
+            <p className="spv-spotlight-lead">
+              Vello rezolvă ambele într-un singur loc: clientul își conectează SPV de pe linkul lui, tu primești
+              e-Facturile la dosarul corect — alături de pozele și PDF-urile încărcate acolo.
+            </p>
+            <ul className="spv-spotlight-list">
+              <li>Conectare SPV de pe linkul unic — fără login ANAF pentru tine</li>
+              <li>Facturi importate automat la clientul potrivit</li>
+              <li>Vezi în dashboard cine e conectat la SPV și cine nu</li>
+            </ul>
           </div>
         </div>
       </section>
@@ -191,6 +234,20 @@ export default function HomePage() {
           </div>
 
             <div className="features-bento">
+            <div className="feat-card fc-spv">
+              <div className="feat-icon sky" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+              </div>
+              <h3>Integrare nativă SPV e-Factura</h3>
+              <p>
+                Clientul autorizează SPV o singură dată de pe linkul de upload. Facturile apar automat în Vello —
+                nu mai descarci manual din portal și nu mai cauți bonul potrivit pe WhatsApp.
+              </p>
+            </div>
+
             <div className="feat-card fc-1">
               <div className="feat-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -382,6 +439,7 @@ export default function HomePage() {
             <div className="footer-col-links">
               <div className="footer-col-title">Produs</div>
               <Link href="#how" className="footer-link">Cum funcționează</Link>
+              <Link href="#spv" className="footer-link">Integrare SPV</Link>
               <Link href="#features" className="footer-link">Funcționalități</Link>
               <Link href="#pricing" className="footer-link">Prețuri</Link>
               <Link href="#" className="footer-link">Changelog</Link>

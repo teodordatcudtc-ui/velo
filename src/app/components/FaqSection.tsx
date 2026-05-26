@@ -5,6 +5,10 @@ import Link from "next/link";
 
 const FAQ_ITEMS = [
   {
+    q: "Vello se conectează la SPV e-Factura?",
+    a: "Da. Clientul își autorizează SPV o singură dată de pe linkul unic de upload (cu certificatul firmei). Facturile din SPV apar automat la dosarul acelui client în Vello. Tu vezi în dashboard cine e conectat și cine nu — fără să intri în SPV pentru fiecare firmă.",
+  },
+  {
     q: "Clientul meu trebuie să creeze un cont pe Vello?",
     a: "Nu, niciodată. Clientul primește un link unic securizat pe email sau SMS. Deschide linkul direct pe telefon, fără instalare, fără înregistrare. Experiența e la fel de simplă ca și cum ar trimite o poză unui prieten.",
   },

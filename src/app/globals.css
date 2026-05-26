@@ -816,12 +816,80 @@ nav.scrolled {
   transition-delay: 0.16s;
 }
 
-.fc-1 {
+.fc-1,
+.fc-spv {
   grid-column: span 12;
+}
+.fc-spv {
+  background: linear-gradient(135deg, var(--sage-xlight) 0%, var(--paper) 55%);
+  border-color: var(--sage-light);
+}
+.fc-spv p {
+  max-width: 520px;
 }
 .fc-3,
 .fc-4 {
   grid-column: span 6;
+}
+
+/* SPV spotlight */
+#spv {
+  background: linear-gradient(180deg, #fff 0%, var(--sage-xlight) 50%, #fff 100%);
+  padding: 64px 0;
+}
+.spv-spotlight {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+.spv-spotlight .overline {
+  display: block;
+  margin-bottom: 12px;
+}
+.spv-spotlight-title {
+  font-family: var(--f-display);
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+}
+.spv-spotlight-title em {
+  font-style: italic;
+  color: var(--sage);
+}
+.spv-spotlight-lead {
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.spv-spotlight-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.spv-spotlight-list li {
+  font-size: 14px;
+  color: var(--ink-muted);
+  padding-left: 26px;
+  position: relative;
+  line-height: 1.5;
+}
+.spv-spotlight-list li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--sage);
+  font-weight: 700;
 }
 
 .feat-icon {
@@ -2149,6 +2217,7 @@ footer {
     grid-template-columns: 1fr;
   }
   .fc-1,
+  .fc-spv,
   .fc-3,
   .fc-4 {
     grid-column: span 1;
