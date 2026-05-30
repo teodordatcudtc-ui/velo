@@ -7,6 +7,10 @@ import { generateUploadToken } from "@/lib/upload-token";
 import { customAlphabet } from "nanoid";
 import { Resend } from "resend";
 import { getClientLimit, hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
+import {
+  ensureDocumentTypesExist as ensureClientDocumentTypes,
+  normalizeDocTypeNames,
+} from "@/lib/document-types";
 
 const fallbackAlphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -421,27 +425,6 @@ function addOneMonthSameDayYmd(ymd: string): string {
   return `${nextYear}-${mm}-${dd}`;
 }
 
-async function ensureDocumentTypesExist(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  clientId: string,
-  docTypes: string[]
-) {
-  const { data: existingTypes } = await supabase
-    .from("document_types")
-    .select("name")
-    .eq("client_id", clientId);
-
-  const existingNames = new Set((existingTypes ?? []).map((t) => t.name));
-  for (const name of docTypes) {
-    const trimmed = name?.trim();
-    if (!trimmed || existingNames.has(trimmed)) continue;
-    const { error: insertErr } = await supabase
-      .from("document_types")
-      .insert({ client_id: clientId, name: trimmed });
-    if (!insertErr) existingNames.add(trimmed);
-  }
-}
-
 async function upsertDocumentRequestForPeriod(
   supabase: Awaited<ReturnType<typeof createClient>>,
   payload: {
@@ -530,7 +513,8 @@ export async function saveDocumentRequest(
 
   if (!client) return { error: "Client negăsit." };
 
-  await ensureDocumentTypesExist(supabase, clientId, data.docTypes);
+  const docTypes = normalizeDocTypeNames(data.docTypes);
+  await ensureClientDocumentTypes(supabase, clientId, docTypes);
 
   // Parse date parts directly to avoid timezone shifts
   const [sendYear, sendMonth, sendDay] = data.sendDate.split("-").map(Number);
@@ -558,7 +542,7 @@ export async function saveDocumentRequest(
     month,
     year,
     channel,
-    docTypeNames: data.docTypes,
+    docTypeNames: docTypes,
     message: data.message || null,
     reminderAfter3Days: data.reminderAfter3Days,
     sentAt: scheduledIso,
@@ -566,6 +550,7 @@ export async function saveDocumentRequest(
   if ("error" in upsert) return { error: upsert.error };
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/clienti");
+  revalidatePath("/upload/[token]", "page");
   return { ok: true };
 }
 
@@ -595,7 +580,8 @@ export async function sendDocumentRequestNow(
     .eq("id", user.id)
     .single();
 
-  await ensureDocumentTypesExist(supabase, clientId, data.docTypes);
+  const docTypes = normalizeDocTypeNames(data.docTypes);
+  await ensureClientDocumentTypes(supabase, clientId, docTypes);
 
   const now = new Date();
   const month = now.getMonth() + 1;
@@ -606,7 +592,7 @@ export async function sendDocumentRequestNow(
     month,
     year,
     channel: data.delivery,
-    docTypeNames: data.docTypes,
+    docTypeNames: docTypes,
     message: data.message || null,
     reminderAfter3Days: data.reminderAfter3Days,
     sentAt: now.toISOString(),
@@ -629,8 +615,8 @@ export async function sendDocumentRequestNow(
     const accountantName = accountant?.name ?? "Contabil";
 
     const docsHtml =
-      data.docTypes.length > 0
-        ? `<ul>${data.docTypes.map((d) => `<li>${d}</li>`).join("")}</ul>`
+      docTypes.length > 0
+        ? `<ul>${docTypes.map((d) => `<li>${d}</li>`).join("")}</ul>`
         : "<p>Documentele obișnuite pentru luna curentă.</p>";
 
     const customMessage = data.message?.trim()
@@ -664,7 +650,7 @@ export async function sendDocumentRequestNow(
       month: nextMonth,
       year: nextYear,
       channel: "email_scheduled",
-      docTypeNames: data.docTypes,
+      docTypeNames: docTypes,
       message: data.message || null,
       reminderAfter3Days: data.reminderAfter3Days,
       sentAt: nextScheduledIso,
@@ -674,6 +660,7 @@ export async function sendDocumentRequestNow(
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/clienti");
+  revalidatePath("/upload/[token]", "page");
   return { ok: true };
 }
 

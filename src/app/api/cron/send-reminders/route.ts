@@ -174,18 +174,25 @@ export async function GET(request: Request) {
   for (const { req, client } of dueScheduled) {
     const accName = client?.accountants?.name ?? "Contabilul tău";
 
-    // Always read current doc types at send time (reflect latest changes).
-    const { data: docTypes, error: docErr } = await supabase
-      .from("document_types")
-      .select("name")
-      .eq("client_id", req.client_id);
-    if (docErr) {
-      errors.push(`doc_types ${req.client_id}: ${docErr.message}`);
+    let docNames =
+      req.doc_type_names && req.doc_type_names.length > 0
+        ? req.doc_type_names.map((n) => n.trim()).filter(Boolean)
+        : [];
+
+    if (docNames.length === 0) {
+      const { data: docTypes, error: docErr } = await supabase
+        .from("document_types")
+        .select("name")
+        .eq("client_id", req.client_id);
+      if (docErr) {
+        errors.push(`doc_types ${req.client_id}: ${docErr.message}`);
+      }
+      docNames = ((docTypes ?? []) as { name: string }[]).map((d) => d.name);
     }
-    const docs = (docTypes ?? []) as { name: string }[];
+
     const docsHtml =
-      docs.length > 0
-        ? `<ul>${docs.map((d) => `<li>${d.name}</li>`).join("")}</ul>`
+      docNames.length > 0
+        ? `<ul>${docNames.map((d) => `<li>${d}</li>`).join("")}</ul>`
         : "";
 
     const uploadLink = `${baseUrl}/upload/${client!.unique_token}`;
@@ -220,7 +227,7 @@ export async function GET(request: Request) {
       .update({
         channel: "email",
         sent_at: new Date().toISOString(),
-        doc_type_names: docs.map((d) => d.name),
+        doc_type_names: docNames,
       })
       .eq("id", req.id);
 

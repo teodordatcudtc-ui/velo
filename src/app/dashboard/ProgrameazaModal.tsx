@@ -120,29 +120,54 @@ export function ProgrameazaModal({
     });
   };
 
-  const addCustomDocType = () => {
+  const addCustomDocType = (): string | null => {
     const name = customInputValue.trim();
-    if (!name) return;
-    if (allDocOptions.some((o) => o.toLowerCase() === name.toLowerCase())) {
+    if (!name) return null;
+    const existing = allDocOptions.find((o) => o.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      setSelectedDocTypes((prev) => new Set([...prev, existing]));
       setCustomInputValue("");
-      return;
+      setShowCustomInput(false);
+      return existing;
     }
     setCustomDocTypes((prev) => [...prev, name]);
     setSelectedDocTypes((prev) => new Set([...prev, name]));
     setCustomInputValue("");
     setShowCustomInput(false);
+    return name;
   };
 
   const handleSend = async (delivery: "manual" | "email") => {
     const effectiveDate = sendMode === "now" ? todayIso : sendDate;
     if (!effectiveDate) return;
+
+    let typesToSend = new Set(selectedDocTypes);
+    const pendingCustom = customInputValue.trim();
+    if (pendingCustom) {
+      const existing = allDocOptions.find((o) => o.toLowerCase() === pendingCustom.toLowerCase());
+      if (existing) typesToSend.add(existing);
+      else {
+        typesToSend.add(pendingCustom);
+        setCustomDocTypes((prev) =>
+          prev.some((p) => p.toLowerCase() === pendingCustom.toLowerCase()) ? prev : [...prev, pendingCustom]
+        );
+      }
+      setCustomInputValue("");
+      setShowCustomInput(false);
+    }
+
+    if (typesToSend.size === 0) {
+      window.alert("Selectează cel puțin un tip de document sau adaugă unul nou.");
+      return;
+    }
+
     setSending(true);
     try {
       const result = await onSend?.({
         sendMode,
         sendDate: effectiveDate,
         delivery,
-        docTypes: Array.from(selectedDocTypes),
+        docTypes: Array.from(typesToSend),
         message,
         reminderAfter3Days,
       });

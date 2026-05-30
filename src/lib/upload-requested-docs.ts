@@ -1,10 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  ensureDocumentTypesExist,
+  filterDocTypesByNames,
+  type ClientDocType,
+} from "@/lib/document-types";
 
-export type UploadDocType = { id: string; name: string };
-
-function normalizeDocTypeName(name: string): string {
-  return name.trim().toLowerCase();
-}
+export type UploadDocType = ClientDocType;
 
 /** Cerere activă pentru luna curentă (trimisă, neînchisă). */
 export async function getActiveDocumentRequestForUpload(
@@ -31,30 +32,24 @@ export async function getActiveDocumentRequestForUpload(
   return { doc_type_names: data.doc_type_names };
 }
 
-/** Păstrează doar tipurile cerute în ultima cerere activă; fără cerere → toate tipurile clientului. */
-export function filterDocTypesForActiveRequest(
-  allTypes: UploadDocType[],
-  requestedNames: string[] | null | undefined
-): UploadDocType[] {
-  if (!requestedNames?.length) return allTypes;
-
-  const wanted = new Set(
-    requestedNames.map(normalizeDocTypeName).filter((n) => n.length > 0)
-  );
-  if (wanted.size === 0) return allTypes;
-
-  const filtered = allTypes.filter((d) => wanted.has(normalizeDocTypeName(d.name)));
-  return filtered.length > 0 ? filtered : allTypes;
-}
-
 export async function resolveUploadDocTypes(
   supabase: SupabaseClient,
   clientId: string,
   allTypes: UploadDocType[]
 ): Promise<UploadDocType[]> {
   const request = await getActiveDocumentRequestForUpload(supabase, clientId);
-  if (!request) return allTypes;
-  return filterDocTypesForActiveRequest(allTypes, request.doc_type_names);
+  if (!request?.doc_type_names?.length) return allTypes;
+
+  await ensureDocumentTypesExist(supabase, clientId, request.doc_type_names);
+
+  const { data: refreshed } = await supabase
+    .from("document_types")
+    .select("id, name")
+    .eq("client_id", clientId);
+
+  const types = (refreshed ?? []) as UploadDocType[];
+  const filtered = filterDocTypesByNames(types, request.doc_type_names);
+  return filtered.length > 0 ? filtered : types;
 }
 
 export async function isDocTypeAllowedForUpload(
@@ -62,9 +57,17 @@ export async function isDocTypeAllowedForUpload(
   clientId: string,
   docTypeName: string
 ): Promise<boolean> {
-  const allTypes = [{ id: "", name: docTypeName }];
   const request = await getActiveDocumentRequestForUpload(supabase, clientId);
   if (!request) return true;
-  const allowed = filterDocTypesForActiveRequest(allTypes, request.doc_type_names);
-  return allowed.some((d) => normalizeDocTypeName(d.name) === normalizeDocTypeName(docTypeName));
+
+  await ensureDocumentTypesExist(supabase, clientId, request.doc_type_names);
+
+  const { data: refreshed } = await supabase
+    .from("document_types")
+    .select("id, name")
+    .eq("client_id", clientId);
+
+  const allowed = filterDocTypesByNames((refreshed ?? []) as UploadDocType[], request.doc_type_names);
+  const norm = docTypeName.trim().toLowerCase();
+  return allowed.some((d) => d.name.trim().toLowerCase() === norm);
 }
