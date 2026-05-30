@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getClientAnafConnectionByClientId } from "@/lib/supabase/client-anaf";
+import { resolveUploadDocTypes } from "@/lib/upload-requested-docs";
 import { Suspense } from "react";
 import { ClientUploadForm } from "./ClientUploadForm";
 import { SpvConnectCard } from "./SpvConnectCard";
@@ -49,7 +50,10 @@ export default async function UploadPage({
   }
 
   const client = data as unknown as ClientWithDocs;
-  const docTypes = client.document_types ?? [];
+  const allDocTypes = client.document_types ?? [];
+  const docTypes = await resolveUploadDocTypes(supabase, client.id, allDocTypes);
+  const requestFiltersTypes =
+    allDocTypes.length > 0 && docTypes.length > 0 && docTypes.length < allDocTypes.length;
 
   const { data: accountant } = await supabase
     .from("accountants")
@@ -107,6 +111,11 @@ export default async function UploadPage({
           <p className="text-sm text-[var(--ink-muted)] mt-3">
             Trimiți către: <strong className="text-[var(--ink-soft)]">{accountantName}</strong>
           </p>
+          {requestFiltersTypes && (
+            <p className="text-sm text-[var(--sage)] mt-2 font-medium">
+              Documente solicitate: {docTypes.map((d) => d.name).join(", ")}
+            </p>
+          )}
         </div>
 
         {docTypes.length === 0 ? (

@@ -4,6 +4,7 @@ import { buildUploadFileName, fileExtension } from "@/lib/upload-naming";
 import type { Database } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
 import { hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
+import { isDocTypeAllowedForUpload } from "@/lib/upload-requested-docs";
 
 type UploadInsert = Database["public"]["Tables"]["uploads"]["Insert"];
 
@@ -82,6 +83,14 @@ export async function POST(request: Request) {
   }
 
   const docTypeName = (docType as { id: string; name: string }).name;
+
+  const allowedForRequest = await isDocTypeAllowedForUpload(supabase, clientId, docTypeName);
+  if (!allowedForRequest) {
+    return NextResponse.json(
+      { error: "Acest tip de document nu face parte din cererea curentă a contabilului." },
+      { status: 400 }
+    );
+  }
 
   /* ── 3. Dată curentă ──────────────────────────────────────────────────── */
   const now   = new Date();
