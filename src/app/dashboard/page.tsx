@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DashboardClientsTable } from "./DashboardClientsTable";
 import { EarlyAccessAutoRedeem } from "./EarlyAccessAutoRedeem";
 import { getClientSpvStatusByClientIds } from "@/lib/client-anaf-status";
+import { normalizeDocTypeNames } from "@/lib/document-types";
 import styles from "./DashboardLayout.module.css";
 
 export const dynamic = "force-dynamic";
@@ -90,13 +91,40 @@ export default async function DashboardPage(props: {
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
+
+  const { data: requestsThisMonth } =
+    clientIds.length > 0
+      ? await supabase
+          .from("document_requests")
+          .select("client_id, sent_at, doc_type_names")
+          .in("client_id", clientIds)
+          .eq("month", currentMonth)
+          .eq("year", currentYear)
+      : { data: [] };
+
+  const requestThisMonthSentAt: Record<string, string> = {};
+  const requestDocTypesByClient: Record<string, string[]> = {};
+  for (const req of requestsThisMonth ?? []) {
+    const prev = requestThisMonthSentAt[req.client_id];
+    if (!prev || req.sent_at > prev) {
+      requestThisMonthSentAt[req.client_id] = req.sent_at;
+      const names = (req as { doc_type_names?: string[] | null }).doc_type_names;
+      requestDocTypesByClient[req.client_id] =
+        names && names.length > 0 ? names : [];
+    }
+  }
+
   const uploadsThisMonth = (uploads ?? []).filter(
     (u) => u.month === currentMonth && u.year === currentYear
   );
-  const totalRequested = (clients ?? []).reduce(
-    (sum, c) => sum + ((c as { document_types?: { id: string }[] }).document_types?.length ?? 0),
-    0
-  );
+  const totalRequested = (clients ?? []).reduce((sum, c) => {
+    const types = (c as { document_types?: { id: string; name: string }[] }).document_types ?? [];
+    const requested = requestDocTypesByClient[c.id];
+    if (requested?.length) {
+      return sum + normalizeDocTypeNames(requested).length;
+    }
+    return sum + types.length;
+  }, 0);
   const clientsWithDocsNoUpload = (clients ?? []).filter((c) => {
     const types = (c as { document_types?: { id: string }[] }).document_types ?? [];
     if (types.length === 0) return false;
@@ -197,6 +225,7 @@ export default async function DashboardPage(props: {
         clients={clients ?? []}
         uploads={uploads ?? []}
         nextRequestByClient={nextRequestByClient}
+        requestDocTypesByClient={requestDocTypesByClient}
         everSentClientIds={everSentClientIds}
         currentMonth={currentMonth}
         currentYear={currentYear}

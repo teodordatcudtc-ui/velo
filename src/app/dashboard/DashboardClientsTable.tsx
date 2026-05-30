@@ -8,6 +8,7 @@ import { ProgrameazaModal } from "./ProgrameazaModal";
 import { useToast } from "@/app/components/ToastProvider";
 import { saveDocumentRequest, sendDocumentRequestNow, markLinkCopied } from "@/app/actions/clients";
 import type { ClientSpvStatus } from "@/lib/client-anaf-status";
+import { computeDocumentProgress } from "@/lib/document-types";
 import { SpvStatusBadge } from "./SpvStatusBadge";
 
 type DocType = { id: string; name: string };
@@ -43,6 +44,7 @@ export function DashboardClientsTable({
   clients,
   uploads,
   nextRequestByClient = {},
+  requestDocTypesByClient = {},
   everSentClientIds = new Set(),
   currentMonth,
   currentYear,
@@ -52,6 +54,7 @@ export function DashboardClientsTable({
   clients: Client[];
   uploads: Upload[];
   nextRequestByClient?: Record<string, string>;
+  requestDocTypesByClient?: Record<string, string[]>;
   everSentClientIds?: Set<string>;
   currentMonth: number;
   currentYear: number;
@@ -72,14 +75,6 @@ export function DashboardClientsTable({
     ...everSentClientIds,
     ...localSentIds,
   ]);
-
-  const uploadedByClientAndType = new Map<string, Set<string>>();
-  for (const u of uploadsThisMonth) {
-    const key = u.client_id;
-    if (!uploadedByClientAndType.has(key))
-      uploadedByClientAndType.set(key, new Set());
-    uploadedByClientAndType.get(key)!.add(u.document_type_id);
-  }
 
   const copyLink = (client: Client) => {
     const origin = typeof window !== "undefined" ? window.location.origin : baseUrl || "";
@@ -115,9 +110,13 @@ export function DashboardClientsTable({
         <tbody>
           {clients.map((client, idx) => {
             const types = client.document_types ?? [];
-            const uploadedTypes = uploadedByClientAndType.get(client.id);
-            const count = uploadedTypes?.size ?? 0;
-            const total = types.length;
+            const monthUploads = uploadsThisMonth.filter((u) => u.client_id === client.id);
+            const requested = requestDocTypesByClient[client.id];
+            const { total, count } = computeDocumentProgress(
+              types,
+              requested?.length ? requested : null,
+              monthUploads
+            );
             const status =
               total === 0
                 ? "—"

@@ -19,6 +19,7 @@ import { ConfirmModal } from "@/app/components/ConfirmModal";
 import { ProgrameazaModal } from "../ProgrameazaModal";
 import { ClientiOnboardingTutorial } from "./ClientiOnboardingTutorial";
 import type { ClientSpvStatus } from "@/lib/client-anaf-status";
+import { computeDocumentProgress } from "@/lib/document-types";
 import { SpvStatusBadge } from "../SpvStatusBadge";
 import styles from "./clienti.module.css";
 
@@ -152,6 +153,7 @@ export function ClientiView({
   archivedClients = [],
   uploads,
   requestThisMonthByClient = {},
+  requestDocTypesByClient = {},
   requestClosedByClient = {},
   nextRequestByClient = {},
   currentMonth,
@@ -167,6 +169,7 @@ export function ClientiView({
   archivedClients?: Client[];
   uploads: Upload[];
   requestThisMonthByClient?: Record<string, string>;
+  requestDocTypesByClient?: Record<string, string[]>;
   requestClosedByClient?: Record<string, boolean>;
   nextRequestByClient?: Record<string, string>;
   currentMonth: number;
@@ -280,18 +283,18 @@ export function ClientiView({
 
     return initialClients.map((client) => {
       const types = client.document_types ?? [];
-      const total = types.length;
-      const received = new Set(
-        uploads
-          .filter(
-            (u) =>
-              u.client_id === client.id &&
-              u.month === currentMonth &&
-              u.year === currentYear
-          )
-          .map((u) => u.document_type_id)
+      const monthUploads = uploads.filter(
+        (u) =>
+          u.client_id === client.id &&
+          u.month === currentMonth &&
+          u.year === currentYear
       );
-      const count = received.size;
+      const requestedNames = requestDocTypesByClient[client.id];
+      const { total, count } = computeDocumentProgress(
+        types,
+        requestedNames?.length ? requestedNames : null,
+        monthUploads
+      );
 
       // Compare dates as "YYYY-MM-DD" strings to avoid timezone issues
       const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -371,7 +374,7 @@ export function ClientiView({
         nextRequestAt,
       };
     });
-  }, [initialClients, uploads, currentMonth, currentYear, requestThisMonthByClient, requestClosedByClient, nextRequestByClient]);
+  }, [initialClients, uploads, currentMonth, currentYear, requestThisMonthByClient, requestDocTypesByClient, requestClosedByClient, nextRequestByClient]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -1343,6 +1346,7 @@ export function ClientiView({
               !!requestThisMonthByClient[drawerClient.id]
             }
             requestClosedCurrentMonth={requestClosedByClient[drawerClient.id] === true}
+            requestedDocTypeNames={requestDocTypesByClient[drawerClient.id]}
             onClose={closeDrawer}
             onEdit={() => {
               const found = initialClients.find((c) => c.id === drawerClient.id);
@@ -1738,6 +1742,7 @@ function ClientiDrawer({
   isPremium,
   hasScheduledEmailRequest,
   requestClosedCurrentMonth,
+  requestedDocTypeNames,
   onClose,
   onEdit,
   onCerere,
@@ -1751,6 +1756,7 @@ function ClientiDrawer({
   isPremium: boolean;
   hasScheduledEmailRequest: boolean;
   requestClosedCurrentMonth: boolean;
+  requestedDocTypeNames?: string[];
   onClose: () => void;
   onEdit: () => void;
   onCerere: () => void;
@@ -1775,11 +1781,15 @@ function ClientiDrawer({
     toast.error(message);
   }, [toast]);
   const types = client.document_types ?? [];
-  const total = types.length;
-  const received = new Set(
-    uploads.filter((u) => u.month === currentMonth && u.year === currentYear).map((u) => u.document_type_id)
+  const monthUploads = uploads.filter(
+    (u) => u.month === currentMonth && u.year === currentYear
   );
-  const pct = total === 0 ? 0 : Math.round((received.size / total) * 100);
+  const { total, count: receivedCount } = computeDocumentProgress(
+    types,
+    requestedDocTypeNames?.length ? requestedDocTypeNames : null,
+    monthUploads
+  );
+  const pct = total === 0 ? 0 : Math.round((receivedCount / total) * 100);
   const circ = 2 * Math.PI * 30;
   const offset = circ * (1 - pct / 100);
   const monthName = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"][currentMonth - 1];
@@ -1843,9 +1853,9 @@ function ClientiDrawer({
                 ? "Neinițiat"
                 : requestClosedCurrentMonth
                   ? "Închis"
-                  : received.size === total
+                  : receivedCount === total
                     ? "La zi"
-                    : received.size === 0
+                    : receivedCount === 0
                       ? "Restant"
                       : "Așteptare"}
             </span>
@@ -1900,11 +1910,11 @@ function ClientiDrawer({
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--sage)" }} />
-                    <strong>{received.size}</strong> documente primite
+                    <strong>{receivedCount}</strong> documente primite
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--amber)" }} />
-                    <strong>{total - received.size}</strong> în așteptare
+                    <strong>{total - receivedCount}</strong> în așteptare
                   </div>
                 </div>
               </div>

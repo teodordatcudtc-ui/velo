@@ -66,3 +66,29 @@ export function filterDocTypesByNames(
 
   return allTypes.filter((d) => wanted.has(normalizeDocTypeName(d.name)));
 }
+
+/** Progres lună curentă: total = tipuri din cerere (dacă există), altfel toate tipurile clientului. */
+export function computeDocumentProgress(
+  allTypes: ClientDocType[],
+  requestedNames: string[] | null | undefined,
+  uploadsThisMonth: { document_type_id: string }[]
+): { total: number; count: number } {
+  if (requestedNames && requestedNames.length > 0) {
+    const wanted = normalizeDocTypeNames(requestedNames);
+    const wantedSet = new Set(wanted.map(normalizeDocTypeName));
+    const typeById = new Map(allTypes.map((t) => [t.id, t]));
+    const receivedTypeIds = new Set<string>();
+    for (const u of uploadsThisMonth) {
+      const t = typeById.get(u.document_type_id);
+      if (t && wantedSet.has(normalizeDocTypeName(t.name))) {
+        receivedTypeIds.add(u.document_type_id);
+      }
+    }
+    return { total: wanted.length, count: receivedTypeIds.size };
+  }
+
+  if (allTypes.length === 0) return { total: 0, count: 0 };
+  const receivedTypeIds = new Set(uploadsThisMonth.map((u) => u.document_type_id));
+  const count = allTypes.filter((t) => receivedTypeIds.has(t.id)).length;
+  return { total: allTypes.length, count };
+}
