@@ -1,7 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getClientAnafConnectionByClientId } from "@/lib/supabase/client-anaf";
 import { resolveUploadDocTypes } from "@/lib/upload-requested-docs";
-import { Suspense } from "react";
 import { ClientUploadForm } from "./ClientUploadForm";
 import { SpvConnectCard } from "./SpvConnectCard";
 
@@ -14,12 +13,17 @@ type ClientWithDocs = {
 
 type UploadRow = { id: string; document_type_id: string; file_name: string };
 
+export const dynamic = "force-dynamic";
+
 export default async function UploadPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ spv?: string; spv_error?: string }>;
 }) {
   const { token } = await params;
+  const spvQuery = await searchParams;
   const supabase = createAdminClient();
 
   const { data, error: clientError } = await supabase
@@ -135,9 +139,12 @@ export default async function UploadPage({
           </div>
         )}
 
-        <Suspense fallback={null}>
-          <SpvConnectCard token={token} clientName={client.name} initial={spvInitial} />
-        </Suspense>
+        <SpvConnectCard
+          token={token}
+          clientName={client.name}
+          initial={spvInitial}
+          spvQuery={spvQuery}
+        />
 
         <p className="mt-10 text-center text-xs text-[var(--ink-muted)]">
           Vel<em className="text-[var(--sage)] not-italic font-semibold">lo</em>

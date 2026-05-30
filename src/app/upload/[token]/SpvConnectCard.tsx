@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 type SpvState = {
   connected: boolean;
@@ -15,20 +15,21 @@ export function SpvConnectCard({
   token,
   clientName,
   initial,
+  spvQuery,
 }: {
   token: string;
   clientName: string;
   initial: SpvState;
+  spvQuery?: { spv?: string; spv_error?: string };
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [companyCif, setCompanyCif] = useState(initial.companyCif ?? "");
   const [consent, setConsent] = useState(!!initial.connected);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(
-    searchParams.get("spv_error") || initial.lastError
+    spvQuery?.spv_error || initial.lastError
   );
-  const justConnected = searchParams.get("spv") === "connected";
+  const justConnected = spvQuery?.spv === "connected";
 
   const connected = initial.connected || justConnected;
 
@@ -55,10 +56,7 @@ export function SpvConnectCard({
   }
 
   function dismissBanner() {
-    const u = new URL(window.location.href);
-    u.searchParams.delete("spv");
-    u.searchParams.delete("spv_error");
-    router.replace(u.pathname + u.search, { scroll: false });
+    router.replace(`/upload/${encodeURIComponent(token)}`, { scroll: false });
   }
 
   if (connected) {
