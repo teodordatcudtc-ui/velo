@@ -11,6 +11,7 @@ import {
   restoreClient,
   sendDocumentRequestNow,
   saveDocumentRequest,
+  syncClientSpvNow,
   updateClient,
   updateClientReminder,
 } from "@/app/actions/clients";
@@ -1766,6 +1767,7 @@ function ClientiDrawer({
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archivePending, setArchivePending] = useState(false);
   const [closingRequest, setClosingRequest] = useState(false);
+  const [syncingSpv, setSyncingSpv] = useState(false);
   const [exportPending, setExportPending] = useState(false);
   const [exportPeriod, setExportPeriod] = useState<"7" | "30" | "60" | "all">("all");
   const router = useRouter();
@@ -1939,6 +1941,31 @@ function ClientiDrawer({
                         CUI {spvStatus.companyCif}
                       </span>
                     )}
+                    <button
+                      type="button"
+                      className={`${styles.btn} ${styles.btnSecondary}`}
+                      style={{ marginTop: 8, height: 30, fontSize: 12, padding: "0 10px" }}
+                      disabled={!spvStatus?.connected || syncingSpv}
+                      onClick={async () => {
+                        setSyncingSpv(true);
+                        const result = await syncClientSpvNow(client.id);
+                        setSyncingSpv(false);
+                        if (result?.error) {
+                          showDrawerActionError(result.error);
+                          return;
+                        }
+                        if ((result.imported ?? 0) > 0) {
+                          toast.success(
+                            `SPV sincronizat: ${result.imported} documente importate.`
+                          );
+                        } else {
+                          toast.info("SPV sincronizat. Nu au fost documente noi de importat.");
+                        }
+                        router.refresh();
+                      }}
+                    >
+                      {syncingSpv ? "Se sincronizează..." : "Sincronizează acum din SPV"}
+                    </button>
                   </div>
                 </div>
                 <div>

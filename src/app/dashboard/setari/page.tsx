@@ -7,7 +7,6 @@ import { TestEmailButton } from "./TestEmailButton";
 import { BillingDetailsForm } from "@/app/components/BillingDetailsForm";
 import { IssuedInvoicesCard } from "./IssuedInvoicesCard";
 import { hasPremiumAccess } from "@/lib/subscription";
-import { AnafIntegrationCard } from "./AnafIntegrationCard";
 
 export default async function SetariPage() {
   const supabase = await createClient();
@@ -46,7 +45,6 @@ export default async function SetariPage() {
     !!user.email &&
     (process.env.EARLY_ACCESS_ADMIN_EMAIL?.trim().toLowerCase() ===
       user.email.toLowerCase());
-  const canManageAnafIntegration = canGenerateCodes;
 
   const { data: issuedInvoices } = await supabase
     .from("smartbill_invoices")
@@ -110,15 +108,6 @@ export default async function SetariPage() {
           <IssuedInvoicesCard invoices={issuedInvoices ?? []} />
         </div>
       </div>
-
-      {canManageAnafIntegration && (
-        <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
-            Integrări fiscale
-          </p>
-          <AnafIntegrationCard />
-        </div>
-      )}
 
       {/* Abonament & early access */}
       <div className="space-y-2">

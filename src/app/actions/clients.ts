@@ -11,6 +11,7 @@ import {
   ensureDocumentTypesExist as ensureClientDocumentTypes,
   normalizeDocTypeNames,
 } from "@/lib/document-types";
+import { syncAnafForClient } from "@/lib/anaf-sync";
 
 const fallbackAlphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -709,6 +710,51 @@ export async function closeCurrentDocumentRequest(clientId: string) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/clienti");
   return { ok: true };
+}
+
+export async function syncClientSpvNow(clientId: string): Promise<{
+  ok?: true;
+  imported?: number;
+  skipped?: number;
+  errors?: string[];
+  error?: string;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Neautentificat" };
+  const subscriptionError = await requireActiveSubscription(supabase, user.id);
+  if (subscriptionError) return { error: subscriptionError };
+
+  const { data: client, error: clientError } = await supabase
+    .from("clients")
+    .select("id, accountant_id, unique_token")
+    .eq("id", clientId)
+    .eq("accountant_id", user.id)
+    .maybeSingle();
+  if (clientError) return { error: clientError.message };
+  if (!client) return { error: "Client negăsit." };
+
+  const admin = createAdminClient();
+  const { data: conn, error: connError } = await admin
+    .from("client_anaf_connections")
+    .select("*")
+    .eq("client_id", clientId)
+    .maybeSingle();
+  if (connError) return { error: connError.message };
+  if (!conn) return { error: "Clientul nu are conexiune SPV configurată." };
+
+  const result = await syncAnafForClient(admin, conn);
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/clienti");
+  revalidatePath(`/upload/${client.unique_token}`);
+  return {
+    ok: true,
+    imported: result.imported,
+    skipped: result.skipped,
+    errors: result.errors,
+  };
 }
 
 export async function addDocumentType(clientId: string, formData: FormData) {
