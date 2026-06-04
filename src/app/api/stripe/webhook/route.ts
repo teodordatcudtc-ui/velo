@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripe, type Interval, type PlanId } from "@/lib/stripe";
+import {
+  premiumUntilIsoFromPeriodEnd,
+  resolveAccountantIdFromInvoice,
+  resolveInvoicePeriodEndUnix,
+  resolveSubscriptionIdFromInvoice,
+} from "@/lib/stripe-invoice";
 import { issueSmartBillAfterStripePayment } from "@/lib/smartbill-issue";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -191,38 +197,50 @@ export async function POST(request: Request) {
       // Reînnoirile (subscription_cycle etc.): emitere SmartBill mai jos cu aceleași date salvate.
       if (invoice.billing_reason === "subscription_create") break;
 
-      const subscriptionId: string | null =
-        typeof invoice.subscription === "string"
-          ? invoice.subscription
-          : invoice.subscription?.id ?? null;
+      const subscriptionId = resolveSubscriptionIdFromInvoice(invoice);
+      const accountantIdFromMeta = resolveAccountantIdFromInvoice(invoice);
 
-      if (!subscriptionId) break;
+      let accountant: { id: string; subscription_plan: string } | null = null;
 
-      // Găsim accountantul după stripe_subscription_id
-      const { data: accountantRow } = await supabase
-        .from("accountants")
-        .select("id, subscription_plan")
-        .eq("stripe_subscription_id", subscriptionId)
-        .single();
+      if (subscriptionId) {
+        const { data: accountantRow } = await supabase
+          .from("accountants")
+          .select("id, subscription_plan")
+          .eq("stripe_subscription_id", subscriptionId)
+          .maybeSingle();
+        accountant = accountantRow as { id: string; subscription_plan: string } | null;
+      }
 
-      if (!accountantRow) {
-        console.error("invoice.payment_succeeded: no accountant for sub", subscriptionId);
+      if (!accountant && accountantIdFromMeta) {
+        const { data: accountantRow } = await supabase
+          .from("accountants")
+          .select("id, subscription_plan")
+          .eq("id", accountantIdFromMeta)
+          .maybeSingle();
+        accountant = accountantRow as { id: string; subscription_plan: string } | null;
+      }
+
+      if (!accountant) {
+        console.error(
+          "invoice.payment_succeeded: no accountant",
+          subscriptionId,
+          accountantIdFromMeta,
+          invoice.id
+        );
         break;
       }
-      const accountant = accountantRow as { id: string; subscription_plan: string };
 
-      // Extindem premium_until cu perioada corespunzătoare
-      const periodEnd: number | undefined = invoice.lines?.data?.[0]?.period?.end;
+      const periodEndUnix = resolveInvoicePeriodEndUnix(invoice);
       let premiumUntil: string;
-      if (periodEnd) {
-        premiumUntil = new Date(periodEnd * 1000).toISOString().slice(0, 10);
+      if (periodEndUnix) {
+        premiumUntil = premiumUntilIsoFromPeriodEnd(periodEndUnix);
       } else {
         const d = new Date();
         d.setDate(d.getDate() + 31);
-        premiumUntil = d.toISOString().slice(0, 10);
+        premiumUntil = d.toISOString();
       }
 
-      await supabase
+      const { error: renewErr } = await supabase
         .from("accountants")
         // @ts-expect-error - Supabase inferred type
         .update({
@@ -231,8 +249,13 @@ export async function POST(request: Request) {
         })
         .eq("id", accountant.id);
 
+      if (renewErr) {
+        console.error("invoice.payment_succeeded: update error", renewErr);
+        return NextResponse.json({ error: "Update failed." }, { status: 500 });
+      }
+
       const paid = invoice.amount_paid ?? 0;
-      if (paid > 0 && invoice.id) {
+      if (paid > 0 && invoice.id && subscriptionId) {
         try {
           const stripe = getStripe();
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
@@ -263,18 +286,24 @@ export async function POST(request: Request) {
     case "invoice.payment_failed": {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invoice = event.data.object as any;
-      const subscriptionId: string | null =
-        typeof invoice.subscription === "string"
-          ? invoice.subscription
-          : invoice.subscription?.id ?? null;
+      const subscriptionId = resolveSubscriptionIdFromInvoice(invoice);
+      const accountantIdFromMeta = resolveAccountantIdFromInvoice(invoice);
 
-      if (!subscriptionId) break;
-
-      await supabase
-        .from("accountants")
-        // @ts-expect-error - Supabase inferred type
-        .update({ stripe_subscription_status: "past_due" })
-        .eq("stripe_subscription_id", subscriptionId);
+      if (subscriptionId) {
+        await supabase
+          .from("accountants")
+          // @ts-expect-error - Supabase inferred type
+          .update({ stripe_subscription_status: "past_due" })
+          .eq("stripe_subscription_id", subscriptionId);
+      } else if (accountantIdFromMeta) {
+        await supabase
+          .from("accountants")
+          // @ts-expect-error - Supabase inferred type
+          .update({ stripe_subscription_status: "past_due" })
+          .eq("id", accountantIdFromMeta);
+      } else {
+        console.error("invoice.payment_failed: no subscription or accountant id", invoice.id);
+      }
 
       break;
     }
