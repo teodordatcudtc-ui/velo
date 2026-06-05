@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { hasPremiumAccess } from "@/lib/subscription";
 import { DocumenteList } from "./DocumenteList";
+import { DocumenteExportZipButton } from "./ExportZipModal";
 
 export type UploadRow = {
   id: string;
@@ -21,6 +23,13 @@ export default async function DocumentePage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { data: accountant } = await supabase
+    .from("accountants")
+    .select("subscription_plan, premium_until")
+    .eq("id", user.id)
+    .single();
+  const isPremium = hasPremiumAccess(accountant);
 
   const { data: activeClients } = await supabase
     .from("clients")
@@ -82,12 +91,21 @@ export default async function DocumentePage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="dash-page-title">Documente</h1>
-        <p className="dash-page-sub">
-          Foldere doar pentru clienți activi. Clienții arhivați și documentele lor sunt în „Clienți
-          arhivați”.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="dash-page-title">Documente</h1>
+          <p className="dash-page-sub">
+            Foldere doar pentru clienți activi. Clienții arhivați și documentele lor sunt în „Clienți
+            arhivați”.
+          </p>
+        </div>
+        <DocumenteExportZipButton
+          isPremium={isPremium}
+          activeUploads={(activeUploads ?? []) as UploadRow[]}
+          archivedUploads={(archivedUploads ?? []) as UploadRow[]}
+          activeClientOptions={activeClientOptions}
+          archivedClientOptions={archivedClientOptions}
+        />
       </header>
 
       <DocumenteList
