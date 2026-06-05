@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState, useMemo, useRef, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import JSZip from "jszip";
 import {
   addClient,
   closeCurrentDocumentRequest,
@@ -21,6 +20,7 @@ import { ProgrameazaModal } from "../ProgrameazaModal";
 import { ClientiOnboardingTutorial } from "./ClientiOnboardingTutorial";
 import type { ClientSpvStatus } from "@/lib/client-anaf-status";
 import { computeDocumentProgress } from "@/lib/document-types";
+import { buildClientDocumentsZip, downloadZipBlob } from "@/lib/export-client-zip";
 import { SpvStatusBadge } from "../SpvStatusBadge";
 import styles from "./clienti.module.css";
 
@@ -526,14 +526,6 @@ export function ClientiView({
     }
   }
 
-  function sanitizeFilePart(value: string): string {
-    return value
-      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 80) || "client";
-  }
-
   const openDrawer = (c: Client) => setDrawerClient(c);
   const closeDrawer = () => setDrawerClient(null);
 
@@ -724,33 +716,13 @@ export function ClientiView({
 
     setBulkExportPending(true);
     try {
-      const zip = new JSZip();
-      const usedPaths = new Set<string>();
-      let exportedCount = 0;
-      const failed: string[] = [];
-
-      for (const up of monthUploads) {
-        const clientName =
-          selectedClients.find((c) => c.id === up.client_id)?.name ?? "Client";
-        const folder = sanitizeFilePart(clientName);
-        const baseName = sanitizeFilePart(up.file_name || "document");
-        let filePath = `${folder}/${baseName}`;
-        let inc = 1;
-        while (usedPaths.has(filePath)) {
-          filePath = `${folder}/${baseName}-${inc}`;
-          inc++;
-        }
-        usedPaths.add(filePath);
-
-        const res = await fetch(`/api/uploads/${up.id}?download=1`);
-        if (!res.ok) {
-          if (failed.length < 5) failed.push(`${clientName}: ${up.file_name}`);
-          continue;
-        }
-        const blob = await res.blob();
-        zip.file(filePath, blob);
-        exportedCount++;
-      }
+      const clientNameById = new Map(
+        selectedClients.map((c) => [c.id, c.name])
+      );
+      const { blob, exportedCount, failed } = await buildClientDocumentsZip(
+        monthUploads,
+        clientNameById
+      );
 
       if (exportedCount === 0) {
         toast.error("Nu am putut exporta niciun fișier.");
@@ -758,17 +730,8 @@ export function ClientiView({
         return;
       }
 
-      const zipBlob = await zip.generateAsync({ type: "blob" });
       const month = String(currentMonth).padStart(2, "0");
-      const fileName = `documente-${currentYear}-${month}.zip`;
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      downloadZipBlob(blob, `documente-${currentYear}-${month}.zip`);
 
       toast.success(`ZIP exportat cu ${exportedCount} fișiere.`);
       if (failed.length > 0) toast.info(`Fișiere neexportate: ${failed.join(" | ")}`);

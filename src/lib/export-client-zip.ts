@@ -1,5 +1,20 @@
 import JSZip from "jszip";
 
+const MONTH_FOLDER_NAMES = [
+  "Ianuarie",
+  "Februarie",
+  "Martie",
+  "Aprilie",
+  "Mai",
+  "Iunie",
+  "Iulie",
+  "August",
+  "Septembrie",
+  "Octombrie",
+  "Noiembrie",
+  "Decembrie",
+];
+
 export function sanitizeZipFilePart(value: string): string {
   return (
     value
@@ -14,7 +29,27 @@ export type ZipExportUpload = {
   id: string;
   client_id: string;
   file_name: string;
+  month: number;
+  year: number;
 };
+
+/** Subfolder lună în arhivă: `Iunie 2026`. */
+export function zipMonthFolder(year: number, month: number): string {
+  const name = MONTH_FOLDER_NAMES[month - 1] ?? `Luna-${month}`;
+  return sanitizeZipFilePart(`${name} ${year}`);
+}
+
+export function zipPathForUpload(
+  clientName: string,
+  up: ZipExportUpload,
+  duplicateIndex = 0
+): string {
+  const clientFolder = sanitizeZipFilePart(clientName);
+  const monthFolder = zipMonthFolder(up.year, up.month);
+  const baseName = sanitizeZipFilePart(up.file_name || "document");
+  const fileName = duplicateIndex > 0 ? `${baseName}-${duplicateIndex}` : baseName;
+  return `${clientFolder}/${monthFolder}/${fileName}`;
+}
 
 export async function buildClientDocumentsZip(
   uploads: ZipExportUpload[],
@@ -27,12 +62,10 @@ export async function buildClientDocumentsZip(
 
   for (const up of uploads) {
     const clientName = clientNameById.get(up.client_id) ?? "Client";
-    const folder = sanitizeZipFilePart(clientName);
-    const baseName = sanitizeZipFilePart(up.file_name || "document");
-    let filePath = `${folder}/${baseName}`;
+    let filePath = zipPathForUpload(clientName, up);
     let inc = 1;
     while (usedPaths.has(filePath)) {
-      filePath = `${folder}/${baseName}-${inc}`;
+      filePath = zipPathForUpload(clientName, up, inc);
       inc++;
     }
     usedPaths.add(filePath);

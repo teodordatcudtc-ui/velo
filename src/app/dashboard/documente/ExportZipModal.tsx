@@ -250,7 +250,8 @@ export function ExportZipModal({
           Export ZIP
         </h2>
         <p className="text-sm text-[var(--ink-muted)] mb-4">
-          Alege perioada și clienții. Fișierele sunt grupate pe foldere per client.
+          Alege perioada și clienții. În ZIP: folder client → subfoldere lună (ex.{" "}
+          <span className="font-medium text-[var(--ink-soft)]">Iunie 2026</span>) → documente.
         </p>
 
         <div className="space-y-4">
