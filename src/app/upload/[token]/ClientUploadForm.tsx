@@ -21,8 +21,9 @@ type ScanReview = {
 };
 type CropRect = { x: number; y: number; w: number; h: number };
 
+/** Lăsăm picker-ul permisiv; serverul acceptă orice tip (imagini → PDF, restul ca atare). */
 const FILE_ACCEPT =
-  "application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.xls,.xlsx,text/plain,.txt";
+  "application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.bmp,.tif,.tiff,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 function isImageFile(file: File): boolean {
   if ((file.type || "").toLowerCase().startsWith("image/")) return true;

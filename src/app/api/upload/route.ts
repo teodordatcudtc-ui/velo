@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { buildPdfFromImageBuffer, guessIsImageMime, guessIsPdf } from "@/lib/image-to-pdf";
+import { buildPdfFromImageBuffer } from "@/lib/image-to-pdf";
+import { detectUploadFileKind } from "@/lib/upload-file-kind";
+import { getMaxUploadBytes, maxUploadSizeLabel } from "@/lib/upload-limits";
 import { buildUploadFileName, fileExtension } from "@/lib/upload-naming";
 import type { Database } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
@@ -10,8 +12,7 @@ type UploadInsert = Database["public"]["Tables"]["uploads"]["Insert"];
 
 const BUCKET = "uploads";
 
-/** Dimensiune maximă fișier încărcat (25 MB) */
-const MAX_BYTES = 25 * 1024 * 1024;
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -28,9 +29,10 @@ export async function POST(request: Request) {
     );
   }
 
-  if (file.size > MAX_BYTES) {
+  const maxBytes = getMaxUploadBytes();
+  if (file.size > maxBytes) {
     return NextResponse.json(
-      { error: "Fișierul este prea mare (maxim 25 MB)." },
+      { error: `Fișierul este prea mare (maxim ${maxUploadSizeLabel()}).` },
       { status: 400 }
     );
   }
@@ -106,36 +108,40 @@ export async function POST(request: Request) {
     .eq("month", month)
     .eq("year", year);
 
-  /* ── 5. Conversie imagine → PDF dacă e cazul ─────────────────────────── */
-  const mime    = (file.type || "").toLowerCase();
-  const isPdf   = guessIsPdf(mime, file.name);
-  const isImage = !isPdf && guessIsImageMime(mime, file.name);
+  /* ── 5. Citește fișierul o dată; PDF-uri mari nu trec prin conversie imagine ─ */
+  const mime = (file.type || "").toLowerCase();
+  const raw = Buffer.from(await file.arrayBuffer());
+  const fileKind = detectUploadFileKind(raw, mime, file.name);
 
   let uploadBody: Buffer | Uint8Array;
   let contentType: string;
   let ext: string;
 
-  if (isImage) {
+  if (fileKind === "image") {
     try {
-      const raw      = Buffer.from(await file.arrayBuffer());
       const pdfBytes = await buildPdfFromImageBuffer(raw, { mode: imageMode });
-      uploadBody  = pdfBytes;
+      uploadBody = pdfBytes;
       contentType = "application/pdf";
-      ext         = ".pdf";
+      ext = ".pdf";
     } catch (e) {
       console.error("image-to-pdf:", e);
       return NextResponse.json(
         {
           error:
-            "Nu am putut converti imaginea în PDF. Încearcă alt format (JPG, PNG) sau o fotografie mai mică.",
+            "Nu am putut converti imaginea în PDF. Încearcă JPG/PNG sau încarcă PDF-ul direct (buton fișier, nu scanare).",
         },
         { status: 400 }
       );
     }
   } else {
-    uploadBody  = Buffer.from(await file.arrayBuffer());
-    contentType = file.type || "application/octet-stream";
-    ext         = isPdf ? ".pdf" : fileExtension(file.name);
+    uploadBody = raw;
+    if (fileKind === "pdf") {
+      contentType = "application/pdf";
+      ext = ".pdf";
+    } else {
+      contentType = file.type || "application/octet-stream";
+      ext = fileExtension(file.name) || "";
+    }
   }
 
   /* ── 6. Construiește numele semantic ──────────────────────────────────── */
@@ -145,6 +151,7 @@ export async function POST(request: Request) {
     month,
     year,
     ext,
+    originalFileName: file.name,
     existingCount: existingCount ?? 0,
   });
 

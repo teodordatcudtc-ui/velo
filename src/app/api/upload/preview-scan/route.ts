@@ -4,8 +4,7 @@ import {
   buildNaturalDocumentImageBuffer,
   guessIsImageMime,
 } from "@/lib/image-to-pdf";
-
-const MAX_BYTES = 25 * 1024 * 1024;
+import { getMaxUploadBytes, maxUploadSizeLabel } from "@/lib/upload-limits";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -17,8 +16,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Lipsește fișierul." }, { status: 400 });
   }
 
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "Fișierul este prea mare (maxim 25 MB)." }, { status: 400 });
+  if (file.size > getMaxUploadBytes()) {
+    return NextResponse.json(
+      { error: `Fișierul este prea mare (maxim ${maxUploadSizeLabel()}).` },
+      { status: 400 }
+    );
   }
 
   const mime = (file.type || "").toLowerCase();

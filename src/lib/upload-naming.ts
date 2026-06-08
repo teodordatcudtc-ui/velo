@@ -33,16 +33,18 @@ function toFileSlug(str: string, maxLen = 28): string {
     .replace(/[_-]+$/, "") || "Document";
 }
 
+function originalFileNameSlug(originalFileName: string): string {
+  const base = originalFileName.trim().replace(/\.[^.]+$/i, "");
+  const slug = toFileSlug(base, 32);
+  const generic = new Set(["document", "scan", "image", "fisier", "file", "photo", "poza"]);
+  if (!slug || generic.has(slug.toLowerCase())) return "";
+  return slug;
+}
+
 /**
  * Construiește un nume de fișier semantic pentru un document încărcat de client.
  *
- * Format: `{Client}_{TipDocument}_{Luna}_{An}[_{N}].{ext}`
- *
- * Exemplu (prima încărcare): `Ionescu_Facturi_Aprilie_2026.pdf`
- * Exemplu (a doua încărcare): `Ionescu_Facturi_Aprilie_2026_2.pdf`
- *
- * @param existingCount  numărul de documente deja existente cu același
- *                       client / tip / lună / an — folosit pentru suffix.
+ * Format: `{Client}_{Tip}_{Luna}_{An}_{NumeOriginal}[_{N}].{ext}`
  */
 export function buildUploadFileName(params: {
   clientName: string;
@@ -51,17 +53,21 @@ export function buildUploadFileName(params: {
   year: number;
   /** Extensie cu punct, ex. ".pdf", ".xlsx" */
   ext: string;
+  /** Numele original al fișierului de la client (pentru diferențiere) */
+  originalFileName?: string;
   /** Câte fișiere cu aceleași metadate există deja în DB (0 = prima încărcare) */
   existingCount: number;
 }): string {
-  const { clientName, docTypeName, month, year, ext, existingCount } = params;
+  const { clientName, docTypeName, month, year, ext, existingCount, originalFileName } = params;
 
-  const clientPart = toFileSlug(clientName, 28);
-  const docPart    = toFileSlug(docTypeName, 28);
-  const monthPart  = MONTHS_RO[(month - 1) % 12];
-  const suffix     = existingCount > 0 ? `_${existingCount + 1}` : "";
+  const clientPart = toFileSlug(clientName, 24);
+  const docPart = toFileSlug(docTypeName, 24);
+  const monthPart = MONTHS_RO[(month - 1) % 12];
+  const origPart = originalFileName ? originalFileNameSlug(originalFileName) : "";
+  const origSegment = origPart ? `_${origPart}` : "";
+  const suffix = existingCount > 0 ? `_${existingCount + 1}` : "";
 
-  return `${clientPart}_${docPart}_${monthPart}_${year}${suffix}${ext}`;
+  return `${clientPart}_${docPart}_${monthPart}_${year}${origSegment}${suffix}${ext}`;
 }
 
 /** Extrage extensia unui fișier, cu punct: "foto.jpg" → ".jpg" */
