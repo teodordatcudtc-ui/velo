@@ -7,6 +7,7 @@ import type { Database } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
 import { hasActiveSubscription, hasPremiumAccess } from "@/lib/subscription";
 import { isDocTypeAllowedForUpload } from "@/lib/upload-requested-docs";
+import { parseUploadPeriodInput } from "@/lib/upload-period";
 
 type UploadInsert = Database["public"]["Tables"]["uploads"]["Insert"];
 
@@ -86,18 +87,42 @@ export async function POST(request: Request) {
 
   const docTypeName = (docType as { id: string; name: string }).name;
 
-  const allowedForRequest = await isDocTypeAllowedForUpload(supabase, clientId, docTypeName);
+  /* ── 3. Perioadă upload (luna selectată de client) ─────────────────────── */
+  const monthRaw = formData.get("uploadMonth");
+  const yearRaw = formData.get("uploadYear");
+  let month: number;
+  let year: number;
+
+  if (
+    monthRaw != null &&
+    yearRaw != null &&
+    String(monthRaw).trim() !== "" &&
+    String(yearRaw).trim() !== ""
+  ) {
+    const periodResult = parseUploadPeriodInput(monthRaw, yearRaw);
+    if (!periodResult.ok) {
+      return NextResponse.json({ error: periodResult.error }, { status: 400 });
+    }
+    month = periodResult.period.month;
+    year = periodResult.period.year;
+  } else {
+    const now = new Date();
+    month = now.getMonth() + 1;
+    year = now.getFullYear();
+  }
+
+  const allowedForRequest = await isDocTypeAllowedForUpload(
+    supabase,
+    clientId,
+    docTypeName,
+    { month, year }
+  );
   if (!allowedForRequest) {
     return NextResponse.json(
-      { error: "Acest tip de document nu face parte din cererea curentă a contabilului." },
+      { error: "Acest tip de document nu face parte din cererea pentru luna selectată." },
       { status: 400 }
     );
   }
-
-  /* ── 3. Dată curentă ──────────────────────────────────────────────────── */
-  const now   = new Date();
-  const year  = now.getFullYear();
-  const month = now.getMonth() + 1;
 
   /* ── 4. Numără documente existente (pentru sufix anti-duplicat) ────────── */
   const { count: existingCount } = await supabase

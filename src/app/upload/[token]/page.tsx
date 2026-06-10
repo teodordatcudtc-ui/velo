@@ -1,8 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getClientAnafConnectionByClientId } from "@/lib/supabase/client-anaf";
-import { resolveUploadDocTypes } from "@/lib/upload-requested-docs";
-import { ClientUploadForm } from "./ClientUploadForm";
+import {
+  resolveDefaultUploadPeriod,
+  resolveUploadDocTypes,
+} from "@/lib/upload-requested-docs";
 import { SpvConnectCard } from "./SpvConnectCard";
+import { UploadPageShell } from "./UploadPageShell";
 
 type ClientWithDocs = {
   id: string;
@@ -11,7 +14,13 @@ type ClientWithDocs = {
   document_types: { id: string; name: string }[] | null;
 };
 
-type UploadRow = { id: string; document_type_id: string; file_name: string };
+type UploadRow = {
+  id: string;
+  document_type_id: string;
+  file_name: string;
+  month: number;
+  year: number;
+};
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +64,13 @@ export default async function UploadPage({
 
   const client = data as unknown as ClientWithDocs;
   const allDocTypes = client.document_types ?? [];
-  const docTypes = await resolveUploadDocTypes(supabase, client.id, allDocTypes);
+  const defaultPeriod = await resolveDefaultUploadPeriod(supabase, client.id);
+  const docTypes = await resolveUploadDocTypes(
+    supabase,
+    client.id,
+    allDocTypes,
+    defaultPeriod
+  );
   const requestFiltersTypes =
     allDocTypes.length > 0 && docTypes.length > 0 && docTypes.length < allDocTypes.length;
 
@@ -66,22 +81,19 @@ export default async function UploadPage({
     .single();
   const accountantName = (accountant as { name?: string } | null)?.name ?? "Contabil";
 
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentYear = now.getFullYear();
-
   const { data: uploads } = await supabase
     .from("uploads")
-    .select("id, document_type_id, file_name")
+    .select("id, document_type_id, file_name, month, year")
     .eq("client_id", client.id)
-    .eq("month", currentMonth)
-    .eq("year", currentYear)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
-  const initialUploads = ((uploads ?? []) as UploadRow[]).map((u) => ({
+  const allUploads = ((uploads ?? []) as UploadRow[]).map((u) => ({
     id: u.id,
     documentTypeId: u.document_type_id,
     file_name: u.file_name,
+    month: u.month,
+    year: u.year,
   }));
 
   const { data: spvConn } = await getClientAnafConnectionByClientId(
@@ -130,11 +142,12 @@ export default async function UploadPage({
           </div>
         ) : (
           <div className="bg-white rounded-[var(--r-xl)] border border-[var(--paper-3)] shadow-[var(--shadow-md)] overflow-hidden">
-            <ClientUploadForm
+            <UploadPageShell
               clientId={client.id}
               documentTypes={docTypes}
               token={token}
-              initialUploads={initialUploads}
+              allUploads={allUploads}
+              defaultPeriod={defaultPeriod}
             />
           </div>
         )}

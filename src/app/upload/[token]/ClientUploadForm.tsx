@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/app/components/ToastProvider";
+import type { UploadPeriod } from "@/lib/upload-period";
 
 type DocType = { id: string; name: string };
 type UploadItem = { id: string; file_name: string };
@@ -199,16 +200,23 @@ async function applyTransformsToFile(
 const DEFAULT_CROP: CropRect = { x: 0.05, y: 0.05, w: 0.90, h: 0.90 };
 const MIN_CROP = 0.08;
 
+function appendUploadPeriod(formData: FormData, period: UploadPeriod) {
+  formData.set("uploadMonth", String(period.month));
+  formData.set("uploadYear", String(period.year));
+}
+
 export function ClientUploadForm({
   clientId: _clientId,
   documentTypes,
   token,
   initialUploads = [],
+  uploadPeriod,
 }: {
   clientId: string;
   documentTypes: DocType[];
   token: string;
   initialUploads?: { id: string; documentTypeId: string; file_name: string }[];
+  uploadPeriod: UploadPeriod;
 }) {
   const [uploading, setUploading] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -407,6 +415,7 @@ export function ClientUploadForm({
     formData.set("documentTypeId", documentTypeId);
     formData.set("file", file);
     formData.set("imageMode", imageMode);
+    appendUploadPeriod(formData, uploadPeriod);
 
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     const data = await res.json().catch(() => ({}));
@@ -508,6 +517,7 @@ export function ClientUploadForm({
       if (item.isImage) {
         formData.set("imageMode", item.source === "scan" ? "scan" : "photo");
       }
+      appendUploadPeriod(formData, uploadPeriod);
 
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json().catch(() => ({}));

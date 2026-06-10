@@ -4,17 +4,22 @@ import {
   filterDocTypesByNames,
   type ClientDocType,
 } from "@/lib/document-types";
+import {
+  buildSelectableUploadPeriods,
+  periodKey,
+  type UploadPeriod,
+} from "@/lib/upload-period";
 
 export type UploadDocType = ClientDocType;
 
-/** Cerere activă pentru luna curentă (trimisă, neînchisă). */
-export async function getActiveDocumentRequestForUpload(
+/** Cerere activă pentru o lună/an (trimisă, neînchisă). */
+export async function getDocumentRequestForUploadPeriod(
   supabase: SupabaseClient,
-  clientId: string
+  clientId: string,
+  month: number,
+  year: number
 ): Promise<{ doc_type_names: string[] } | null> {
   const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
 
   const { data } = await supabase
     .from("document_requests")
@@ -32,12 +37,71 @@ export async function getActiveDocumentRequestForUpload(
   return { doc_type_names: data.doc_type_names };
 }
 
+/** Cerere activă pentru luna curentă (trimisă, neînchisă). */
+export async function getActiveDocumentRequestForUpload(
+  supabase: SupabaseClient,
+  clientId: string
+): Promise<{ doc_type_names: string[] } | null> {
+  const now = new Date();
+  return getDocumentRequestForUploadPeriod(
+    supabase,
+    clientId,
+    now.getMonth() + 1,
+    now.getFullYear()
+  );
+}
+
+/** Perioadă implicită: cererea deschisă recentă din fereastra selectabilă, altfel luna curentă. */
+export async function resolveDefaultUploadPeriod(
+  supabase: SupabaseClient,
+  clientId: string
+): Promise<UploadPeriod> {
+  const now = new Date();
+  const current: UploadPeriod = {
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+  };
+  const selectableKeys = new Set(
+    buildSelectableUploadPeriods().map((p) => periodKey(p))
+  );
+
+  const { data: requests } = await supabase
+    .from("document_requests")
+    .select("month, year, sent_at")
+    .eq("client_id", clientId)
+    .eq("request_closed", false)
+    .lte("sent_at", now.toISOString())
+    .order("sent_at", { ascending: false });
+
+  for (const req of requests ?? []) {
+    const month = Number(req.month);
+    const year = Number(req.year);
+    if (!Number.isInteger(month) || !Number.isInteger(year)) continue;
+    if (selectableKeys.has(periodKey({ month, year }))) {
+      return { month, year };
+    }
+  }
+
+  return current;
+}
+
 export async function resolveUploadDocTypes(
   supabase: SupabaseClient,
   clientId: string,
-  allTypes: UploadDocType[]
+  allTypes: UploadDocType[],
+  period?: UploadPeriod
 ): Promise<UploadDocType[]> {
-  const request = await getActiveDocumentRequestForUpload(supabase, clientId);
+  const now = new Date();
+  const target = period ?? {
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+  };
+  const request = await getDocumentRequestForUploadPeriod(
+    supabase,
+    clientId,
+    target.month,
+    target.year
+  );
   if (!request?.doc_type_names?.length) return allTypes;
 
   await ensureDocumentTypesExist(supabase, clientId, request.doc_type_names);
@@ -55,9 +119,20 @@ export async function resolveUploadDocTypes(
 export async function isDocTypeAllowedForUpload(
   supabase: SupabaseClient,
   clientId: string,
-  docTypeName: string
+  docTypeName: string,
+  period?: UploadPeriod
 ): Promise<boolean> {
-  const request = await getActiveDocumentRequestForUpload(supabase, clientId);
+  const now = new Date();
+  const target = period ?? {
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+  };
+  const request = await getDocumentRequestForUploadPeriod(
+    supabase,
+    clientId,
+    target.month,
+    target.year
+  );
   if (!request) return true;
 
   await ensureDocumentTypesExist(supabase, clientId, request.doc_type_names);
