@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useToast } from "@/app/components/ToastProvider";
+import {
+  buildClientDocumentsZip,
+  downloadZipBlob,
+  sanitizeZipFilePart,
+} from "@/lib/export-client-zip";
 import type { UploadRow, ClientOption, DocTypeOption } from "./page";
 
 const MONTH_NAMES = [
@@ -11,6 +17,39 @@ const MONTH_NAMES = [
 
 type SortBy = "date" | "client" | "type" | "month";
 type Option = { value: string; label: string };
+
+const MONTH_FOLDER_NAMES = [
+  "Ianuarie",
+  "Februarie",
+  "Martie",
+  "Aprilie",
+  "Mai",
+  "Iunie",
+  "Iulie",
+  "August",
+  "Septembrie",
+  "Octombrie",
+  "Noiembrie",
+  "Decembrie",
+];
+
+function buildClientFolderZipFileName(
+  clientName: string,
+  filterMonth: string,
+  filterYear: string,
+  filterDocType: string,
+  docTypeById: Map<string, string>
+): string {
+  const parts = [sanitizeZipFilePart(clientName)];
+  if (filterDocType) {
+    parts.push(sanitizeZipFilePart(docTypeById.get(filterDocType) ?? "tip"));
+  }
+  if (filterMonth) {
+    parts.push(MONTH_FOLDER_NAMES[parseInt(filterMonth, 10) - 1] ?? `luna-${filterMonth}`);
+  }
+  if (filterYear) parts.push(filterYear);
+  return `${parts.join("-").replace(/\s+/g, "-").toLowerCase()}.zip`;
+}
 
 function FolderIcon() {
   return (
@@ -222,18 +261,21 @@ function FilterDropdown({
 type FolderView = "active" | "archived";
 
 export function DocumenteList({
+  isPremium,
   activeUploads,
   archivedUploads,
   activeClientOptions,
   archivedClientOptions,
   docTypeOptions,
 }: {
+  isPremium: boolean;
   activeUploads: UploadRow[];
   archivedUploads: UploadRow[];
   activeClientOptions: ClientOption[];
   archivedClientOptions: ClientOption[];
   docTypeOptions: DocTypeOption[];
 }) {
+  const toast = useToast();
   const [folderView, setFolderView] = useState<FolderView>("active");
   const [filterDocType, setFilterDocType] = useState<string>("");
   const [filterMonth, setFilterMonth] = useState<string>("");
@@ -241,6 +283,7 @@ export function DocumenteList({
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortDesc, setSortDesc] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [zipExportPending, setZipExportPending] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
 
   const uploads = folderView === "archived" ? archivedUploads : activeUploads;
@@ -364,6 +407,53 @@ export function DocumenteList({
       window.alert(error instanceof Error ? error.message : "Eroare la stergere.");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleClientFolderZipExport() {
+    if (!isPremium) {
+      toast.info(
+        "Export ZIP este disponibil doar pe planul Premium. Activează Premium din Abonamente."
+      );
+      return;
+    }
+    if (filtered.length === 0) {
+      toast.info("Nu există documente de exportat pentru filtrele curente.");
+      return;
+    }
+
+    setZipExportPending(true);
+    try {
+      const clientNameById = new Map([[selectedClientId, selectedClientName]]);
+      const { blob, exportedCount, failed } = await buildClientDocumentsZip(
+        filtered,
+        clientNameById
+      );
+
+      if (exportedCount === 0) {
+        toast.error("Nu am putut exporta niciun fișier.");
+        if (failed.length > 0) toast.info(`Eșecuri: ${failed.join(" | ")}`);
+        return;
+      }
+
+      downloadZipBlob(
+        blob,
+        buildClientFolderZipFileName(
+          selectedClientName,
+          filterMonth,
+          filterYear,
+          filterDocType,
+          docTypeById
+        )
+      );
+      toast.success(`ZIP exportat cu ${exportedCount} fișiere.`);
+      if (failed.length > 0) {
+        toast.info(`Fișiere neexportate: ${failed.join(" | ")}`);
+      }
+    } catch {
+      toast.error("A apărut o eroare la exportul ZIP.");
+    } finally {
+      setZipExportPending(false);
     }
   }
 
@@ -583,6 +673,55 @@ export function DocumenteList({
         <span className="text-xs text-[var(--ink-muted)] shrink-0 ml-0.5">
           {sorted.length} doc.
         </span>
+        <button
+          type="button"
+          disabled={sorted.length === 0 || zipExportPending}
+          onClick={() => void handleClientFolderZipExport()}
+          className="inline-flex items-center gap-1.5 shrink-0 ml-auto text-xs font-semibold disabled:opacity-50"
+          style={{
+            padding: "6px 12px",
+            borderRadius: 9999,
+            border: "1.5px solid var(--paper-3)",
+            background: "var(--paper-2)",
+            color: "var(--ink-soft)",
+          }}
+          title={
+            isPremium
+              ? "Descarcă toate documentele vizibile (respectă filtrele)"
+              : "Disponibil pe planul Premium"
+          }
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          {zipExportPending ? "Se exportă..." : "Descarcă ZIP"}
+          {!isPremium && (
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                padding: "1px 5px",
+                borderRadius: 999,
+                background: "var(--amber-light)",
+                color: "#9C6B10",
+              }}
+            >
+              Premium
+            </span>
+          )}
+        </button>
       </div>
 
       {sorted.length === 0 ? (

@@ -109,6 +109,7 @@ export default async function DocumentePage() {
       </header>
 
       <DocumenteList
+        isPremium={isPremium}
         activeUploads={(activeUploads ?? []) as UploadRow[]}
         archivedUploads={(archivedUploads ?? []) as UploadRow[]}
         activeClientOptions={activeClientOptions}
