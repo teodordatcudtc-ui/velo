@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { COMPANY_LEGAL } from "@/lib/company-legal";
-import { buildOnboardingEmailHtml } from "@/lib/onboarding-email";
+import { buildOnboardingEmailHtml, buildVelloFromAddress } from "@/lib/onboarding-email";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
   const recipientName = previewName ?? accountant?.name ?? "Contabil Demo";
   const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://vello.ro").replace(/\/$/, "");
-  const from = process.env.RESEND_FROM ?? "Vello <noreply@vello.ro>";
+  const from = buildVelloFromAddress();
   const contactEmail = COMPANY_LEGAL.email;
 
   const resend = new Resend(apiKey);

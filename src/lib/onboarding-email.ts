@@ -7,10 +7,26 @@ const INK = "#1c1917";
 const INK_SOFT = "#57534e";
 const PAPER = "#f7f4ef";
 
-function firstName(fullName: string): string {
+/** Adresa From pentru emailuri Vello (platformă), nu numele contabilului. */
+export function buildVelloFromAddress(): string {
+  const base = process.env.RESEND_FROM ?? "Vello <noreply@vello.ro>";
+  const match = base.match(/<([^>]+)>/);
+  const address = match ? match[1] : base.trim();
+  return `Vello <${address}>`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function displayRecipientName(fullName: string): string {
   const trimmed = fullName.trim();
   if (!trimmed) return "acolo";
-  return trimmed.split(/\s+/)[0] ?? trimmed;
+  return trimmed;
 }
 
 export function buildOnboardingEmailHtml(params: {
@@ -19,7 +35,7 @@ export function buildOnboardingEmailHtml(params: {
   clientsUrl: string;
   contactEmail: string;
 }): string {
-  const greeting = firstName(params.recipientName);
+  const greeting = escapeHtml(displayRecipientName(params.recipientName));
   const year = new Date().getFullYear();
 
   return `
@@ -110,7 +126,7 @@ export function buildOnboardingEmailHtml(params: {
           </tr>
         </table>
         <p style="margin:16px 0 0;font-size:12px;color:#a8a29e;text-align:center;">
-          © ${year} Vello · ${COMPANY_LEGAL.shortName}
+          © ${year} Vello
         </p>
       </td>
     </tr>
@@ -154,7 +170,7 @@ export async function sendOnboardingEmailIfNeeded(params: {
   if (!claimed) return;
 
   const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://vello.ro").replace(/\/$/, "");
-  const from = process.env.RESEND_FROM ?? "Vello <noreply@vello.ro>";
+  const from = buildVelloFromAddress();
   const contactEmail = COMPANY_LEGAL.email;
   const recipientName = params.name.trim() || to.split("@")[0] || "acolo";
 
