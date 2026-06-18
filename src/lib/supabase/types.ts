@@ -26,6 +26,7 @@ export interface Database {
           billing_country: string | null;
           billing_email: string | null;
           billing_is_company: boolean | null;
+          onboarding_email_sent_at: string | null;
         };
         Insert: {
           id: string;
@@ -43,6 +44,7 @@ export interface Database {
           billing_country?: string | null;
           billing_email?: string | null;
           billing_is_company?: boolean | null;
+          onboarding_email_sent_at?: string | null;
         };
         Update: {
           id?: string;
@@ -60,6 +62,7 @@ export interface Database {
           billing_country?: string | null;
           billing_email?: string | null;
           billing_is_company?: boolean | null;
+          onboarding_email_sent_at?: string | null;
         };
       };
       smartbill_invoices: {

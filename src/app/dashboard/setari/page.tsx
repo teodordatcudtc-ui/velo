@@ -4,6 +4,7 @@ import { ProfileForm } from "./ProfileForm";
 import { PasswordForm } from "./PasswordForm";
 import { PlanAccessCard } from "./PlanAccessCard";
 import { TestEmailButton } from "./TestEmailButton";
+import { TestOnboardingEmailButton } from "./TestOnboardingEmailButton";
 import { BillingDetailsForm } from "@/app/components/BillingDetailsForm";
 import { IssuedInvoicesCard } from "./IssuedInvoicesCard";
 import { hasPremiumAccess } from "@/lib/subscription";
@@ -139,6 +140,7 @@ export default async function SetariPage() {
               Trimite un email de test către adresa ta, folosind domeniul vello.ro și configurarea actuală Resend.
             </p>
             <TestEmailButton />
+            <TestOnboardingEmailButton defaultName={accountant?.name ?? "Contabil"} />
           </div>
         </div>
       )}

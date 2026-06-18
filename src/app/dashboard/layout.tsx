@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { sendOnboardingEmailIfNeeded } from "@/lib/onboarding-email";
 import { DashboardLayoutClient } from "./DashboardLayoutClient";
 
 export default async function DashboardLayout({
@@ -15,9 +17,22 @@ export default async function DashboardLayout({
 
   const { data: accountant } = await supabase
     .from("accountants")
-    .select("name")
+    .select("name, onboarding_email_sent_at")
     .eq("id", user.id)
     .single();
+
+  const accountantName = accountant?.name ?? "Contabil";
+  if (user.email && !accountant?.onboarding_email_sent_at) {
+    const accountantId = user.id;
+    const email = user.email;
+    after(async () => {
+      await sendOnboardingEmailIfNeeded({
+        accountantId,
+        email,
+        name: accountantName,
+      });
+    });
+  }
 
   const { count: clientCount } = await supabase
     .from("clients")
@@ -31,7 +46,7 @@ export default async function DashboardLayout({
     redirect("/");
   }
 
-  const name = accountant?.name ?? "Contabil";
+  const name = accountantName;
   const email = user.email ?? "";
   const initial = (name.split(/\s+/).map((s: string) => s[0]).join("").slice(0, 2) || name[0] || "?").toUpperCase();
 
