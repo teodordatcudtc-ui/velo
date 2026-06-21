@@ -5,6 +5,7 @@ import { PasswordForm } from "./PasswordForm";
 import { PlanAccessCard } from "./PlanAccessCard";
 import { TestEmailButton } from "./TestEmailButton";
 import { TestOnboardingEmailButton } from "./TestOnboardingEmailButton";
+import { SmartBillAdminLog } from "./SmartBillAdminLog";
 import { BillingDetailsForm } from "@/app/components/BillingDetailsForm";
 import { IssuedInvoicesCard } from "./IssuedInvoicesCard";
 import { hasPremiumAccess } from "@/lib/subscription";
@@ -142,6 +143,7 @@ export default async function SetariPage() {
             <TestEmailButton />
             <TestOnboardingEmailButton defaultName={accountant?.name ?? "Contabil"} />
           </div>
+          <SmartBillAdminLog />
         </div>
       )}
     </div>

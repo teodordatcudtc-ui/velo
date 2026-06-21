@@ -8,6 +8,10 @@ import {
   resolveSubscriptionIdFromInvoice,
 } from "@/lib/stripe-invoice";
 import { issueSmartBillAfterStripePayment } from "@/lib/smartbill-issue";
+import {
+  issueSmartBillAfterStripeInvoice,
+  resolveStripeInvoiceIdFromCheckoutSession,
+} from "@/lib/stripe-smartbill-webhook";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -101,6 +105,7 @@ export async function POST(request: Request) {
 
         const totalOnce = session.amount_total ?? 0;
         const curOnce = (session.currency ?? "eur").toLowerCase();
+        const checkoutInvoiceId = resolveStripeInvoiceIdFromCheckoutSession(session);
         if (totalOnce > 0 && session.id) {
           const checkoutProduct =
             (session.metadata?.checkout_product as "test" | PlanId | undefined) ??
@@ -110,7 +115,7 @@ export async function POST(request: Request) {
           await issueSmartBillAfterStripePayment(supabase, {
             accountantId,
             stripeCheckoutSessionId: session.id,
-            stripeInvoiceId: null,
+            stripeInvoiceId: checkoutInvoiceId,
             amountCents: totalOnce,
             currency: curOnce,
             checkoutProduct,
@@ -166,6 +171,7 @@ export async function POST(request: Request) {
 
         const total = session.amount_total ?? 0;
         const cur = (session.currency ?? "eur").toLowerCase();
+        const checkoutInvoiceId = resolveStripeInvoiceIdFromCheckoutSession(session);
         if (total > 0 && session.id) {
           const checkoutProduct =
             (session.metadata?.checkout_product as "test" | PlanId | undefined) ??
@@ -175,13 +181,18 @@ export async function POST(request: Request) {
           await issueSmartBillAfterStripePayment(supabase, {
             accountantId,
             stripeCheckoutSessionId: session.id,
-            stripeInvoiceId: null,
+            stripeInvoiceId: checkoutInvoiceId,
             amountCents: total,
             currency: cur,
             checkoutProduct,
             interval: intv,
             mentionExtra: `Sesiune checkout Stripe: ${session.id}`,
           });
+        } else if (checkoutInvoiceId) {
+          // Sesiune fără amount_total dar cu factură Stripe — emitere la invoice.payment_succeeded
+          console.log(
+            `checkout.session.completed: amount_total=0, SmartBill amânat pentru factura ${checkoutInvoiceId}`
+          );
         }
       }
       break;
@@ -191,11 +202,7 @@ export async function POST(request: Request) {
     case "invoice.payment_succeeded": {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invoice = event.data.object as any;
-
-      // Prima factură a abonamentului: factura SmartBill e deja emisă la checkout.session.completed
-      // (datele clientului vin din coloanele billing_* din `accountants`, persistente).
-      // Reînnoirile (subscription_cycle etc.): emitere SmartBill mai jos cu aceleași date salvate.
-      if (invoice.billing_reason === "subscription_create") break;
+      const billingReason = invoice.billing_reason as string | undefined;
 
       const subscriptionId = resolveSubscriptionIdFromInvoice(invoice);
       const accountantIdFromMeta = resolveAccountantIdFromInvoice(invoice);
@@ -230,49 +237,47 @@ export async function POST(request: Request) {
         break;
       }
 
-      const periodEndUnix = resolveInvoicePeriodEndUnix(invoice);
-      let premiumUntil: string;
-      if (periodEndUnix) {
-        premiumUntil = premiumUntilIsoFromPeriodEnd(periodEndUnix);
-      } else {
-        const d = new Date();
-        d.setDate(d.getDate() + 31);
-        premiumUntil = d.toISOString();
-      }
+      // Reînnoiri: prelungește premium_until. Prima factură e gestionată la checkout.session.completed.
+      if (billingReason !== "subscription_create") {
+        const periodEndUnix = resolveInvoicePeriodEndUnix(invoice);
+        let premiumUntil: string;
+        if (periodEndUnix) {
+          premiumUntil = premiumUntilIsoFromPeriodEnd(periodEndUnix);
+        } else {
+          const d = new Date();
+          d.setDate(d.getDate() + 31);
+          premiumUntil = d.toISOString();
+        }
 
-      const { error: renewErr } = await supabase
-        .from("accountants")
-        // @ts-expect-error - Supabase inferred type
-        .update({
-          premium_until: premiumUntil,
-          stripe_subscription_status: "active",
-        })
-        .eq("id", accountant.id);
+        const { error: renewErr } = await supabase
+          .from("accountants")
+          // @ts-expect-error - Supabase inferred type
+          .update({
+            premium_until: premiumUntil,
+            stripe_subscription_status: "active",
+          })
+          .eq("id", accountant.id);
 
-      if (renewErr) {
-        console.error("invoice.payment_succeeded: update error", renewErr);
-        return NextResponse.json({ error: "Update failed." }, { status: 500 });
+        if (renewErr) {
+          console.error("invoice.payment_succeeded: update error", renewErr);
+          return NextResponse.json({ error: "Update failed." }, { status: 500 });
+        }
       }
 
       const paid = invoice.amount_paid ?? 0;
-      if (paid > 0 && invoice.id && subscriptionId) {
+      if (paid > 0 && invoice.id) {
         try {
-          const stripe = getStripe();
-          const sub = await stripe.subscriptions.retrieve(subscriptionId);
-          const checkoutProduct =
-            (sub.metadata?.checkout_product as "test" | PlanId | undefined) ??
-            (sub.metadata?.plan as PlanId | undefined) ??
-            "standard";
-          const intv = (sub.metadata?.interval as Interval | undefined) ?? "monthly";
-          await issueSmartBillAfterStripePayment(supabase, {
+          await issueSmartBillAfterStripeInvoice(supabase, {
             accountantId: accountant.id,
-            stripeCheckoutSessionId: null,
+            accountantPlan: accountant.subscription_plan,
             stripeInvoiceId: invoice.id,
             amountCents: paid,
             currency: (invoice.currency ?? "eur").toLowerCase(),
-            checkoutProduct,
-            interval: intv,
-            mentionExtra: `Reînnoire abonament — factură Stripe ${invoice.id}`,
+            subscriptionId,
+            mentionExtra:
+              billingReason === "subscription_create"
+                ? `Prima factură abonament — Stripe ${invoice.id}`
+                : `Reînnoire abonament — factură Stripe ${invoice.id}`,
           });
         } catch (e) {
           console.error("invoice.payment_succeeded SmartBill:", e);
