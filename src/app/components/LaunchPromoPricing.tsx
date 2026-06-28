@@ -61,25 +61,6 @@ export function LaunchPromoPriceBlock({
 
   return (
     <div className="pc-price-wrap">
-      {promoActive && (
-        <div
-          className="pc-promo-badge"
-          style={{
-            display: "inline-block",
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            color: "var(--sage)",
-            background: "var(--sage-xlight, #eef5f2)",
-            borderRadius: 999,
-            padding: "4px 10px",
-            marginBottom: 8,
-          }}
-        >
-          −50% prima lună
-        </div>
-      )}
       <div className="pc-price">
         <sup>EUR</sup>
         <span>{display}</span>
