@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LaunchPromoBanner, LaunchPromoPriceBlock } from "@/app/components/LaunchPromoPricing";
 
 const CHECK = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}>
@@ -98,6 +99,7 @@ export default function AbonamentePricing({
 
   return (
     <div>
+      <LaunchPromoBanner style={{ marginBottom: 24 }} />
       {/* Toggle Lunar / Anual – identic cu landing page */}
       <div className="pricing-toggle-wrap" style={{ marginBottom: 40 }}>
         <span className={`pricing-toggle-label ${!annual ? "active" : ""}`}>Lunar</span>
@@ -133,18 +135,7 @@ export default function AbonamentePricing({
               <div className="pc-eyebrow">{plan.eyebrow}</div>
               <div className="pc-name">{plan.name}</div>
               <div className="pc-desc">{plan.desc}</div>
-              <div className="pc-price-wrap">
-                <div className="pc-price">
-                  <sup>EUR</sup>
-                  <span>{annual ? plan.annual : plan.monthly}</span>
-                  <sub>/lună</sub>
-                </div>
-                <div className="pc-annual-note">
-                  {annual
-                    ? `Plată anuală: ${plan.annual * 12} EUR (12 luni achitate în avans)`
-                    : "Facturare lunară"}
-                </div>
-              </div>
+              <LaunchPromoPriceBlock planId={plan.planId} annual={annual} />
               <div className="pc-divider" />
               <ul className="pc-features">
                 {plan.features.map((f) => (

@@ -5,6 +5,12 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { BillingDetailsForm } from "@/app/components/BillingDetailsForm";
+import {
+  getLaunchPromoFirstMonthEur,
+  getPlanMonthlyEur,
+  isLaunchPromoCheckout,
+  LAUNCH_PROMO_END_LABEL,
+} from "@/lib/launch-promo";
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -28,6 +34,17 @@ function CheckoutContent() {
     const intLabel = intervalVal === "annual" ? "anual" : "lunar";
     if (planId === "premium") return `Vello Premium (${intLabel})`;
     return `Vello Standard (${intLabel})`;
+  }, [planId, intervalVal]);
+
+  const priceSummary = useMemo(() => {
+    if (!isLaunchPromoCheckout(planId, intervalVal)) return null;
+    const promo = getLaunchPromoFirstMonthEur(planId);
+    const normal = getPlanMonthlyEur(planId);
+    return {
+      promo,
+      normal,
+      text: `Prima lună: ${promo} EUR (ofertă până pe ${LAUNCH_PROMO_END_LABEL}). Din luna a doua: ${normal} EUR/lună.`,
+    };
   }, [planId, intervalVal]);
 
   const openStripe = useCallback(async () => {
@@ -64,6 +81,16 @@ function CheckoutContent() {
           Stripe pentru plată securizată. Datele se salvează în cont: la reînnoirile lunare sau anuale nu
           trebuie introduse din nou — factura se emite automat la fiecare plată.
         </p>
+
+        {priceSummary && (
+          <div
+            className="mb-4 rounded-xl border border-[var(--sage)] px-4 py-3 text-sm"
+            style={{ background: "var(--sage-xlight, #eef5f2)" }}
+          >
+            <strong className="text-[var(--ink)]">Ofertă lansare:</strong>{" "}
+            <span className="text-[var(--ink-soft)]">{priceSummary.text}</span>
+          </div>
+        )}
 
         <div className="rounded-xl border border-[var(--border)] bg-white p-6 shadow-sm">
           <BillingDetailsForm

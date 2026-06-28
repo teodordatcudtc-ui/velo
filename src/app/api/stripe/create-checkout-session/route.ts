@@ -9,6 +9,10 @@ import {
   type PlanId,
   type Interval,
 } from "@/lib/stripe";
+import {
+  ensureLaunchPromoCoupon,
+  isLaunchPromoCheckout,
+} from "@/lib/launch-promo";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -87,6 +91,13 @@ export async function POST(request: Request) {
 
     const existingCustomerId = acc.stripe_customer_id ?? undefined;
 
+    const launchPromo = isLaunchPromoCheckout(plan, interval);
+    const discounts: { coupon: string }[] = [];
+    if (launchPromo) {
+      const couponId = await ensureLaunchPromoCoupon(stripe, plan);
+      if (couponId) discounts.push({ coupon: couponId });
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: existingCustomerId,
@@ -97,6 +108,7 @@ export async function POST(request: Request) {
         plan,
         interval,
         checkout_product: plan,
+        ...(launchPromo ? { launch_promo: "true" } : {}),
       },
       subscription_data: {
         metadata: {
@@ -104,8 +116,10 @@ export async function POST(request: Request) {
           plan,
           interval,
           checkout_product: plan,
+          ...(launchPromo ? { launch_promo: "true" } : {}),
         },
       },
+      ...(discounts.length > 0 ? { discounts } : {}),
       line_items: [
         {
           quantity: 1,

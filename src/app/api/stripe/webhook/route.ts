@@ -178,6 +178,7 @@ export async function POST(request: Request) {
             (session.metadata?.plan as PlanId | undefined) ??
             "standard";
           const intv = (session.metadata?.interval as Interval | undefined) ?? "monthly";
+          const launchPromo = session.metadata?.launch_promo === "true";
           await issueSmartBillAfterStripePayment(supabase, {
             accountantId,
             stripeCheckoutSessionId: session.id,
@@ -186,7 +187,9 @@ export async function POST(request: Request) {
             currency: cur,
             checkoutProduct,
             interval: intv,
-            mentionExtra: `Sesiune checkout Stripe: ${session.id}`,
+            mentionExtra: launchPromo
+              ? `Ofertă lansare — prima lună redusă. Sesiune Stripe: ${session.id}`
+              : `Sesiune checkout Stripe: ${session.id}`,
           });
         } else if (checkoutInvoiceId) {
           // Sesiune fără amount_total dar cu factură Stripe — emitere la invoice.payment_succeeded

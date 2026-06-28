@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { LaunchPromoBanner, LaunchPromoPriceBlock } from "@/app/components/LaunchPromoPricing";
 
 const CHECK = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}>
@@ -119,6 +120,7 @@ export default function PricingSection() {
           <p className="body" style={{ marginTop: 8, maxWidth: 500, marginLeft: "auto", marginRight: "auto" }}>
             Pachete simple, în EUR, fără surprize: Standard sau Premium.
           </p>
+          <LaunchPromoBanner />
           <div className="pricing-toggle-wrap" suppressHydrationWarning>
             <span className={`pricing-toggle-label ${!annual ? "active" : ""}`}>Lunar</span>
             <div
@@ -148,18 +150,7 @@ export default function PricingSection() {
               <div className="pc-eyebrow">{plan.eyebrow}</div>
               <div className="pc-name">{plan.name}</div>
               <div className="pc-desc">{plan.desc}</div>
-              <div className="pc-price-wrap">
-                <div className="pc-price">
-                  <sup>EUR</sup>
-                  <span>{annual ? plan.annual : plan.monthly}</span>
-                  <sub>/lună</sub>
-                </div>
-                <div className="pc-annual-note">
-                  {annual
-                    ? `Plată anuală: ${plan.annual * 12} EUR (12 luni achitate în avans)`
-                    : "Facturare lunară"}
-                </div>
-              </div>
+              <LaunchPromoPriceBlock planId={plan.planId} annual={annual} />
               <div className="pc-divider" />
               <ul className="pc-features">
                 {plan.features.map((f) => (

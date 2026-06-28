@@ -7,7 +7,9 @@
     "dev:turbo": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "demo:record": "node scripts/record-demo-video.mjs",
+    "demo:preview": "next dev"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
@@ -31,6 +33,7 @@
     "@types/react-dom": "^19.0.1",
     "eslint": "^9.16.0",
     "eslint-config-next": "15.2.6",
+    "playwright": "^1.52.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2"
