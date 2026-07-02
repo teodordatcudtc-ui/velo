@@ -160,14 +160,14 @@ export async function setSubscriptionPlanForTesting(formData: FormData) {
 
   const oneYearFromNow = new Date();
   oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-  const futureDate = oneYearFromNow.toISOString().slice(0, 10);
+  const futureDate = oneYearFromNow.toISOString();
 
   const updatePayload =
     plan === "premium"
       ? { subscription_plan: "premium" as const, premium_until: futureDate }
       : plan === "none"
         ? { subscription_plan: "none" as const, premium_until: null as string | null }
-        : { subscription_plan: "standard" as const, premium_until: null as string | null };
+        : { subscription_plan: "standard" as const, premium_until: futureDate };
 
   const { error } = await supabase
     .from("accountants")
@@ -178,6 +178,7 @@ export async function setSubscriptionPlanForTesting(formData: FormData) {
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/clienti");
+  revalidatePath("/dashboard/documente");
   revalidatePath("/dashboard/setari");
 
   return { ok: true, plan };
