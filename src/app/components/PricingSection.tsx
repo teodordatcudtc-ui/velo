@@ -73,7 +73,7 @@ export default function PricingSection() {
         { text: "Dashboard documente", included: true },
         { text: "Categorii documente", included: true },
         { text: "Reminder automat SMS", included: false },
-        { text: "Export ZIP lunar", included: false },
+        { text: "Export ZIP lunar", included: true },
         { text: "Suport prioritar", included: false },
       ],
       cta: "Alege Standard",

@@ -383,13 +383,13 @@ export function ExportZipModal({
 }
 
 export function DocumenteExportZipButton({
-  isPremium,
+  canExportZip,
   activeUploads,
   archivedUploads,
   activeClientOptions,
   archivedClientOptions,
 }: {
-  isPremium: boolean;
+  canExportZip: boolean;
   activeUploads: UploadRow[];
   archivedUploads: UploadRow[];
   activeClientOptions: ClientOption[];
@@ -399,9 +399,9 @@ export function DocumenteExportZipButton({
   const [open, setOpen] = useState(false);
 
   function handleClick() {
-    if (!isPremium) {
+    if (!canExportZip) {
       toast.info(
-        "Export ZIP este disponibil doar pe planul Premium. Activează Premium din Abonamente."
+        "Export ZIP este disponibil pe planurile Standard și Premium. Alege un abonament din Abonamente."
       );
       return;
     }
@@ -431,16 +431,16 @@ export function DocumenteExportZipButton({
           <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
         Export ZIP
-        {!isPremium && (
+        {!canExportZip && (
           <span
             className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
             style={{ background: "var(--amber-light)", color: "#9C6B10" }}
           >
-            Premium
+            Standard
           </span>
         )}
       </button>
-      {isPremium && (
+      {canExportZip && (
         <ExportZipModal
           open={open}
           onClose={() => setOpen(false)}

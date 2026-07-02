@@ -698,8 +698,8 @@ export function ClientiView({
 
   async function handleBulkExportZip() {
     if (!canRunBulk) return;
-    if (!isPremium) {
-      toast.info("Export ZIP lunar este disponibil doar pe Premium.");
+    if (!hasActiveSubscription) {
+      toast.info("Export ZIP este disponibil pe planurile Standard și Premium.");
       return;
     }
 

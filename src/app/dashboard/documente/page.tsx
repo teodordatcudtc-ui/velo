@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { hasPremiumAccess } from "@/lib/subscription";
+import { hasZipExportAccess } from "@/lib/subscription";
 import { DocumenteList } from "./DocumenteList";
 import { DocumenteExportZipButton } from "./ExportZipModal";
 
@@ -29,7 +29,7 @@ export default async function DocumentePage() {
     .select("subscription_plan, premium_until")
     .eq("id", user.id)
     .single();
-  const isPremium = hasPremiumAccess(accountant);
+  const canExportZip = hasZipExportAccess(accountant);
 
   const { data: activeClients } = await supabase
     .from("clients")
@@ -100,7 +100,7 @@ export default async function DocumentePage() {
           </p>
         </div>
         <DocumenteExportZipButton
-          isPremium={isPremium}
+          canExportZip={canExportZip}
           activeUploads={(activeUploads ?? []) as UploadRow[]}
           archivedUploads={(archivedUploads ?? []) as UploadRow[]}
           activeClientOptions={activeClientOptions}
@@ -109,7 +109,7 @@ export default async function DocumentePage() {
       </header>
 
       <DocumenteList
-        isPremium={isPremium}
+        canExportZip={canExportZip}
         activeUploads={(activeUploads ?? []) as UploadRow[]}
         archivedUploads={(archivedUploads ?? []) as UploadRow[]}
         activeClientOptions={activeClientOptions}

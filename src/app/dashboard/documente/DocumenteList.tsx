@@ -261,14 +261,14 @@ function FilterDropdown({
 type FolderView = "active" | "archived";
 
 export function DocumenteList({
-  isPremium,
+  canExportZip,
   activeUploads,
   archivedUploads,
   activeClientOptions,
   archivedClientOptions,
   docTypeOptions,
 }: {
-  isPremium: boolean;
+  canExportZip: boolean;
   activeUploads: UploadRow[];
   archivedUploads: UploadRow[];
   activeClientOptions: ClientOption[];
@@ -411,9 +411,9 @@ export function DocumenteList({
   }
 
   async function handleClientFolderZipExport() {
-    if (!isPremium) {
+    if (!canExportZip) {
       toast.info(
-        "Export ZIP este disponibil doar pe planul Premium. Activează Premium din Abonamente."
+        "Export ZIP este disponibil pe planurile Standard și Premium. Alege un abonament din Abonamente."
       );
       return;
     }
@@ -686,9 +686,9 @@ export function DocumenteList({
             color: "var(--ink-soft)",
           }}
           title={
-            isPremium
+            canExportZip
               ? "Descarcă toate documentele vizibile (respectă filtrele)"
-              : "Disponibil pe planul Premium"
+              : "Disponibil pe Standard și Premium"
           }
         >
           <svg
@@ -707,7 +707,7 @@ export function DocumenteList({
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
           {zipExportPending ? "Se exportă..." : "Descarcă ZIP"}
-          {!isPremium && (
+          {!canExportZip && (
             <span
               style={{
                 fontSize: 9,
@@ -718,7 +718,7 @@ export function DocumenteList({
                 color: "#9C6B10",
               }}
             >
-              Premium
+              Standard
             </span>
           )}
         </button>

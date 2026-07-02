@@ -40,6 +40,14 @@ export function hasActiveSubscription(
   return hasFuturePremiumUntil(accountant, now);
 }
 
+/** Export ZIP bulk — Standard sau Premium activ (nu plan gratuit). */
+export function hasZipExportAccess(
+  accountant: AccountantSubscriptionRow | null | undefined,
+  now: Date = new Date()
+): boolean {
+  return hasActiveSubscription(accountant, now);
+}
+
 /** Limită clienți: null = nelimitat (Premium), 5 = fără abonament/expirat, 50 = Standard activ. */
 export function getClientLimit(
   accountant: AccountantSubscriptionRow | null | undefined
