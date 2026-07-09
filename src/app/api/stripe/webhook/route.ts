@@ -106,7 +106,7 @@ export async function POST(request: Request) {
 
         const totalOnce = session.amount_total ?? 0;
         const curOnce = (session.currency ?? "eur").toLowerCase();
-        const checkoutInvoiceId = resolveStripeInvoiceIdFromCheckoutSession(session);
+        const checkoutInvoiceId = await resolveCheckoutInvoiceId(session, null);
         if (totalOnce > 0 && session.id) {
           const checkoutProduct =
             (session.metadata?.checkout_product as "test" | PlanId | undefined) ??
