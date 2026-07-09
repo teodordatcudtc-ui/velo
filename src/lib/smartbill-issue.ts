@@ -82,6 +82,23 @@ export async function issueSmartBillAfterStripePayment(
     return;
   }
 
+  if (params.stripeInvoiceId) {
+    const { data: existingInv } = await supabase
+      .from("smartbill_invoices")
+      .select("id")
+      .eq("stripe_invoice_id", params.stripeInvoiceId)
+      .maybeSingle();
+    if (existingInv) {
+      console.log("SmartBill: factură deja emisă pentru factura Stripe", params.stripeInvoiceId);
+      await logSync(supabase, {
+        ...baseLog,
+        status: "skipped",
+        detail: "Factură deja înregistrată pentru această factură Stripe.",
+      });
+      return;
+    }
+  }
+
   if (params.stripeCheckoutSessionId) {
     const { data: existing } = await supabase
       .from("smartbill_invoices")
@@ -99,21 +116,31 @@ export async function issueSmartBillAfterStripePayment(
     }
   }
 
-  if (params.stripeInvoiceId) {
-    const { data: existingInv } = await supabase
-      .from("smartbill_invoices")
-      .select("id")
-      .eq("stripe_invoice_id", params.stripeInvoiceId)
-      .maybeSingle();
-    if (existingInv) {
-      console.log("SmartBill: factură deja emisă pentru factura Stripe", params.stripeInvoiceId);
-      await logSync(supabase, {
-        ...baseLog,
-        status: "skipped",
-        detail: "Factură deja înregistrată pentru această factură Stripe.",
-      });
-      return;
+  const since = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+  const { data: recentDup } = await supabase
+    .from("smartbill_invoices")
+    .select("id, stripe_invoice_id")
+    .eq("accountant_id", params.accountantId)
+    .eq("amount_cents", params.amountCents)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recentDup) {
+    if (params.stripeInvoiceId && !recentDup.stripe_invoice_id) {
+      await supabase
+        .from("smartbill_invoices")
+        .update({ stripe_invoice_id: params.stripeInvoiceId })
+        .eq("id", recentDup.id);
     }
+    console.log("SmartBill: factură duplicat evitat (plată recentă același contabil)");
+    await logSync(supabase, {
+      ...baseLog,
+      status: "skipped",
+      detail: "Factură deja emisă recent pentru aceeași plată.",
+    });
+    return;
   }
 
   const { data: acc, error: accErr } = await supabase

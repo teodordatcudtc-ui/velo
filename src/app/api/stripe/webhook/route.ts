@@ -10,7 +10,8 @@ import {
 import { issueSmartBillAfterStripePayment } from "@/lib/smartbill-issue";
 import {
   issueSmartBillAfterStripeInvoice,
-  resolveStripeInvoiceIdFromCheckoutSession,
+  resolveCheckoutInvoiceId,
+  shouldSkipSmartBillForSubscriptionCreate,
 } from "@/lib/stripe-smartbill-webhook";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -171,7 +172,7 @@ export async function POST(request: Request) {
 
         const total = session.amount_total ?? 0;
         const cur = (session.currency ?? "eur").toLowerCase();
-        const checkoutInvoiceId = resolveStripeInvoiceIdFromCheckoutSession(session);
+        const checkoutInvoiceId = await resolveCheckoutInvoiceId(session, subscriptionId);
         if (total > 0 && session.id) {
           const checkoutProduct =
             (session.metadata?.checkout_product as "test" | PlanId | undefined) ??
@@ -270,7 +271,24 @@ export async function POST(request: Request) {
       const paid = invoice.amount_paid ?? 0;
       if (paid > 0 && invoice.id) {
         try {
-          await issueSmartBillAfterStripeInvoice(supabase, {
+          let shouldIssueSmartBill = true;
+          if (billingReason === "subscription_create") {
+            shouldIssueSmartBill = !(await shouldSkipSmartBillForSubscriptionCreate(
+              supabase,
+              accountant.id,
+              invoice.id,
+              paid
+            ));
+            if (!shouldIssueSmartBill) {
+              console.log(
+                "invoice.payment_succeeded: SmartBill omis (deja emis la checkout)",
+                invoice.id
+              );
+            }
+          }
+
+          if (shouldIssueSmartBill) {
+            await issueSmartBillAfterStripeInvoice(supabase, {
             accountantId: accountant.id,
             accountantPlan: accountant.subscription_plan,
             stripeInvoiceId: invoice.id,
@@ -282,6 +300,7 @@ export async function POST(request: Request) {
                 ? `Prima factură abonament — Stripe ${invoice.id}`
                 : `Reînnoire abonament — factură Stripe ${invoice.id}`,
           });
+          }
         } catch (e) {
           console.error("invoice.payment_succeeded SmartBill:", e);
         }
