@@ -6,6 +6,12 @@ import {
   buildClientDocumentsZip,
   downloadZipBlob,
 } from "@/lib/export-client-zip";
+import { ZipScopePicker } from "./ZipScopePicker";
+import {
+  filterUploadsByZipScope,
+  zipScopeSuffix,
+  type ZipExportScope,
+} from "./zip-export-scope";
 import type { ClientOption, UploadRow } from "./page";
 
 const MONTH_NAMES = [
@@ -108,8 +114,11 @@ export function ExportZipModal({
   const [periodMode, setPeriodMode] = useState<ExportPeriodMode>("current_month");
   const [customMonth, setCustomMonth] = useState("");
   const [customYear, setCustomYear] = useState("");
+  const [processedScope, setProcessedScope] = useState<ZipExportScope>("unprocessed");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exportPending, setExportPending] = useState(false);
+
+  const isProcessed = (u: UploadRow) => u.processed_at != null;
 
   const allUploads = useMemo(
     () => [...activeUploads, ...archivedUploads],
@@ -132,10 +141,30 @@ export function ExportZipModal({
     [allUploads, periodMode, customMonth, customYear]
   );
 
+  const scopedPeriodUploads = useMemo(
+    () =>
+      filterUploadsByZipScope(
+        periodUploads,
+        processedScope,
+        new Set(),
+        isProcessed
+      ),
+    [periodUploads, processedScope]
+  );
+
+  const unprocessedInPeriod = useMemo(
+    () => periodUploads.filter((u) => !isProcessed(u)).length,
+    [periodUploads]
+  );
+  const processedInPeriod = useMemo(
+    () => periodUploads.filter((u) => isProcessed(u)).length,
+    [periodUploads]
+  );
+
   const clientsWithDocs = useMemo(() => {
-    const ids = new Set(periodUploads.map((u) => u.client_id));
+    const ids = new Set(scopedPeriodUploads.map((u) => u.client_id));
     return allClients.filter((c) => ids.has(c.id));
-  }, [allClients, periodUploads]);
+  }, [allClients, scopedPeriodUploads]);
 
   const yearOptions = useMemo(() => {
     const set = new Set(allUploads.map((u) => u.year));
@@ -147,6 +176,7 @@ export function ExportZipModal({
     setPeriodMode("current_month");
     setCustomMonth("");
     setCustomYear("");
+    setProcessedScope("unprocessed");
     const handle = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !exportPending) onClose();
     };
@@ -161,7 +191,13 @@ export function ExportZipModal({
   useEffect(() => {
     if (!open) return;
     setSelectedIds(new Set(clientsWithDocs.map((c) => c.id)));
-  }, [open, periodMode, customMonth, customYear, clientsWithDocs]);
+  }, [open, periodMode, customMonth, customYear, processedScope, clientsWithDocs]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (unprocessedInPeriod > 0) setProcessedScope("unprocessed");
+    else if (periodUploads.length > 0) setProcessedScope("filtered");
+  }, [open, periodMode, customMonth, customYear, unprocessedInPeriod, periodUploads.length]);
 
   const allSelected =
     clientsWithDocs.length > 0 && selectedIds.size === clientsWithDocs.length;
@@ -189,7 +225,7 @@ export function ExportZipModal({
       return;
     }
 
-    const toExport = periodUploads.filter((u) => selectedIds.has(u.client_id));
+    const toExport = scopedPeriodUploads.filter((u) => selectedIds.has(u.client_id));
     if (toExport.length === 0) {
       toast.info("Nu există documente de exportat pentru selecția curentă.");
       return;
@@ -209,9 +245,11 @@ export function ExportZipModal({
         return;
       }
 
-      const suffix = periodLabel(periodMode, customMonth, customYear)
+      const periodSuffix = periodLabel(periodMode, customMonth, customYear)
         .replace(/\s+/g, "-")
         .toLowerCase();
+      const scopeSuffix = zipScopeSuffix(processedScope);
+      const suffix = scopeSuffix ? `${periodSuffix}-${scopeSuffix}` : periodSuffix;
       downloadZipBlob(blob, `documente-${suffix}.zip`);
       toast.success(`ZIP exportat cu ${exportedCount} fișiere.`);
       if (failed.length > 0) {
@@ -304,6 +342,37 @@ export function ExportZipModal({
           </div>
 
           <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)] mb-2">
+              Ce documente?
+            </label>
+            <ZipScopePicker
+              value={processedScope}
+              onChange={setProcessedScope}
+              disabled={exportPending}
+              options={[
+                {
+                  value: "unprocessed",
+                  label: "Nelucrate",
+                  description: "Doar documentele nemarcate ca lucrate",
+                  count: unprocessedInPeriod,
+                },
+                {
+                  value: "processed",
+                  label: "Lucrate",
+                  description: "Doar documentele marcate ca lucrate",
+                  count: processedInPeriod,
+                },
+                {
+                  value: "filtered",
+                  label: "Toate din perioadă",
+                  description: "Lucrate și nelucrate din perioada aleasă",
+                  count: periodUploads.length,
+                },
+              ]}
+            />
+          </div>
+
+          <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                 Clienți ({selectedIds.size}/{clientsWithDocs.length})
@@ -327,7 +396,7 @@ export function ExportZipModal({
                 style={{ listStyle: "none", margin: 0, padding: 0 }}
               >
                 {clientsWithDocs.map((client) => {
-                  const count = periodUploads.filter(
+                  const count = scopedPeriodUploads.filter(
                     (u) => u.client_id === client.id
                   ).length;
                   const checked = selectedIds.has(client.id);

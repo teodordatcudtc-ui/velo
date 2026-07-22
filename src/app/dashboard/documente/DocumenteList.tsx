@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useToast } from "@/app/components/ToastProvider";
 import {
@@ -8,6 +8,12 @@ import {
   downloadZipBlob,
   sanitizeZipFilePart,
 } from "@/lib/export-client-zip";
+import { ClientFolderZipModal } from "./ClientFolderZipModal";
+import {
+  filterUploadsByZipScope,
+  zipScopeSuffix,
+  type ZipExportScope,
+} from "./zip-export-scope";
 import type { UploadRow, ClientOption, DocTypeOption } from "./page";
 
 const MONTH_NAMES = [
@@ -17,7 +23,6 @@ const MONTH_NAMES = [
 
 type SortBy = "date" | "client" | "type" | "month";
 type ProcessedFilter = "" | "pending" | "done";
-type ZipExportMode = "filtered" | "unprocessed" | "selected";
 type Option = { value: string; label: string };
 
 const MONTH_FOLDER_NAMES = [
@@ -268,6 +273,93 @@ function FilterDropdown({
   );
 }
 
+const docActionBtnStyle: CSSProperties = {
+  padding: "4px 9px",
+  fontSize: 11.5,
+  fontWeight: 600,
+  borderRadius: 9999,
+  border: "1px solid var(--paper-3)",
+  background: "#fff",
+  color: "var(--ink-soft)",
+  lineHeight: 1.2,
+  whiteSpace: "nowrap",
+};
+
+function DocRowActions({
+  processed,
+  markPending,
+  deletePending,
+  onOpen,
+  downloadHref,
+  fileName,
+  onToggleProcessed,
+  onDelete,
+}: {
+  processed: boolean;
+  markPending: boolean;
+  deletePending: boolean;
+  onOpen: () => void;
+  downloadHref: string;
+  fileName: string;
+  onToggleProcessed: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-2 min-w-[220px]">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="hover:border-[var(--sage-light)] hover:text-[var(--sage)]"
+          style={docActionBtnStyle}
+        >
+          Deschide
+        </button>
+        <a
+          href={downloadHref}
+          download={fileName}
+          className="hover:border-[var(--sage-light)] hover:text-[var(--sage)] no-underline"
+          style={docActionBtnStyle}
+        >
+          Descarcă
+        </a>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deletePending}
+          className="hover:border-[var(--terracotta)] hover:text-[var(--terracotta)] disabled:opacity-50"
+          style={{
+            ...docActionBtnStyle,
+            color: "var(--terracotta)",
+          }}
+        >
+          {deletePending ? "..." : "Șterge"}
+        </button>
+      </div>
+      <button
+        type="button"
+        disabled={markPending}
+        onClick={onToggleProcessed}
+        className="disabled:opacity-50 shrink-0"
+        style={{
+          padding: "5px 11px",
+          fontSize: 11.5,
+          fontWeight: 700,
+          borderRadius: 9999,
+          border: processed ? "1.5px solid var(--paper-3)" : "none",
+          background: processed ? "var(--paper-2)" : "var(--sage)",
+          color: processed ? "var(--ink-muted)" : "#fff",
+          boxShadow: processed ? "none" : "0 1px 3px rgba(75, 122, 110, 0.35)",
+          whiteSpace: "nowrap",
+        }}
+        title={processed ? "Marchează din nou ca nelucrat" : "Marchează ca lucrat"}
+      >
+        {markPending ? "..." : processed ? "✓ Lucrat" : "Marchează lucrat"}
+      </button>
+    </div>
+  );
+}
+
 type FolderView = "active" | "archived";
 
 export function DocumenteList({
@@ -293,7 +385,7 @@ export function DocumenteList({
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortDesc, setSortDesc] = useState(true);
   const [filterProcessed, setFilterProcessed] = useState<ProcessedFilter>("");
-  const [zipExportMode, setZipExportMode] = useState<ZipExportMode>("filtered");
+  const [zipModalOpen, setZipModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [processedOverrides, setProcessedOverrides] = useState<Map<string, string | null>>(
     new Map()
@@ -321,7 +413,7 @@ export function DocumenteList({
     setFilterYear("");
     setFilterProcessed("");
     setSelectedIds(new Set());
-    setZipExportMode("filtered");
+    setZipModalOpen(false);
   }
 
   function clearClientFolder() {
@@ -331,7 +423,7 @@ export function DocumenteList({
     setFilterYear("");
     setFilterProcessed("");
     setSelectedIds(new Set());
-    setZipExportMode("filtered");
+    setZipModalOpen(false);
   }
 
   const uploads = folderView === "archived" ? archivedUploads : activeUploads;
@@ -404,15 +496,6 @@ export function DocumenteList({
       { value: "", label: "Status" },
       { value: "pending", label: "Nelucrate" },
       { value: "done", label: "Lucrate" },
-    ],
-    []
-  );
-
-  const zipExportModeOptions = useMemo<Option[]>(
-    () => [
-      { value: "filtered", label: "ZIP: filtre curente" },
-      { value: "unprocessed", label: "ZIP: nelucrate" },
-      { value: "selected", label: "ZIP: selectate" },
     ],
     []
   );
@@ -548,34 +631,37 @@ export function DocumenteList({
     });
   }
 
-  function getZipExportList(): UploadRow[] {
-    if (zipExportMode === "selected") {
-      return sorted.filter((u) => selectedIds.has(u.id));
-    }
-    if (zipExportMode === "unprocessed") {
-      return sorted.filter((u) => !isUploadProcessed(u));
-    }
-    return sorted;
+  function getZipExportList(scope: ZipExportScope): UploadRow[] {
+    return filterUploadsByZipScope(sorted, scope, selectedIds, isUploadProcessed);
   }
 
-  async function handleClientFolderZipExport() {
+  function handleOpenZipModal() {
     if (!canExportZip) {
       toast.info(
         "Export ZIP este disponibil pe planurile Standard și Premium. Alege un abonament din Abonamente."
       );
       return;
     }
+    if (sorted.length === 0) {
+      toast.info("Nu există documente de exportat.");
+      return;
+    }
+    setZipModalOpen(true);
+  }
 
-    const toExport = getZipExportList();
-    if (zipExportMode === "selected" && selectedIds.size === 0) {
+  async function handleClientFolderZipExport(scope: ZipExportScope) {
+    const toExport = getZipExportList(scope);
+    if (scope === "selected" && selectedIds.size === 0) {
       toast.info("Bifează documentele pe care vrei să le incluzi în ZIP.");
       return;
     }
     if (toExport.length === 0) {
       toast.info(
-        zipExportMode === "unprocessed"
+        scope === "unprocessed"
           ? "Nu există documente nelucrate pentru export."
-          : "Nu există documente de exportat."
+          : scope === "processed"
+            ? "Nu există documente lucrate pentru export."
+            : "Nu există documente de exportat."
       );
       return;
     }
@@ -594,12 +680,7 @@ export function DocumenteList({
         return;
       }
 
-      const suffix =
-        zipExportMode === "unprocessed"
-          ? "nelucrate"
-          : zipExportMode === "selected"
-            ? "selectate"
-            : "";
+      const suffix = zipScopeSuffix(scope);
       const baseName = buildClientFolderZipFileName(
         selectedClientName,
         filterMonth,
@@ -616,6 +697,7 @@ export function DocumenteList({
       if (failed.length > 0) {
         toast.info(`Fișiere neexportate: ${failed.join(" | ")}`);
       }
+      setZipModalOpen(false);
     } catch {
       toast.error("A apărut o eroare la exportul ZIP.");
     } finally {
@@ -829,24 +911,10 @@ export function DocumenteList({
         <span className="text-xs text-[var(--ink-muted)] shrink-0 ml-0.5">
           {sorted.length} doc.
         </span>
-        <FilterDropdown
-          label="Export"
-          value={zipExportMode}
-          options={zipExportModeOptions}
-          onChange={(v) => setZipExportMode(v as ZipExportMode)}
-          width={148}
-        />
         <button
           type="button"
-          disabled={
-            zipExportPending ||
-            (zipExportMode === "selected"
-              ? selectedIds.size === 0
-              : zipExportMode === "unprocessed"
-                ? sorted.filter((u) => !isUploadProcessed(u)).length === 0
-                : sorted.length === 0)
-          }
-          onClick={() => void handleClientFolderZipExport()}
+          disabled={sorted.length === 0 || zipExportPending}
+          onClick={handleOpenZipModal}
           className="inline-flex items-center gap-1.5 shrink-0 ml-auto text-xs font-semibold disabled:opacity-50"
           style={{
             padding: "6px 12px",
@@ -857,11 +925,7 @@ export function DocumenteList({
           }}
           title={
             canExportZip
-              ? zipExportMode === "unprocessed"
-                ? "Descarcă doar documentele nelucrate (respectă filtrele)"
-                : zipExportMode === "selected"
-                  ? "Descarcă documentele bifate"
-                  : "Descarcă documentele vizibile (respectă filtrele)"
+              ? "Alege ce documente incluzi în ZIP"
               : "Disponibil pe Standard și Premium"
           }
         >
@@ -1009,39 +1073,19 @@ export function DocumenteList({
                       year: "numeric",
                     })}
                   </td>
-                  <td className="py-2.5 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openUpload(u.id)}
-                      className="text-[var(--sage)] hover:underline"
-                    >
-                      Deschide
-                    </button>
-                    <a
-                      href={`/api/uploads/${u.id}?download=1`}
-                      download={u.file_name}
-                      className="text-[var(--sage)] hover:underline"
-                    >
-                      Descarcă
-                    </a>
-                    <button
-                      type="button"
-                      disabled={markProcessedPending}
-                      onClick={() =>
+                  <td className="py-2.5">
+                    <DocRowActions
+                      processed={processed}
+                      markPending={markProcessedPending}
+                      deletePending={deletingId === u.id}
+                      onOpen={() => openUpload(u.id)}
+                      downloadHref={`/api/uploads/${u.id}?download=1`}
+                      fileName={u.file_name}
+                      onToggleProcessed={() =>
                         void markUploadsProcessed([u.id], !processed)
                       }
-                      className="text-[var(--ink-soft)] hover:underline disabled:opacity-60"
-                    >
-                      {processed ? "Nelucrat" : "Lucrat"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteUpload(u.id)}
-                      disabled={deletingId === u.id}
-                      className="text-[var(--terracotta)] hover:underline disabled:opacity-60"
-                    >
-                      {deletingId === u.id ? "Stergere..." : "Sterge"}
-                    </button>
+                      onDelete={() => deleteUpload(u.id)}
+                    />
                   </td>
                 </tr>
               );
@@ -1104,6 +1148,16 @@ export function DocumenteList({
           </button>
         </div>
       )}
+      <ClientFolderZipModal
+        open={zipModalOpen}
+        onClose={() => !zipExportPending && setZipModalOpen(false)}
+        clientName={selectedClientName}
+        sortedUploads={sorted}
+        selectedIds={selectedIds}
+        isProcessed={isUploadProcessed}
+        exportPending={zipExportPending}
+        onExport={(scope) => void handleClientFolderZipExport(scope)}
+      />
       </div>
     </div>
   );
