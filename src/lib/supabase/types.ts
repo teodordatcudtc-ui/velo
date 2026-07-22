@@ -443,6 +443,7 @@ export interface Database {
           month: number;
           year: number;
           created_at: string;
+          processed_at: string | null;
         };
         Insert: {
           id?: string;
@@ -453,6 +454,7 @@ export interface Database {
           month: number;
           year: number;
           created_at?: string;
+          processed_at?: string | null;
         };
         Update: {
           client_id?: string;
@@ -462,6 +464,7 @@ export interface Database {
           month?: number;
           year?: number;
           created_at?: string;
+          processed_at?: string | null;
         };
       };
       early_access_codes: {

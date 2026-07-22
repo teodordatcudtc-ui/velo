@@ -12,6 +12,7 @@ export type UploadRow = {
   month: number;
   year: number;
   created_at: string;
+  processed_at: string | null;
 };
 
 export type ClientOption = { id: string; name: string };
@@ -52,7 +53,7 @@ export default async function DocumentePage() {
     activeIds.length > 0
       ? await supabase
           .from("uploads")
-          .select("id, client_id, document_type_id, file_name, month, year, created_at")
+          .select("id, client_id, document_type_id, file_name, month, year, created_at, processed_at")
           .in("client_id", activeIds)
           .order("created_at", { ascending: false })
       : { data: [] };
@@ -61,7 +62,7 @@ export default async function DocumentePage() {
     archivedIds.length > 0
       ? await supabase
           .from("uploads")
-          .select("id, client_id, document_type_id, file_name, month, year, created_at")
+          .select("id, client_id, document_type_id, file_name, month, year, created_at, processed_at")
           .in("client_id", archivedIds)
           .order("created_at", { ascending: false })
       : { data: [] };

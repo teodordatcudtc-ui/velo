@@ -16,6 +16,8 @@ const MONTH_NAMES = [
 ];
 
 type SortBy = "date" | "client" | "type" | "month";
+type ProcessedFilter = "" | "pending" | "done";
+type ZipExportMode = "filtered" | "unprocessed" | "selected";
 type Option = { value: string; label: string };
 
 const MONTH_FOLDER_NAMES = [
@@ -72,10 +74,12 @@ function FolderIcon() {
 function ClientFolderCard({
   name,
   count,
+  unprocessedCount,
   onOpen,
 }: {
   name: string;
   count: number;
+  unprocessedCount?: number;
   onOpen: () => void;
 }) {
   return (
@@ -126,6 +130,12 @@ function ClientFolderCard({
         </strong>
         <span className="text-xs text-[var(--ink-muted)]">
           {count} {count === 1 ? "document" : "documente"}
+          {unprocessedCount != null && unprocessedCount > 0 && (
+            <span style={{ color: "var(--sage)", fontWeight: 600 }}>
+              {" "}
+              · {unprocessedCount} nelucrate
+            </span>
+          )}
         </span>
       </div>
     </button>
@@ -282,9 +292,47 @@ export function DocumenteList({
   const [filterYear, setFilterYear] = useState<string>("");
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortDesc, setSortDesc] = useState(true);
+  const [filterProcessed, setFilterProcessed] = useState<ProcessedFilter>("");
+  const [zipExportMode, setZipExportMode] = useState<ZipExportMode>("filtered");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [processedOverrides, setProcessedOverrides] = useState<Map<string, string | null>>(
+    new Map()
+  );
+  const [markProcessedPending, setMarkProcessedPending] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [zipExportPending, setZipExportPending] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+
+  function getProcessedAt(u: UploadRow): string | null {
+    if (processedOverrides.has(u.id)) {
+      return processedOverrides.get(u.id) ?? null;
+    }
+    return u.processed_at ?? null;
+  }
+
+  function isUploadProcessed(u: UploadRow): boolean {
+    return getProcessedAt(u) !== null;
+  }
+
+  function openClientFolder(clientId: string) {
+    setSelectedClientId(clientId);
+    setFilterDocType("");
+    setFilterMonth("");
+    setFilterYear("");
+    setFilterProcessed("");
+    setSelectedIds(new Set());
+    setZipExportMode("filtered");
+  }
+
+  function clearClientFolder() {
+    setSelectedClientId("");
+    setFilterDocType("");
+    setFilterMonth("");
+    setFilterYear("");
+    setFilterProcessed("");
+    setSelectedIds(new Set());
+    setZipExportMode("filtered");
+  }
 
   const uploads = folderView === "archived" ? archivedUploads : activeUploads;
   const clientOptions =
@@ -306,6 +354,16 @@ export function DocumenteList({
     }
     return countMap;
   }, [uploads]);
+
+  const unprocessedCountByClient = useMemo(() => {
+    const countMap = new Map<string, number>();
+    for (const u of uploads) {
+      if (!isUploadProcessed(u)) {
+        countMap.set(u.client_id, (countMap.get(u.client_id) ?? 0) + 1);
+      }
+    }
+    return countMap;
+  }, [uploads, processedOverrides]);
 
   const selectedClientUploads = useMemo(() => {
     if (!selectedClientId) return [];
@@ -341,6 +399,24 @@ export function DocumenteList({
     [selectedYears]
   );
 
+  const processedFilterOptions = useMemo<Option[]>(
+    () => [
+      { value: "", label: "Status" },
+      { value: "pending", label: "Nelucrate" },
+      { value: "done", label: "Lucrate" },
+    ],
+    []
+  );
+
+  const zipExportModeOptions = useMemo<Option[]>(
+    () => [
+      { value: "filtered", label: "ZIP: filtre curente" },
+      { value: "unprocessed", label: "ZIP: nelucrate" },
+      { value: "selected", label: "ZIP: selectate" },
+    ],
+    []
+  );
+
   const filtered = useMemo(() => {
     const source = selectedClientId
       ? uploads.filter((u) => u.client_id === selectedClientId)
@@ -349,9 +425,20 @@ export function DocumenteList({
       if (filterDocType && u.document_type_id !== filterDocType) return false;
       if (filterMonth && u.month !== parseInt(filterMonth, 10)) return false;
       if (filterYear && u.year !== parseInt(filterYear, 10)) return false;
+      const processed = isUploadProcessed(u);
+      if (filterProcessed === "pending" && processed) return false;
+      if (filterProcessed === "done" && !processed) return false;
       return true;
     });
-  }, [uploads, selectedClientId, filterDocType, filterMonth, filterYear]);
+  }, [
+    uploads,
+    selectedClientId,
+    filterDocType,
+    filterMonth,
+    filterYear,
+    filterProcessed,
+    processedOverrides,
+  ]);
 
   const sorted = useMemo(() => {
     const dir = sortDesc ? -1 : 1;
@@ -410,6 +497,67 @@ export function DocumenteList({
     }
   }
 
+  async function markUploadsProcessed(ids: string[], processed: boolean) {
+    if (ids.length === 0) return;
+    setMarkProcessedPending(true);
+    try {
+      const res = await fetch("/api/uploads/mark-processed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uploadIds: ids, processed }),
+      });
+      const data = (await res.json()) as { error?: string; processed_at?: string | null };
+      if (!res.ok) throw new Error(data.error ?? "Nu am putut actualiza statusul.");
+
+      const ts = processed ? (data.processed_at ?? new Date().toISOString()) : null;
+      setProcessedOverrides((prev) => {
+        const next = new Map(prev);
+        for (const id of ids) next.set(id, ts);
+        return next;
+      });
+      toast.success(
+        processed
+          ? ids.length === 1
+            ? "Document marcat ca lucrat."
+            : `${ids.length} documente marcate ca lucrate.`
+          : ids.length === 1
+            ? "Marcare anulată."
+            : `${ids.length} documente marcate ca nelucrate.`
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Eroare la actualizare.");
+    } finally {
+      setMarkProcessedPending(false);
+    }
+  }
+
+  function toggleSelectAllVisible() {
+    if (selectedIds.size === sorted.length && sorted.length > 0) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectedIds(new Set(sorted.map((u) => u.id)));
+  }
+
+  function toggleSelectOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function getZipExportList(): UploadRow[] {
+    if (zipExportMode === "selected") {
+      return sorted.filter((u) => selectedIds.has(u.id));
+    }
+    if (zipExportMode === "unprocessed") {
+      return sorted.filter((u) => !isUploadProcessed(u));
+    }
+    return sorted;
+  }
+
   async function handleClientFolderZipExport() {
     if (!canExportZip) {
       toast.info(
@@ -417,8 +565,18 @@ export function DocumenteList({
       );
       return;
     }
-    if (filtered.length === 0) {
-      toast.info("Nu există documente de exportat pentru filtrele curente.");
+
+    const toExport = getZipExportList();
+    if (zipExportMode === "selected" && selectedIds.size === 0) {
+      toast.info("Bifează documentele pe care vrei să le incluzi în ZIP.");
+      return;
+    }
+    if (toExport.length === 0) {
+      toast.info(
+        zipExportMode === "unprocessed"
+          ? "Nu există documente nelucrate pentru export."
+          : "Nu există documente de exportat."
+      );
       return;
     }
 
@@ -426,7 +584,7 @@ export function DocumenteList({
     try {
       const clientNameById = new Map([[selectedClientId, selectedClientName]]);
       const { blob, exportedCount, failed } = await buildClientDocumentsZip(
-        filtered,
+        toExport,
         clientNameById
       );
 
@@ -436,16 +594,24 @@ export function DocumenteList({
         return;
       }
 
-      downloadZipBlob(
-        blob,
-        buildClientFolderZipFileName(
-          selectedClientName,
-          filterMonth,
-          filterYear,
-          filterDocType,
-          docTypeById
-        )
+      const suffix =
+        zipExportMode === "unprocessed"
+          ? "nelucrate"
+          : zipExportMode === "selected"
+            ? "selectate"
+            : "";
+      const baseName = buildClientFolderZipFileName(
+        selectedClientName,
+        filterMonth,
+        filterYear,
+        filterDocType,
+        docTypeById
       );
+      const fileName = suffix
+        ? baseName.replace(/\.zip$/i, `-${suffix}.zip`)
+        : baseName;
+
+      downloadZipBlob(blob, fileName);
       toast.success(`ZIP exportat cu ${exportedCount} fișiere.`);
       if (failed.length > 0) {
         toast.info(`Fișiere neexportate: ${failed.join(" | ")}`);
@@ -459,10 +625,7 @@ export function DocumenteList({
 
   function switchFolderView(next: FolderView) {
     setFolderView(next);
-    setSelectedClientId("");
-    setFilterDocType("");
-    setFilterMonth("");
-    setFilterYear("");
+    clearClientFolder();
   }
 
   function FolderViewToggle({ className = "" }: { className?: string }) {
@@ -552,12 +715,7 @@ export function DocumenteList({
                 key={client.id}
                 name={client.name}
                 count={0}
-                onOpen={() => {
-                  setSelectedClientId(client.id);
-                  setFilterDocType("");
-                  setFilterMonth("");
-                  setFilterYear("");
-                }}
+                onOpen={() => openClientFolder(client.id)}
               />
             ))}
           </div>
@@ -591,12 +749,8 @@ export function DocumenteList({
                 key={client.id}
                 name={client.name}
                 count={docsCountByClient.get(client.id) ?? 0}
-                onOpen={() => {
-                  setSelectedClientId(client.id);
-                  setFilterDocType("");
-                  setFilterMonth("");
-                  setFilterYear("");
-                }}
+                unprocessedCount={unprocessedCountByClient.get(client.id) ?? 0}
+                onOpen={() => openClientFolder(client.id)}
               />
             ))}
           </div>
@@ -612,12 +766,7 @@ export function DocumenteList({
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => {
-            setSelectedClientId("");
-            setFilterDocType("");
-            setFilterMonth("");
-            setFilterYear("");
-          }}
+          onClick={clearClientFolder}
           className="inline-flex items-center justify-center text-sm font-semibold"
           style={{
             background: "var(--sage)",
@@ -670,12 +819,33 @@ export function DocumenteList({
           onChange={setFilterYear}
           width={96}
         />
+        <FilterDropdown
+          label="Status"
+          value={filterProcessed}
+          options={processedFilterOptions}
+          onChange={(v) => setFilterProcessed(v as ProcessedFilter)}
+          width={108}
+        />
         <span className="text-xs text-[var(--ink-muted)] shrink-0 ml-0.5">
           {sorted.length} doc.
         </span>
+        <FilterDropdown
+          label="Export"
+          value={zipExportMode}
+          options={zipExportModeOptions}
+          onChange={(v) => setZipExportMode(v as ZipExportMode)}
+          width={148}
+        />
         <button
           type="button"
-          disabled={sorted.length === 0 || zipExportPending}
+          disabled={
+            zipExportPending ||
+            (zipExportMode === "selected"
+              ? selectedIds.size === 0
+              : zipExportMode === "unprocessed"
+                ? sorted.filter((u) => !isUploadProcessed(u)).length === 0
+                : sorted.length === 0)
+          }
           onClick={() => void handleClientFolderZipExport()}
           className="inline-flex items-center gap-1.5 shrink-0 ml-auto text-xs font-semibold disabled:opacity-50"
           style={{
@@ -687,7 +857,11 @@ export function DocumenteList({
           }}
           title={
             canExportZip
-              ? "Descarcă toate documentele vizibile (respectă filtrele)"
+              ? zipExportMode === "unprocessed"
+                ? "Descarcă doar documentele nelucrate (respectă filtrele)"
+                : zipExportMode === "selected"
+                  ? "Descarcă documentele bifate"
+                  : "Descarcă documentele vizibile (respectă filtrele)"
               : "Disponibil pe Standard și Premium"
           }
         >
@@ -733,6 +907,18 @@ export function DocumenteList({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--paper-3)] text-left">
+                <th className="py-2 pr-2 w-8">
+                  <input
+                    type="checkbox"
+                    checked={sorted.length > 0 && selectedIds.size === sorted.length}
+                    onChange={toggleSelectAllVisible}
+                    aria-label="Selectează toate"
+                    className="shrink-0"
+                  />
+                </th>
+                <th className="py-2 pr-4 font-600 text-[var(--ink-muted)] w-[88px]">
+                  Status
+                </th>
                 <th className="py-2 pr-4 font-600 text-[var(--ink-muted)]">
                   <button
                     type="button"
@@ -778,11 +964,34 @@ export function DocumenteList({
               </tr>
             </thead>
             <tbody>
-              {sorted.map((u) => (
+              {sorted.map((u) => {
+                const processed = isUploadProcessed(u);
+                return (
                 <tr
                   key={u.id}
                   className="border-b border-[var(--paper-3)] last:border-0"
+                  style={processed ? { opacity: 0.72 } : undefined}
                 >
+                  <td className="py-2.5 pr-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(u.id)}
+                      onChange={() => toggleSelectOne(u.id)}
+                      aria-label={`Selectează ${u.file_name}`}
+                      className="shrink-0"
+                    />
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    <span
+                      className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                      style={{
+                        background: processed ? "var(--paper-3)" : "var(--sage-xlight)",
+                        color: processed ? "var(--ink-muted)" : "var(--sage)",
+                      }}
+                    >
+                      {processed ? "Lucrat" : "Nelucrat"}
+                    </span>
+                  </td>
                   <td className="py-2.5 pr-4 text-[var(--ink)]">{selectedClientName}</td>
                   <td className="py-2.5 pr-4 text-[var(--ink-soft)]">
                     {docTypeById.get(u.document_type_id) ?? "—"}
@@ -800,7 +1009,7 @@ export function DocumenteList({
                       year: "numeric",
                     })}
                   </td>
-                  <td className="py-2.5 flex items-center gap-2">
+                  <td className="py-2.5 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => openUpload(u.id)}
@@ -817,6 +1026,16 @@ export function DocumenteList({
                     </a>
                     <button
                       type="button"
+                      disabled={markProcessedPending}
+                      onClick={() =>
+                        void markUploadsProcessed([u.id], !processed)
+                      }
+                      className="text-[var(--ink-soft)] hover:underline disabled:opacity-60"
+                    >
+                      {processed ? "Nelucrat" : "Lucrat"}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => deleteUpload(u.id)}
                       disabled={deletingId === u.id}
                       className="text-[var(--terracotta)] hover:underline disabled:opacity-60"
@@ -825,9 +1044,64 @@ export function DocumenteList({
                     </button>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {selectedIds.size > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-[var(--paper-3)]"
+          style={{
+            position: "sticky",
+            bottom: 0,
+            background: "var(--paper)",
+            zIndex: 5,
+          }}
+        >
+          <span className="text-sm font-semibold text-[var(--ink)]">
+            {selectedIds.size}{" "}
+            {selectedIds.size === 1 ? "selectat" : "selectate"}
+          </span>
+          <button
+            type="button"
+            disabled={markProcessedPending}
+            onClick={() => void markUploadsProcessed([...selectedIds], true)}
+            className="text-xs font-semibold disabled:opacity-50"
+            style={{
+              padding: "6px 12px",
+              borderRadius: 9999,
+              border: "none",
+              background: "var(--sage)",
+              color: "#fff",
+            }}
+          >
+            Marchează lucrat
+          </button>
+          <button
+            type="button"
+            disabled={markProcessedPending}
+            onClick={() => void markUploadsProcessed([...selectedIds], false)}
+            className="text-xs font-semibold disabled:opacity-50"
+            style={{
+              padding: "6px 12px",
+              borderRadius: 9999,
+              border: "1.5px solid var(--paper-3)",
+              background: "var(--paper-2)",
+              color: "var(--ink-soft)",
+            }}
+          >
+            Marchează nelucrat
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set())}
+            className="text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--ink)] ml-auto"
+          >
+            Anulează selecția
+          </button>
         </div>
       )}
       </div>
